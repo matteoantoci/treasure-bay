@@ -98,6 +98,13 @@ func save_progress() -> void:
 		push_warning("The progress was not saved: %s" % error_string(error))
 
 
+## The settings pause play, and the input is locked while they are open. The game does not keep a
+## press while the input is locked, so the kept press goes (spec 5.4, 11.2).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED:
+		_kept_direction = Vector2i.ZERO
+
+
 func _show_current_labyrinth() -> void:
 	# A move of the old Labyrinth stops and never ends.
 	if _move_tween != null:

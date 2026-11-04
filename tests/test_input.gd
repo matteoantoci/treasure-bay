@@ -125,3 +125,25 @@ func test_presses_are_dropped_during_the_fade_in_after_a_reset(t) -> bool:
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "after the fade-in, a press moves the boat")
 	await Scene.remove(t, main)
 	return true
+
+
+## Spec 5.4: the input is locked while the settings are open, and the game does not keep a press
+## while the input is locked. A press kept while the boat slides is dropped when the settings open.
+func test_the_settings_drop_a_kept_press(t) -> bool:
+	var main := await Scene.add_main(t)
+	var panel: SettingsPanel = main.get_node("Settings")
+	var squares := _record_stops(main)
+	var moves := Scene.record_moves(main)
+	# Labyrinth 1: down slides from (0, 0) to the bend (0, 2). Right is kept while the boat slides.
+	Scene.send_key(KEY_DOWN)
+	Scene.send_key(KEY_RIGHT)
+	panel.open()
+	for frame in 3:
+		await t.process_frame
+	panel.close()
+	t.assert_true(await t.wait_for(main.move_finished, Scene.MOVE_TIMEOUT), "the slide down is over")
+	await t.create_timer(Scene.NO_MOVE_SECONDS).timeout
+	t.assert_eq(moves, ["move_started"], "only the slide down: the kept press is dropped")
+	t.assert_eq(squares, [Vector2i(0, 2)], "the boat stops at the bend")
+	await Scene.remove(t, main)
+	return true
