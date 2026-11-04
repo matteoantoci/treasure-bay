@@ -16,6 +16,10 @@ var width: int
 var height: int
 ## Wall bits of each square, at index y * width + x. A set bit is a closed wall.
 var _walls: PackedByteArray
+## The seed that LabyrinthPlan.build() used. The wall island decoration uses seed_value + 1 (spec 7.1).
+var seed_value := 0
+## The Items in placement order (spec 4.6). LabyrinthPlan.build() places them.
+var items: Array[Item] = []
 
 
 ## Makes a Labyrinth with every wall closed.
