@@ -7,7 +7,8 @@ const Fixtures := preload("res://tests/fixtures.gd")
 ## Goal celebration.
 const TIME_SCALE := 8.0
 const MOVE_TIMEOUT := 10.0
-## The Goal celebration takes 4.2 s before the next Labyrinth (spec 6.3).
+## The next Labyrinth shows 4.7 s after the arrival on the Goal, and its fade-in ends at 5.2 s
+## (spec 6.3, 8.8).
 const NEXT_LABYRINTH_TIMEOUT := 10.0
 
 

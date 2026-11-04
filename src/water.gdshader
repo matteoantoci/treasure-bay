@@ -1,6 +1,6 @@
 // The water of spec 7.1 and 7.2: the deep colour of the Area, short wave lines in its light colour,
-// and soft light patterns (spec 8.2, Open gap 6). The water is still: it shows the motion of
-// spec 8.2 at the time t = 0.
+// and soft light patterns (spec 8.2, Open gap 6). WaterView moves them: it sets wave_phase and
+// light_shift from the time (Motion).
 // All sizes are px of the prototype tile of 130 px (spec 8.1), relative to the Labyrinth.
 shader_type canvas_item;
 
@@ -9,6 +9,9 @@ uniform vec4 light_colour : source_color = vec4(0.498, 0.847, 0.937, 1.0);
 // Canvas px of the Labyrinth tile (0, 0), and s = tile px / 130 of spec 8.1.
 uniform vec2 labyrinth_origin = vec2(0.0);
 uniform float s = 1.0;
+// 1.2 t of the wave motion, and how far the light shapes moved, in prototype px.
+uniform float wave_phase = 0.0;
+uniform float light_shift = 0.0;
 
 // Wave lines: 18 % opacity, 3 px wide, rows 34 px apart, one line every 90 px in a row. Each line
 // is the quadratic curve of the motion prototype: 44 px long, 3 px high in the middle.
@@ -22,8 +25,9 @@ const vec2 GRID_START = vec2(-130.0, -40.0);
 const vec2 PROTOTYPE_ORIGIN = vec2(90.0, 150.0);
 // Each line moves 8 * sin(1.2 t + 0.02 x + 0.05 y) px, with x and y in prototype canvas px.
 const float WAVE_SHIFT = 8.0;
-// Light patterns: soft light shapes at 8 % opacity.
+// Light patterns: soft light shapes at 8 % opacity. They drift down and to the right.
 const float LIGHT_ALPHA = 0.08;
+const vec2 LIGHT_DRIFT = vec2(0.8, 0.6);
 
 varying vec2 canvas_px;
 
@@ -36,8 +40,7 @@ float wave_distance(vec2 p, float j, float k) {
 	float row_y = GRID_START.y + j * ROW_DISTANCE;
 	float line_x = GRID_START.x + k * LINE_DISTANCE;
 	vec2 prototype_px = vec2(line_x, row_y) + PROTOTYPE_ORIGIN;
-	float t = 0.0; // The still water.
-	line_x += WAVE_SHIFT * sin(1.2 * t + 0.02 * prototype_px.x + 0.05 * prototype_px.y);
+	line_x += WAVE_SHIFT * sin(wave_phase + 0.02 * prototype_px.x + 0.05 * prototype_px.y);
 	float u = (p.x - line_x) / LINE_LENGTH;
 	if (u < 0.0 || u > 1.0) {
 		return 1e6;
@@ -81,6 +84,6 @@ void fragment() {
 	float half_width = 0.5 * WAVE_WIDTH * s;
 	float line = 1.0 - smoothstep(half_width - 0.5, half_width + 0.5, d * s);
 	vec3 colour = mix(deep_colour.rgb, light_colour.rgb, WAVE_ALPHA * line);
-	colour = mix(colour, vec3(1.0), LIGHT_ALPHA * light_pattern(p));
+	colour = mix(colour, vec3(1.0), LIGHT_ALPHA * light_pattern(p - light_shift * LIGHT_DRIFT));
 	COLOR = vec4(colour, 1.0);
 }

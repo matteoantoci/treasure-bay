@@ -93,7 +93,9 @@ func test_empty_item_outlines_are_grey_and_light(t) -> bool:
 		t.assert_eq(row.outlines[i].material.shader.resource_path, "res://src/item_outline.gdshader", "outline %d shader" % i)
 		t.assert_true(is_equal_approx(row.outlines[i].modulate.a, 0.35), "outline %d at 35 %% opacity" % i)
 		t.assert_eq(row.fills[i].modulate.a, 0.0, "outline %d is empty" % i)
-	row.fill(1)
+	row.collect(1)
+	t.assert_eq(row.fills[1].modulate.a, 0.0, "the outline stays empty until the Item arrives")
+	t.assert_true(await t.wait_for(row.show_fill(1).finished, Scene.MOVE_TIMEOUT), "the outline fills")
 	t.assert_eq(row.fills[1].modulate.a, 1.0, "a filled outline shows the normal sprite")
 	await Scene.remove(t, main)
 	return true

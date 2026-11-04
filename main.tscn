@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
@@ -9,6 +9,11 @@
 [ext_resource type="Script" path="res://src/water_view.gd" id="7_water_view"]
 [ext_resource type="Script" path="res://src/area_decoration.gd" id="8_area_decoration"]
 [ext_resource type="Script" path="res://src/gear_view.gd" id="9_gear_view"]
+[ext_resource type="Script" path="res://src/foam_view.gd" id="10_foam_view"]
+[ext_resource type="Script" path="res://src/wake_view.gd" id="11_wake_view"]
+[ext_resource type="Script" path="res://src/sea_friend_view.gd" id="12_sea_friend_view"]
+[ext_resource type="Script" path="res://src/effects_view.gd" id="13_effects_view"]
+[ext_resource type="Script" path="res://src/fade_view.gd" id="14_fade_view"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -20,6 +25,12 @@ script = ExtResource("7_water_view")
 
 [node name="AreaDecoration" type="Node2D" parent="."]
 script = ExtResource("8_area_decoration")
+
+[node name="Foam" type="Node2D" parent="."]
+script = ExtResource("10_foam_view")
+
+[node name="Wake" type="Node2D" parent="."]
+script = ExtResource("11_wake_view")
 
 [node name="LabyrinthView" type="Node2D" parent="."]
 script = ExtResource("2_labyrinth_view")
@@ -43,3 +54,10 @@ script = ExtResource("9_gear_view")
 
 [node name="SeaFriend" type="Sprite2D" parent="."]
 visible = false
+script = ExtResource("12_sea_friend_view")
+
+[node name="Effects" type="Node2D" parent="."]
+script = ExtResource("13_effects_view")
+
+[node name="Fade" type="Node2D" parent="."]
+script = ExtResource("14_fade_view")

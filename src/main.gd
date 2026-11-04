@@ -1,6 +1,7 @@
 ## The main scene: one Labyrinth on the screen, the boat, the Items, the Item row, and the
 ## Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects each Item that it
-## stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth starts.
+## stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth fades in. The
+## motion values of spec 8 are in Motion.
 extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.
@@ -14,15 +15,11 @@ signal item_collected(item: Item)
 signal goal_reached(sea_friend: String)
 ## Emitted when the Sea friend of the Goal appears next to the Goal island.
 signal sea_friend_appeared(sea_friend: String)
-
-## Goal celebration times in seconds from the arrival on the Goal square (spec 6.3).
-const SEA_FRIEND_APPEARS_SECONDS := 1.4
-const SEA_FRIEND_IN_SLOT_SECONDS := 3.7
-const NEXT_LABYRINTH_SECONDS := 4.2
-## Next to the Goal island, the Sea friend is 1.3 times 110 px, 30 px above the island centre, in
-## px of the prototype tile (spec 8.6, 10).
-const SEA_FRIEND_PX := 110.0 * 1.3
-const SEA_FRIEND_RISE_PX := 30.0
+## Emitted at 4.2 s of the Goal celebration, when the fade to the next Labyrinth starts (spec 8.8).
+signal next_labyrinth_coming(number: int)
+## Emitted when the Child can sail the shown Labyrinth: at once after show_labyrinth(), or at the end
+## of the fade-in (spec 5.4, 8.8).
+signal labyrinth_ready(number: int)
 
 ## The progress of the Child. The save code can replace it, then call show_labyrinth().
 var progress := Progress.new()
@@ -32,23 +29,29 @@ var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
 var _busy := false
-## True from the arrival on the Goal to the start of the next Labyrinth. Presses are dropped
-## (spec 5.4).
+## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth. Presses are
+## dropped (spec 5.4).
 var _locked := false
 ## One early press, kept while the boat is busy (spec 5.4). ZERO means none.
 var _kept_direction := Vector2i.ZERO
 var _tile_px := 0.0
 var _celebration: Tween
+## The slide or the bump of the boat while it runs.
+var _move_tween: Tween
 
 @onready var _water: WaterView = $Water
 @onready var _area_decoration: AreaDecoration = $AreaDecoration
+@onready var _foam: FoamView = $Foam
+@onready var _wake: WakeView = $Wake
 @onready var _labyrinth_view: LabyrinthView = $LabyrinthView
 @onready var _items: ItemsView = $Items
 @onready var _boat: BoatView = $Boat
 @onready var _item_row: ItemRow = $ItemRow
 @onready var _collection_strip: CollectionStrip = $CollectionStrip
 @onready var _gear: GearView = $Gear
-@onready var _sea_friend: Sprite2D = $SeaFriend
+@onready var _sea_friend: SeaFriendView = $SeaFriend
+@onready var _effects: EffectsView = $Effects
+@onready var _fade: FadeView = $Fade
 
 
 func _ready() -> void:
@@ -58,23 +61,53 @@ func _ready() -> void:
 	item_collected.connect(save_progress.unbind(1))
 	goal_reached.connect(save_progress.unbind(1))
 	get_viewport().size_changed.connect(_layout)
-	show_labyrinth()
+	_wake.boat = _boat
+	start_with_fade()
 
 
-## Shows the current Labyrinth of `progress`, with the boat on its start square.
+## Shows the current Labyrinth of `progress` at once, with the boat on its start square. A Goal
+## celebration or a fade stops.
 func show_labyrinth() -> void:
-	if _celebration != null:
-		_celebration.kill()
-		_celebration = null
+	_stop_celebration()
+	_fade.stop()
+	_show_current_labyrinth()
+	labyrinth_ready.emit(progress.labyrinth_number)
+
+
+## Shows the current Labyrinth of `progress`, and the screen fades in from dark in 500 ms with no
+## Area Item: at launch and after a Parent reset (spec 8.8).
+func start_with_fade() -> void:
+	_stop_celebration()
+	_fade.set_dark()
+	_show_current_labyrinth()
+	_fade.fade_in().finished.connect(_emit_ready)
+
+
+## Writes the progress to the save file (spec 12.3). The Child gets no message if it fails.
+func save_progress() -> void:
+	var error := save_store.save(progress)
+	if error != OK:
+		push_warning("The progress was not saved: %s" % error_string(error))
+
+
+func _show_current_labyrinth() -> void:
+	# A move of the old Labyrinth stops and never ends.
+	if _move_tween != null:
+		_move_tween.kill()
+		_move_tween = null
+	_busy = false
 	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
+	_boat.idle = true
 	_kept_direction = Vector2i.ZERO
-	_locked = false
-	_sea_friend.visible = false
+	_sea_friend.stop()
+	_effects.clear()
+	_wake.clear()
 	var area := Area.for_labyrinth(progress.labyrinth_number)
 	_water.show_area(area)
 	_area_decoration.show_labyrinth(labyrinth, area)
+	_foam.show_labyrinth(labyrinth)
 	_labyrinth_view.labyrinth = labyrinth
 	_items.show_items(labyrinth, progress)
 	_item_row.show_items(labyrinth, progress)
@@ -83,11 +116,15 @@ func show_labyrinth() -> void:
 	labyrinth_started.emit(progress.labyrinth_number)
 
 
-## Writes the progress to the save file (spec 12.3). The Child gets no message if it fails.
-func save_progress() -> void:
-	var error := save_store.save(progress)
-	if error != OK:
-		push_warning("The progress was not saved: %s" % error_string(error))
+func _stop_celebration() -> void:
+	if _celebration != null:
+		_celebration.kill()
+		_celebration = null
+	_locked = false
+
+
+func _emit_ready() -> void:
+	labyrinth_ready.emit(progress.labyrinth_number)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -120,19 +157,25 @@ func _direction_of(event: InputEvent) -> Vector2i:
 func _move(direction: Vector2i) -> void:
 	var move := MoveRule.plan(labyrinth, boat_square, direction, progress.item_states(labyrinth))
 	_busy = true
+	_boat.idle = false
+	_wake.start(direction)
 	_boat.rotation = move.rotation
 	var start := _square_centre(boat_square)
-	var tween := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var tween := create_tween()
+	_move_tween = tween
 	if move.bump:
-		var push := Vector2(direction) * MoveRule.BUMP_TILES * _tile_px
-		tween.tween_property(_boat, "position", start + push, MoveRule.BUMP_OUT_SECONDS)
-		tween.tween_property(_boat, "position", start, MoveRule.BUMP_BACK_SECONDS)
+		var push := Vector2(direction) * Motion.BUMP_TILES * _tile_px
+		Motion.shape(tween.tween_property(_boat, "position", start + push, Motion.BUMP_OUT_SECONDS), Motion.BUMP_CURVE)
+		Motion.shape(tween.tween_property(_boat, "position", start, Motion.BUMP_BACK_SECONDS), Motion.BUMP_CURVE)
 	else:
-		tween.tween_property(_boat, "position", _square_centre(move.target), move.duration)
+		Motion.shape(tween.tween_property(_boat, "position", _square_centre(move.target), move.duration), Motion.SLIDE_CURVE)
 	await tween.finished
+	_move_tween = null
+	_wake.stop()
 	boat_square = move.target
 	_boat.position = _square_centre(boat_square)
 	_busy = false
+	_boat.idle = true
 	_arrive()
 	move_finished.emit()
 	if _kept_direction != Vector2i.ZERO:
@@ -146,47 +189,83 @@ func _arrive() -> void:
 	for i in labyrinth.items.size():
 		var item := labyrinth.items[i]
 		if item.square == boat_square and progress.collect_item(item.id):
-			_items.remove_item(item.id)
-			_item_row.fill(i)
-			_collection_strip.set_count(progress.total_items)
+			_collect(i)
 			item_collected.emit(item)
 	if boat_square == labyrinth.goal_square():
 		_reach_goal()
 
 
-## Locks the input, moves the progress on, and plays the celebration of spec 6.3: the Sea friend
-## appears at 1.4 s, is in its slot at 3.7 s, and the next Labyrinth starts at 4.2 s.
+## The Item splashes, pops, and flies to its outline, which fills when it arrives (spec 8.4). The
+## total count goes up at once.
+func _collect(index: int) -> void:
+	var item := labyrinth.items[index]
+	var sprite := _items.sprite_of(item.id)
+	var from := _items.position + sprite.position
+	_effects.burst(Burst.stars(Motion.SPLASH_COUNT, Motion.SPLASH_COLOURS, Motion.SPLASH_SPEED_PX, Motion.SPLASH_LIFE), from, _labyrinth_scale())
+	_effects.fly_item(sprite.texture, from, _items.item_px(), _item_row.outline_centre(index), _show_item_in_outline.bind(index))
+	_items.remove_item(item.id)
+	_item_row.collect(index)
+	_collection_strip.set_count(progress.total_items)
+
+
+func _show_item_in_outline(index: int) -> void:
+	_item_row.show_fill(index)
+	var sparkles := Burst.stars(Motion.OUTLINE_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.OUTLINE_SPARKLE_SPEED_PX, Motion.OUTLINE_SPARKLE_LIFE)
+	_effects.burst(sparkles, _item_row.outline_centre(index), _hud_scale())
+
+
+## Locks the input, moves the progress on, and plays the Goal celebration of spec 6.3 and 8.5 to
+## 8.8: the steps and their times are in Motion.goal_steps().
 func _reach_goal() -> void:
 	_locked = true
 	_kept_direction = Vector2i.ZERO
+	_boat.idle = false
 	var friend := progress.reach_goal()
 	goal_reached.emit(friend)
-	_celebration = create_tween()
-	_celebration.tween_interval(SEA_FRIEND_APPEARS_SECONDS)
-	_celebration.tween_callback(_show_sea_friend.bind(friend))
-	_celebration.tween_interval(SEA_FRIEND_IN_SLOT_SECONDS - SEA_FRIEND_APPEARS_SECONDS)
-	_celebration.tween_callback(_put_sea_friend_in_slot.bind(friend))
-	_celebration.tween_interval(NEXT_LABYRINTH_SECONDS - SEA_FRIEND_IN_SLOT_SECONDS)
-	_celebration.tween_callback(show_labyrinth)
+	_celebration = create_tween().set_parallel()
+	for step: Array in Motion.goal_steps():
+		_celebration.tween_callback(_run_goal_step.bind(step[1], friend)).set_delay(step[0])
 
 
-func _show_sea_friend(friend: String) -> void:
-	if friend.is_empty():
-		return
-	_sea_friend.texture = load(SeaFriends.texture_path(friend))
-	var s := ScreenLayout.labyrinth_scale(_tile_px)
-	var centre := _tile_centre(labyrinth.goal_island_tile()) + Vector2(0, -SEA_FRIEND_RISE_PX * s)
-	var rect := ScreenLayout.sprite_rect(centre, _sea_friend.texture.get_size(), SEA_FRIEND_PX * s)
-	_sea_friend.position = rect.get_center()
-	_sea_friend.scale = rect.size / _sea_friend.texture.get_size()
-	_sea_friend.visible = true
-	sea_friend_appeared.emit(friend)
-
-
-func _put_sea_friend_in_slot(friend: String) -> void:
-	_sea_friend.visible = false
-	if not friend.is_empty():
-		_collection_strip.show_friend(friend)
+func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
+	var s := _labyrinth_scale()
+	var island := _tile_centre(labyrinth.goal_island_tile())
+	match step:
+		Motion.GoalStep.OPEN_CHEST:
+			_labyrinth_view.open_chest()
+		Motion.GoalStep.HOP:
+			_boat.hop()
+		Motion.GoalStep.CONFETTI:
+			_effects.burst(Burst.confetti(), island + Vector2(0, -Motion.CONFETTI_RISE_PX * s), s)
+		Motion.GoalStep.FRIEND_APPEARS:
+			if not friend.is_empty():
+				_sea_friend.appear(load(SeaFriends.texture_path(friend)), island, s)
+				sea_friend_appeared.emit(friend)
+		Motion.GoalStep.FRIEND_WIGGLES:
+			_sea_friend.wiggle()
+		Motion.GoalStep.FRIEND_FLIES:
+			if not friend.is_empty():
+				_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
+		Motion.GoalStep.FRIEND_IN_SLOT:
+			_sea_friend.stop()
+			if not friend.is_empty():
+				_collection_strip.show_friend(friend)
+				var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
+				_effects.burst(sparkles, _slot_centre(friend), _hud_scale())
+		Motion.GoalStep.FADE_OUT:
+			next_labyrinth_coming.emit(progress.labyrinth_number)
+			_fade.fade_out()
+		Motion.GoalStep.NEXT_LABYRINTH:
+			_show_current_labyrinth()
+			_boat.idle = false
+			_fade.fade_in()
+			if Motion.starts_new_area(progress.labyrinth_number):
+				_fade.show_area_item(Area.item_kinds(Area.for_labyrinth(progress.labyrinth_number))[0], _items.item_px())
+		Motion.GoalStep.UNLOCK:
+			_locked = false
+			_boat.idle = true
+			_celebration = null
+			labyrinth_ready.emit(progress.labyrinth_number)
 
 
 func _layout() -> void:
@@ -194,6 +273,7 @@ func _layout() -> void:
 	_item_row.layout(visible.size)
 	_collection_strip.layout(visible.size)
 	_gear.layout(visible.size)
+	_fade.layout(visible)
 	if labyrinth == null:
 		return
 	var rect := ScreenLayout.labyrinth_rect(visible.size, labyrinth.tile_count())
@@ -201,12 +281,31 @@ func _layout() -> void:
 	_water.layout(visible, rect, _tile_px)
 	_area_decoration.position = rect.position
 	_area_decoration.set_tile_px(_tile_px)
+	_foam.position = rect.position
+	_foam.set_tile_px(_tile_px)
+	_wake.set_tile_px(_tile_px)
 	_labyrinth_view.position = rect.position
 	_labyrinth_view.tile_px = _tile_px
 	_items.position = rect.position
 	_items.set_tile_px(_tile_px)
 	_boat.set_tile_px(_tile_px)
 	_boat.position = _square_centre(boat_square)
+
+
+func _visible_size() -> Vector2:
+	return get_viewport().get_visible_rect().size
+
+
+func _labyrinth_scale() -> float:
+	return ScreenLayout.labyrinth_scale(_tile_px)
+
+
+func _hud_scale() -> float:
+	return ScreenLayout.hud_scale(_visible_size())
+
+
+func _slot_centre(friend: String) -> Vector2:
+	return ScreenLayout.collection_slot_centres(_visible_size())[SeaFriends.slot_of(friend)]
 
 
 func _square_centre(square: Vector2i) -> Vector2:

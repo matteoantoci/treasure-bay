@@ -48,7 +48,7 @@ func test_sailing_each_goal_starts_the_next_labyrinth(t) -> bool:
 			t.assert_true(await Scene.press(t, main, Scene.key_for(direction)), "move is over")
 			t.assert_eq(main.boat_square, expected, "the boat stops where the move rule says")
 			presses += 1
-		t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth %d starts" % (number + 1))
+		t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth %d starts, and its fade-in ends" % (number + 1))
 	t.assert_eq(main.progress.labyrinth_number, 4, "Labyrinth 4 after 3 Goals")
 	t.assert_eq(main.labyrinth.width, LabyrinthPlan.size_for(4).x, "Labyrinth 4 width")
 	await Scene.remove(t, main)

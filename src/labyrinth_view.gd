@@ -1,7 +1,8 @@
 ## Draws the islands of a Labyrinth with the Kenney tiles (spec 7.1): a TileMapLayer for the coasts
 ## and the grass, the rocks and bushes of the wall islands, and the palm and the closed chest on
 ## the Goal island (spec 6.2). The water is the Water node below. The tile (0, 0) is at the node
-## position. IslandLook picks the tiles.
+## position. IslandLook picks the tiles. The palm sways (spec 8.2), and the chest opens at the
+## start of the Goal celebration (spec 8.5).
 class_name LabyrinthView
 extends Node2D
 
@@ -9,6 +10,7 @@ extends Node2D
 const KENNEY_TILE_PX := 128
 const KENNEY_TILES_DIR := "res://assets/kenney/tiles/"
 const CHEST_CLOSED := preload("res://assets/sprites/goal/chest_closed.png")
+const CHEST_OPEN := preload("res://assets/sprites/goal/chest_open.png")
 ## The chest has the Item size: 60 px of the prototype tile (spec 10, Open gap 3).
 const CHEST_PX := 60.0
 ## Sizes of a whole Kenney tile picture, in Labyrinth tiles: a rock or bush fills the grass top of
@@ -35,6 +37,8 @@ var tile_px := 0.0:
 ## The palm and the chest of the Goal island.
 var palm := Sprite2D.new()
 var chest := Sprite2D.new()
+## Seconds of palm sway.
+var time := 0.0
 
 var _islands := TileMapLayer.new()
 ## Labyrinth tile -> the Sprite2D of its rock or bush.
@@ -94,8 +98,19 @@ func decorations() -> Dictionary:
 	return numbers
 
 
+## The chest shows chest_open.png in place of chest_closed.png.
+func open_chest() -> void:
+	chest.texture = CHEST_OPEN
+
+
+func _process(delta: float) -> void:
+	time += delta
+	palm.rotation = Motion.palm_sway(time)
+
+
 func _show_look() -> void:
 	_islands.clear()
+	chest.texture = CHEST_CLOSED
 	for sprite: Sprite2D in _decorations.values():
 		sprite.queue_free()
 	_decorations.clear()
