@@ -1,0 +1,8 @@
+batch01-crab: 33s
+batch02: 94s
+batch07: 86s
+batch06: 91s
+batch05: 95s
+batch04: 110s
+batch03: 120s
+batch08-duck: 52s

@@ -1,0 +1,4 @@
+generate_image:
+  enabled: true
+modelRoles:
+  image: xai-oauth/grok-imagine-image

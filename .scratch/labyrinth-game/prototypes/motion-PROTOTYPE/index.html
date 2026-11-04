@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway. Answers ticket 11: which motions to keep, and how much motion.
+     Browser stand-in for Godot tweens + CPUParticles2D. Islands are rough shapes; the art is decided in ticket 13. -->
+<html><head><meta charset="utf-8"><title>PROTOTYPE motion</title>
+<style>
+ html,body{margin:0;height:100%;background:#123;font-family:system-ui,sans-serif;color:#eee}
+ body{display:flex;flex-direction:column}
+ #bar{display:flex;gap:6px;padding:8px;background:#222;flex-wrap:wrap;justify-content:center;align-items:center}
+ button{font-size:14px;padding:7px 12px;border-radius:8px;border:0;cursor:pointer}
+ button.on{outline:3px solid #ffd54a}
+ #wrap{flex:1;display:flex;align-items:center;justify-content:center}
+ #wrap{min-height:0} canvas{display:block}
+ small{color:#aaa}
+</style></head><body>
+<div id="bar"></div>
+<div id="wrap"><canvas id="c" width="960" height="760"></canvas></div>
+<script>
+const P='../art-PROTOTYPE/sprites/', K='../style-target/assets/kenney/ships/boat_white_sail.png';
+const img=s=>{const i=new Image();i.src=s;return i};
+const BOAT=img(K), ITEMS=['spiral_shell','starfish','pearl'].map(n=>img(P+'items/'+n+'.png'));
+const FRIENDS=['dolphin','turtle','octopus','seal','penguin','fish'].map(n=>img(P+'friends/'+n+'.png'));
+const AREAS=[['#3fb4d8','#7fd8ef'],['#2aa6a0','#76d6c4'],['#1f6fb5','#5aa0dc'],['#14284f','#3a5a92']];
+
+// Amount presets: multiplier for every motion. The Parent picks one.
+const AMOUNT={calm:0.5,medium:1,lively:1.8};
+let amt='medium', A=()=>AMOUNT[amt];
+const ON={idle:true,water:true,wake:true,item:true,goal:true,friend:true,trans:true};
+
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+// Draw at the real screen resolution. A 960 px canvas stretched by CSS is blurred a second time on large or Retina screens.
+let KK=1;
+function fit(){const wr=document.getElementById('wrap').getBoundingClientRect(),dpr=devicePixelRatio||1;
+ const css=Math.min(wr.width*.98,wr.height*.98*960/760);cv.style.width=css+'px';cv.style.height=css*760/960+'px';
+ cv.width=Math.round(css*dpr);cv.height=Math.round(css*dpr*760/960);KK=cv.width/960;g.imageSmoothingQuality='high'}
+addEventListener('resize',fit);
+const COLS=6,ROWS=4,S=130,OX=(960-COLS*S)/2,OY=150;
+// 1 = island (wall), 0 = water. Goal is the island at the end.
+const MAP=['000010','110110','000000','011101'];
+let area=0, boat, items, goal, dock, fx=[], hud=[], tweens=[], banner=null; const F={fade:0};
+function reset(){boat={x:0,y:0,px:0,py:0,dir:Math.PI/2,sx:1,sy:1};
+ items=[{x:3,y:0,k:0,got:false,s:1},{x:2,y:2,k:1,got:false,s:1},{x:0,y:2,k:2,got:false,s:1}];
+ hud=items.map(()=>({fill:0,s:1})); goal={x:5,y:3}; dock={x:5,y:2}; fx=[];}
+reset();
+
+// --- tween helper (same idea as Godot create_tween) ---
+const ease={out:t=>1-(1-t)**3,inout:t=>t<.5?4*t*t*t:1-(-2*t+2)**3/2,back:t=>1+2.7*(t-1)**3+1.7*(t-1)**2};
+function tw(o,k,to,ms,e='out',done){const from=o[k],t0=performance.now();tweens.push({o,k,from,to,ms:Math.max(1,ms),e,t0,done})}
+function runTweens(now){const cur=tweens;tweens=[];const keep=cur.filter(t=>{const p=Math.min(1,(now-t.t0)/t.ms);t.o[t.k]=t.from+(t.to-t.from)*ease[t.e](p);if(p>=1){t.done&&t.done();return false}return true});tweens=keep.concat(tweens)}
+function burst(x,y,n,col,spd,life,grav=0,shape='dot'){n=Math.round(n*A());for(let i=0;i<n;i++){const a=Math.random()*6.28,v=spd*(.4+Math.random()*.8)*Math.sqrt(A());fx.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-(grav?v*.6:0),life,max:life,col:col[i%col.length],grav,shape,r:Math.random()*6.28})}}
+const cx=x=>OX+x*S+S/2, cy=y=>OY+y*S+S/2;
+
+// --- movement: slide to next junction (ticket 03), 180 ms per square ---
+let busy=false;
+const open=(x,y)=>x>=0&&y>=0&&x<COLS&&y<ROWS&&MAP[y][x]==='0';
+function exits(x,y){return[[1,0],[-1,0],[0,1],[0,-1]].filter(([a,b])=>open(x+a,y+b)).length}
+function move(dx,dy){if(busy)return;boat.dir=Math.atan2(dy,dx)-Math.PI/2;
+ let x=boat.x,y=boat.y,n=0;
+ while(open(x+dx,y+dy)){x+=dx;y+=dy;n++;if(items.some(i=>!i.got&&i.x===x&&i.y===y))break;if(x===dock.x&&y===dock.y)break;if(exits(x,y)!==2)break}
+ if(!n){bump(dx,dy);return}
+ busy=true;boat.x=x;boat.y=y;
+ tw(boat,'px',x,180*n,'out');tw(boat,'py',y,180*n,'out',()=>{busy=false;arrive()});}
+function bump(dx,dy){busy=true;const b=boat.px,c=boat.py;tw(boat,'px',b+dx*.12,70,'out',()=>tw(boat,'px',b,110,'out'));tw(boat,'py',c+dy*.12,70,'out',()=>tw(boat,'py',c,110,'out',()=>busy=false))}
+function arrive(){const it=items.find(i=>!i.got&&i.x===boat.x&&i.y===boat.y);if(it)collect(it);
+ if(boat.x===dock.x&&boat.y===dock.y)celebrate()}
+
+// --- Item collect: pop, then fly to its outline at the top, outline fills ---
+function collect(it){it.got=true;const idx=items.indexOf(it);
+ if(!ON.item){hud[idx].fill=1;return}
+ it.fly={x:cx(it.x),y:cy(it.y)};tw(it,'s',1.4,120,'out',()=>{
+  const tx=hudX(idx),ty=60;tw(it.fly,'x',tx,450,'inout');tw(it.fly,'y',ty,450,'inout');tw(it,'s',.55,450,'inout',()=>{
+   it.fly=null;tw(hud[idx],'fill',1,150);hud[idx].s=1+.5*A();tw(hud[idx],'s',1,350,'back');burst(tx,ty,10,['#fff','#ffe07a'],120,500)})});
+ burst(cx(it.x),cy(it.y),8,['#fff','#bdf'],90,400);}
+const hudX=i=>480+(i-1)*90;
+
+// --- Goal celebration, 3 s: boat hops, confetti, then the Sea friend ---
+let friend=null,coll=[];
+function celebrate(){if(!ON.goal){meetFriend();return}busy=true;
+ const hop=()=>{tw(boat,'sy',1.25,150,'out',()=>tw(boat,'sy',1,250,'back'))};
+ hop();setTimeout(hop,600);if(A()>1)setTimeout(hop,1200);
+ burst(cx(goal.x),cy(goal.y)-40,40,['#ff5a5a','#ffd54a','#5ad1ff','#7cff7a','#ff8ad8'],320,2600,1,'conf');
+ setTimeout(meetFriend,1400);}
+function meetFriend(){if(!ON.friend){coll.push(FRIENDS[coll.length%6]);setTimeout(next,600);return}
+ friend={i:FRIENDS[coll.length%6],x:cx(goal.x)-60,y:cy(goal.y)+60,s:0,r:0};
+ tw(friend,'s',1.3,450,'back');tw(friend,'y',cy(goal.y)-30,450,'back');
+ setTimeout(()=>{friend.r=-.15;tw(friend,'r',.15,250,'inout',()=>tw(friend,'r',0,250,'inout'))},500);
+ setTimeout(()=>{const tx=60+coll.length*48;tw(friend,'x',tx,700,'inout');tw(friend,'y',725,700,'inout');tw(friend,'s',.35,700,'inout',()=>{coll.push(friend.i);friend=null;burst(tx,725,10,['#fff','#ffe07a'],100,500);setTimeout(next,500)})},1600);}
+
+// --- Transition to next Labyrinth; every 2nd here = new Area (in game: every 5) ---
+let lvl=1;
+function next(){lvl++;const newArea=lvl%2===1;
+ if(!ON.trans){if(newArea)area=(area+1)%4;reset();busy=false;return}
+ tw(F,'fade',1,500,'inout',()=>{if(newArea){area=(area+1)%4;banner={a:0,n:area+1};tw(banner,'a',1,400,'out');setTimeout(()=>tw(banner,'a',0,400,'out',()=>banner=null),1300)}
+  reset();setTimeout(()=>tw(F,'fade',0,500,'inout',()=>busy=false),newArea?900:100)});}
+
+// --- draw ---
+function draw(now){runTweens(now);const t=now/1000,a=A();g.setTransform(KK,0,0,KK,0,0);
+ const [deep,lite]=AREAS[area];g.fillStyle=deep;g.fillRect(0,0,960,760);
+ if(ON.water){g.save();g.globalAlpha=.18*Math.min(1,a);g.strokeStyle=lite;g.lineWidth=3;
+  for(let y=110;y<760;y+=34)for(let x=-40;x<960;x+=90){const o=Math.sin(t*1.2*a+x*.02+y*.05)*8*a;g.beginPath();g.moveTo(x+o,y+(y%68?0:17));g.quadraticCurveTo(x+22+o,y-6,x+44+o,y+(y%68?0:17));g.stroke()}g.restore()}
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(MAP[y][x]==='1')island(cx(x),cy(y),t,false);
+ island(cx(goal.x),cy(goal.y),t,true);
+ items.forEach((it,i)=>{if(it.got&&!it.fly)return;const bob=ON.idle&&!it.got?Math.sin(t*2+i)*4*a:0;
+  const X=it.fly?it.fly.x:cx(it.x),Y=it.fly?it.fly.y:cy(it.y)+bob;spr(ITEMS[it.k],X,Y,60*it.s,0);
+  if(ON.idle&&!it.got&&a>=1){const sh=(t*.7+i*.33)%1;if(sh<.15){g.fillStyle='rgba(255,255,255,'+(1-sh/.15)+')';star(X+18,Y-18,7)}}});
+ // wake
+ if(ON.wake){const m=Math.hypot(boat.px-boat.x,boat.py-boat.y);if(m>.02&&Math.random()<.6*a)fx.push({x:cx(boat.px)-Math.sin(boat.dir)*30,y:cy(boat.py)+Math.cos(boat.dir)*30,vx:0,vy:0,life:900,max:900,col:'#fff',shape:'ring',grav:0})}
+ fx=fx.filter(p=>{p.life-=16;p.x+=p.vx/60;p.y+=p.vy/60;if(p.grav)p.vy+=380/60;p.r+=.2;const k=p.life/p.max;g.globalAlpha=Math.max(0,k);
+  if(p.shape==='ring'){g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.ellipse(p.x,p.y,(1-k)*26+4,(1-k)*14+2,boat.dir,0,6.28);g.stroke()}
+  else if(p.shape==='conf'){g.fillStyle=p.col;g.save();g.translate(p.x,p.y);g.rotate(p.r);g.fillRect(-5,-3,10,6);g.restore()}
+  else{g.fillStyle=p.col;star(p.x,p.y,4)}g.globalAlpha=1;return p.life>0});
+ const rock=ON.idle&&!busy?Math.sin(t*1.6)*.06*a:0, bob=ON.idle&&!busy?Math.sin(t*1.6+1)*2*a:0;
+ g.save();g.translate(cx(boat.px),cy(boat.py)+bob);g.rotate(boat.dir+rock);g.scale(boat.sx,boat.sy);g.drawImage(mip(BOAT,54),-27,-43,54,86);g.restore();
+ // HUD outlines
+ hud.forEach((h,i)=>{const X=hudX(i);g.save();g.translate(X,60);g.scale(h.s,h.s);g.globalAlpha=.35;g.filter='grayscale(1) brightness(2)';spr(ITEMS[items[i].k],0,0,56,0);g.filter='none';g.globalAlpha=h.fill;spr(ITEMS[items[i].k],0,0,56,0);g.restore()});
+ g.fillStyle='rgba(0,0,0,.25)';g.fillRect(0,690,960,70);coll.forEach((f,i)=>spr(f,60+i*48,725,44,0));
+ if(friend)spr(friend.i,friend.x,friend.y,110*friend.s,friend.r);
+ if(F.fade){g.fillStyle='rgba(10,20,40,'+F.fade+')';g.fillRect(0,0,960,760)}
+ if(banner){g.globalAlpha=banner.a;g.fillStyle=AREAS[area][1];g.font='bold 120px system-ui';g.textAlign='center';g.fillText(banner.n,480,430);g.globalAlpha=1}
+ requestAnimationFrame(draw)}
+function spr(i,x,y,w,r){if(!i.complete||!i.naturalWidth)return;const h=w*i.naturalHeight/i.naturalWidth;g.save();g.translate(x,y);g.rotate(r);g.drawImage(mip(i,w),-w/2,-h/2,w,h);g.restore()}
+// Mipmap stand-in (Godot: Mipmaps > Generate + TEXTURE_FILTER_LINEAR_WITH_MIPMAPS). A 512 px sprite drawn at
+// 44-110 px with one plain drawImage skips most source pixels, so the outline looks stepped. Halve step by step,
+// then make one copy at the exact screen size of the sprite (rounded to 4 px) from the next larger level.
+function mip(i,w){if(!i.complete||!i.naturalWidth)return i;if(!i.mips){i.mips=[i];i.exact={};let c=i;while(c.width/2>=16){const n=document.createElement('canvas');n.width=Math.round(c.width/2);n.height=Math.round(c.height/2);const x=n.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,0,0,n.width,n.height);i.mips.push(n);c=n}}
+ const px=Math.max(4,Math.round(w*KK/4)*4);if(px>=i.naturalWidth)return i;
+ if(!i.exact[px]){let src=i.mips[0];for(const m of i.mips)if(m.width>=px)src=m;const n=document.createElement('canvas');n.width=px;n.height=Math.max(1,Math.round(px*i.naturalHeight/i.naturalWidth));const x=n.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(src,0,0,n.width,n.height);i.exact[px]=n}
+ return i.exact[px]}
+function star(x,y,r){g.beginPath();for(let k=0;k<8;k++){const q=k*Math.PI/4,d=k%2?r*.35:r;g.lineTo(x+Math.cos(q)*d,y+Math.sin(q)*d)}g.fill()}
+function island(x,y,t,isGoal){const a=A();if(ON.water){g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=4;g.setLineDash([10,9]);g.lineDashOffset=-t*20*a;g.beginPath();g.ellipse(x,y,62+Math.sin(t*2)*2*a,58,0,0,6.28);g.stroke();g.setLineDash([])}
+ g.fillStyle='#f1d58e';g.beginPath();g.ellipse(x,y,58,54,0,0,6.28);g.fill();g.fillStyle=isGoal?'#4fc35a':'#6bbf4e';g.beginPath();g.ellipse(x,y-4,42,38,0,0,6.28);g.fill();
+ if(isGoal){const sway=ON.idle?Math.sin(t*1.5)*.08*a:0;g.save();g.translate(x,y);g.rotate(sway);g.fillStyle='#8a5a2b';g.fillRect(-3,-40,6,34);g.fillStyle='#2f9e3a';for(let k=0;k<5;k++){g.beginPath();g.ellipse(Math.cos(k*1.26)*16,-42+Math.sin(k*1.26)*6,16,6,k*1.26,0,6.28);g.fill()}g.restore()}}
+
+// --- controls ---
+const bar=document.getElementById('bar');
+function btn(label,fn,on){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{fn(b);b.blur()};if(on)b.classList.add('on');bar.append(b);return b}
+const am={};for(const k in AMOUNT)am[k]=btn('Amount: '+k,()=>{amt=k;for(const j in am)am[j].classList.toggle('on',j===k)},k===amt);
+bar.append(Object.assign(document.createElement('small'),{textContent:' | on/off: '}));
+const NAMES={idle:'Idle rock/bob',water:'Water+foam',wake:'Wake',item:'Item fly',goal:'Confetti+hop',friend:'Sea friend',trans:'Fade+Area number'};
+for(const k in ON)btn(NAMES[k],b=>{ON[k]=!ON[k];b.classList.toggle('on',ON[k])},true);
+bar.append(Object.assign(document.createElement('small'),{textContent:' | '}));
+btn('Restart',()=>{reset();busy=false;coll=[];area=0;lvl=1});
+addEventListener('keydown',e=>{const d={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowDown:[0,1],ArrowUp:[0,-1]}[e.key];if(d&&!e.repeat){e.preventDefault();move(...d)}});
+fit();requestAnimationFrame(draw);
+</script></body></html>
