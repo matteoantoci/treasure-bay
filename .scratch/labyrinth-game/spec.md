@@ -167,16 +167,16 @@ Source: [ticket 13](issues/13-polished-sea-look.md): "The islands are the walls,
 
 ### 4.6 Item placement
 
-Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issues/05-levels-and-difficulty.md), gap-audit default 19.
+Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issues/05-levels-and-difficulty.md), gap-audit default 19, [play-improvements spec Part 1](../play-improvements/spec.md).
 
 1. A dead end is a square with exactly one open side. The start square and the Goal square are not used.
 2. Item 1 goes in the dead end farthest from the start (breadth-first search distance). On a tie, take the lowest y, then the lowest x.
-3. The PRNG continues after the generator. It shuffles the other dead ends, then the other squares (Fisher-Yates with `prng.next() % (i + 1)`). The next Items go on the dead ends first, then on the other squares.
+3. The main path P is the only chain of squares from the start to the Goal. P[0] is the start, and P[L] is the Goal. L counts moves from square to square. The on-path count is `k = min(max(1, count div 3), L - 1)`, where count is the Item count of section 4.3. So 2 to 5 Items give 1 on-path Item, and 6 to 8 Items give 2 on-path Items. On-path Item j (1 to k) goes on `P[j * L div (k + 1)]`, with integer division. This index is from 1 to L − 1 and never repeats, so it is never the start or the Goal. A junction gets no special case. A main-path square is never a dead end. The PRNG continues after the generator. It shuffles the other dead ends, then the other squares without the k path squares (Fisher-Yates with `prng.next() % (i + 1)`). The placement order is: Item 1 on the farthest dead end, then the k on-path squares from the start to the Goal, then the shuffled other dead ends, then the shuffled other squares. With k = 0, this rule gives the placement from before play-improvements Part 1.
 4. Each Item has its own square. No Item is on the start square or the Goal square.
 5. Item i (0-based, in placement order) has kind `area_items[i % len(area_items)]` (section 7.2).
 6. The Item ID is `"x,y"` with the square coordinates.
 7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. For a random Labyrinth, add 1 to the seed and generate again. A test checks that seeds 1 to 20 are valid. See Open gap 4.
-8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2).
+8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2). The Child gets at least one Item on the way to the Goal, also when she sails straight to the chest.
 
 ### 4.7 Sea friend for each Labyrinth
 
@@ -735,13 +735,15 @@ Tests:
    - the Goal square has exactly one open side,
    - each square is reachable from the start with a breadth-first search that does not continue from the Goal square. No Labyrinth has a square behind the Goal.
    The full wall data of Labyrinth 1 is pinned. The pinned values of the tests come from `tests/spec_port.py`, a separate Python port of section 4.
-3. **Items:**
+3. **Items:** for Labyrinths 1 to 20 and for 200 random seeds:
    - the count matches section 4.3,
    - at least one Item is in a dead end,
+   - Item 1 is on the farthest dead end,
+   - at least k Items are on the main path (section 4.6 rule 3),
    - no Item is on the start square or the Goal square,
    - all Item squares are different,
    - the kinds follow the Area list.
-   Seeds 1 to 20 are all valid. A random seed with no valid dead end moves to seed + 1.
+   Seeds 1 to 20 are all valid. A random seed with no valid dead end moves to seed + 1. The Item IDs of Labyrinths 1 to 20 and of two random seeds are pinned from `tests/spec_port.py`. A random Labyrinth keeps its layout for its saved seed: the wall data of one random seed is pinned.
 4. **Move rule:** on fixed small Labyrinths, the boat stops at:
    - a junction,
    - a bend,

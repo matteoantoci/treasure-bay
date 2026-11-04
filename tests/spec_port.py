@@ -1,5 +1,5 @@
-"""Independent Python port of spec 4.1, 4.2, 4.6, 5.2, the wall island decoration of spec 7.1, and
-the Labyrinth measure of play-improvements spec Part 3.
+"""Independent Python port of spec 4.1, 4.2, 4.6, 5.2, the wall island decoration of spec 7.1, the
+main-path Items of play-improvements spec Part 1, and the Labyrinth measure of its Part 3.
 
 It gives the pinned values of the GDScript tests (tests/test_generator.gd, tests/test_items.gd,
 tests/test_island_look.gd, tests/test_labyrinth_measure.gd, and the scene tests that sail
