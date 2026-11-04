@@ -58,3 +58,12 @@ func test_a_sprite_fits_its_longer_side_to_the_size(t) -> bool:
 	t.assert_eq(ScreenLayout.sprite_rect(Vector2(100, 100), Vector2(256, 512), 60.0), Rect2(85, 70, 30, 60), "tall sprite")
 	t.assert_eq(ScreenLayout.labyrinth_scale(65.0), 0.5, "s at a 65 px tile")
 	return true
+
+
+func test_gear_in_the_top_right_corner(t) -> bool:
+	# 64 px. Its centre is at the height of the Item row, 60 h = 94.74 px at 1200, and the same
+	# distance from the right edge.
+	t.assert_eq(ScreenLayout.gear_rect(SCREEN_16_10).size, Vector2(64, 64), "gear size")
+	t.assert_true(ScreenLayout.gear_rect(SCREEN_16_10).get_center().distance_to(Vector2(1920 - 94.7368, 94.7368)) < 0.01, "gear centre at 1200")
+	t.assert_true(ScreenLayout.gear_rect(SCREEN_1512_982).get_center().distance_to(Vector2(1920 - 98.4474, 98.4474)) < 0.01, "gear centre at 1247")
+	return true
