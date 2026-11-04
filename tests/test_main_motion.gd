@@ -6,6 +6,8 @@ extends RefCounted
 const Scene := preload("res://tests/scene_helpers.gd")
 ## Game seconds of slack for a time measured in frames.
 const TIME_SLACK := 0.2
+## Game seconds after the Sea friend appears, when it stands still at its end place.
+const FRIEND_STILL_SECONDS := 0.8
 
 
 ## Game seconds since `start_usec`, at the test time scale.
@@ -82,6 +84,36 @@ func test_the_goal_celebration_runs_on_the_spec_times(t) -> bool:
 	t.assert_eq(view.chest.texture.resource_path, "res://assets/sprites/goal/chest_closed.png", "the next Goal chest is closed")
 	t.assert_true(not friend.visible, "the Sea friend is in its slot")
 	t.assert_true(boat.idle, "the boat rocks again")
+	await Scene.remove(t, main)
+	return true
+
+
+## The Sea friend grows next to the Goal island at the far side, away from the chest and the boat,
+## so the open chest and the boat stay in view (spec 6.2, 8.5, 8.6, Open gap 3). The check uses the
+## box of the opaque pixels of each of the 20 Sea friend pictures at the end of the growth.
+func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
+	var main := await Scene.add_main(t)
+	var view: LabyrinthView = main.get_node("LabyrinthView")
+	var boat: BoatView = main.get_node("Boat")
+	var friend: SeaFriendView = main.get_node("SeaFriend")
+	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
+	t.assert_true(await t.wait_for(main.sea_friend_appeared, Scene.NEXT_LABYRINTH_TIMEOUT), "the Sea friend appears")
+	# Game seconds: after the growth (0.45 s) and before the flight to the strip (1.6 s).
+	await t.create_timer(FRIEND_STILL_SECONDS).timeout
+	var s := boat.scale.x
+	var tile_px := ScreenLayout.PROTOTYPE_TILE_PX * s
+	var island := view.global_position + (Vector2(main.labyrinth.goal_island_tile()) + Vector2(0.5, 0.5)) * tile_px
+	t.assert_true(friend.position.is_equal_approx(island + Vector2(60, -30) * s), "the Sea friend is at (+60, -30) px from the Goal island centre")
+	var chest_px := maxf(view.chest.texture.get_width(), view.chest.texture.get_height()) * view.chest.global_scale.x
+	var chest := _opaque_rect(view.chest.texture, view.chest.global_position, chest_px)
+	var boat_local := _opaque_rect(BoatView.TEXTURE, Vector2.ZERO, BoatView.LENGTH_PX * s)
+	var boat_rect := Transform2D(boat.global_rotation, boat.global_position) * boat_local
+	for id in SeaFriends.IDS:
+		var texture: Texture2D = load(SeaFriends.texture_path(id))
+		var shape := _opaque_rect(texture, friend.position, Motion.FRIEND_PX * Motion.FRIEND_SCALE * s)
+		var on_chest := shape.intersection(chest).get_area() / chest.get_area()
+		t.assert_true(on_chest <= 0.2, "%s covers at most a corner of the open chest (%.2f of its box)" % [id, on_chest])
+		t.assert_true(not shape.intersects(boat_rect), "%s does not cover the boat" % id)
 	await Scene.remove(t, main)
 	return true
 
@@ -165,6 +197,15 @@ func test_a_new_labyrinth_stops_a_running_move(t) -> bool:
 	t.assert_eq(main.boat_square, Vector2i(0, 2), "the new move runs")
 	await Scene.remove(t, main)
 	return true
+
+
+## The box on the screen of the opaque pixels of `texture`, drawn centred on `centre` with its
+## longer side `px` long and no rotation.
+func _opaque_rect(texture: Texture2D, centre: Vector2, px: float) -> Rect2:
+	var size := texture.get_size()
+	var k := px / maxf(size.x, size.y)
+	var used := Rect2(texture.get_image().get_used_rect())
+	return Rect2(centre + (used.position - size / 2.0) * k, used.size * k)
 
 
 func _confetti_count(main: Node) -> int:

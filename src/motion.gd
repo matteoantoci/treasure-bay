@@ -152,7 +152,11 @@ const CONFETTI_SPIN_RAD := 0.2 * 60.0
 
 # Sea friend (spec 8.6). Times from the arrival on the Goal square.
 const FRIEND_APPEARS_AT := 1.4
-const FRIEND_START_PX := Vector2(-60, 60)
+## Spec 8.6 says (-60, +60) px from the Goal island centre. In the prototype the Goal island was
+## below the boat; here it is right of the Goal square, so at x = -60 the Sea friend covered the
+## chest (Open gap 3: at the side next to the Goal square) and the boat. At x = +60 it grows at the
+## far side of the Goal island, over the palm, and the open chest and the boat stay in view.
+const FRIEND_START_PX := Vector2(60, 60)
 const FRIEND_PX := 110.0
 const FRIEND_SCALE := 1.3
 const FRIEND_GROW_SECONDS := 0.45

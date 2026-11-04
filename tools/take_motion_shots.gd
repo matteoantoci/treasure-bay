@@ -62,6 +62,8 @@ func _initialize() -> void:
 	await _shot("motion-new-area.png", "0.45 s into the fade-in of Labyrinth 6: the first Item of Area 2")
 	_main.queue_free()
 	await process_frame
+	# The audio server frees a stopped playback in a later mix step.
+	await create_timer(0.1, true, false, true).timeout
 	_remove_save_dir()
 	quit()
 
