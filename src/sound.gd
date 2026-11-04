@@ -25,11 +25,6 @@ const SPLASH_PATH := "res://assets/audio/effects/splash.wav"
 ## The move swish varies its pitch, and up to 4 swishes can sound at one time (spec 9.3).
 const MOVE_PITCH_SEMITONES := 1.0
 const MOVE_POLYPHONY := 4
-## The 13 Sea friends with an own sound (spec 9.4). The other 7 play the splash.
-const SEA_FRIENDS_WITH_OWN_SOUND: PackedStringArray = [
-	"crab", "octopus", "whale", "dolphin", "fish", "squid", "seal",
-	"jellyfish", "otter", "penguin", "duck", "swan", "flamingo",
-]
 
 ## The two music players of the crossfade. `_active` is the one with the current track.
 var music_players: Array[AudioStreamPlayer] = []
@@ -56,7 +51,7 @@ static func add_buses() -> void:
 
 ## The sound file of a Sea friend: its own sound, or the splash (spec 9.4).
 static func sea_friend_sound_path(sea_friend: String) -> String:
-	if SEA_FRIENDS_WITH_OWN_SOUND.has(sea_friend):
+	if SeaFriends.has_own_sound(sea_friend):
 		return "res://assets/audio/friends/%s.wav" % sea_friend
 	return SPLASH_PATH
 
@@ -138,12 +133,17 @@ func _on_labyrinth_started(number: int) -> void:
 
 
 ## The new copy goes from -40 dB to its level, the old copy goes to -40 dB and stops (spec 9.2).
-## A new crossfade during a crossfade restarts the copy that fades out.
+## During a crossfade both players play. A new crossfade then fades out the louder copy from its
+## level now, and the quieter player takes the new track.
 func _crossfade_to(path: String) -> void:
 	if _crossfade != null:
 		_crossfade.kill()
-	var old := music_players[_active]
-	_active = 1 - _active
+	var old_index := _active
+	var other := music_players[1 - _active]
+	if other.playing and other.volume_db > music_players[_active].volume_db:
+		old_index = 1 - _active
+	var old := music_players[old_index]
+	_active = 1 - old_index
 	var new := music_players[_active]
 	_start(new, path, SILENT_DB)
 	_crossfade = create_tween().set_parallel().set_ignore_time_scale()

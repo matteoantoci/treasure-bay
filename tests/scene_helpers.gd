@@ -12,16 +12,21 @@ const MOVE_TIMEOUT := 10.0
 const NEXT_LABYRINTH_TIMEOUT := 10.0
 ## The audio server frees a stopped playback in a later mix step.
 const AUDIO_FREE_SECONDS := 0.1
+## Game seconds of a check that no move comes. Longer than the longest move: a slide on a 10 x 7
+## Labyrinth crosses at most 9 squares, 18 tiles, in 3.24 s (spec 5.2). The timer of the check runs
+## at the test time scale, like the moves.
+const NO_MOVE_SECONDS := 3.5
 
 
-## Adds the main scene. It loads and saves in `save_dir`, or in a new empty folder in the OS temp
-## folder, never in user://.
+## Adds the main scene and waits for the end of its launch fade-in, so the Child can sail. It loads
+## and saves in `save_dir`, or in a new empty folder in the OS temp folder, never in user://.
 static func add_main(t, save_dir: String = "") -> Node:
 	var main: Node = load("res://main.tscn").instantiate()
 	main.save_store = SaveStore.new(save_dir if not save_dir.is_empty() else Fixtures.new_save_dir())
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = TIME_SCALE
+	t.assert_true(await t.wait_for(main.labyrinth_ready, MOVE_TIMEOUT), "the launch fade-in ends")
 	return main
 
 
@@ -46,6 +51,15 @@ static func send_key(key: Key) -> void:
 		event.pressed = pressed
 		Input.parse_input_event(event)
 	Input.flush_buffered_events()
+
+
+## Records the start of each move of `main`: "move_started" for a slide, "bumped" for a bump. Both
+## fire when the move starts, so the list shows a move before it ends.
+static func record_moves(main: Node) -> Array:
+	var moves := []
+	main.move_started.connect(func() -> void: moves.append("move_started"))
+	main.bumped.connect(func() -> void: moves.append("bumped"))
+	return moves
 
 
 ## Presses and releases an arrow key. Returns true when the boat is free again in time.

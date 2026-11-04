@@ -36,15 +36,7 @@ func broken_path() -> String:
 ## Writes `progress` to save.json.tmp, closes it, then renames it to save.json. A crash leaves the
 ## old save.json or the new one, never half a file.
 func save(progress: Progress) -> Error:
-	DirAccess.make_dir_recursive_absolute(dir)
-	var file := FileAccess.open(tmp_path(), FileAccess.WRITE)
-	if file == null:
-		return FileAccess.get_open_error()
-	var written := file.store_string(JSON.stringify(to_dictionary(progress), "  "))
-	file.close()
-	if not written:
-		return ERR_FILE_CANT_WRITE
-	return DirAccess.rename_absolute(tmp_path(), save_path())
+	return JsonFile.write(to_dictionary(progress), save_path(), tmp_path())
 
 
 ## Loads the progress. With no save.json, the game starts at Labyrinth 1. A broken or newer file
@@ -82,14 +74,14 @@ static func to_dictionary(progress: Progress) -> Dictionary:
 ## from before the Goal rule of spec 4.2 can have one. JSON reads each number as a float, so the
 ## numbers become int here.
 static func from_dictionary(data: Variant) -> Progress:
-	if not data is Dictionary or not _is_whole_number(data.get("version")):
+	if not data is Dictionary or not JsonFile.is_whole_number(data.get("version")):
 		return null
 	var version := int(data["version"])
 	if version < 1 or version > VERSION:
 		return null
 	data = migrate(data, version)
 	for field in ["labyrinth", "random_seed", "total_items"]:
-		if not _is_whole_number(data.get(field)):
+		if not JsonFile.is_whole_number(data.get(field)):
 			return null
 	for field in ["collected_items", "collection"]:
 		if not _is_string_list(data.get(field)):
@@ -150,12 +142,6 @@ func _keep_broken_file() -> void:
 	if FileAccess.file_exists(broken_path()):
 		DirAccess.remove_absolute(broken_path())
 	DirAccess.rename_absolute(save_path(), broken_path())
-
-
-static func _is_whole_number(value: Variant) -> bool:
-	if value is int:
-		return true
-	return value is float and is_finite(value) and value == floorf(value)
 
 
 static func _is_string_list(value: Variant) -> bool:

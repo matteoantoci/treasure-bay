@@ -46,12 +46,16 @@ func item_states(labyrinth: Labyrinth) -> Dictionary:
 
 ## The Child reaches the Goal of the current Labyrinth. Labyrinth n (1 to 20) adds its Sea friend
 ## to the Collection (spec 4.7). After Labyrinth 20, a random Sea friend of the Collection comes
-## back, never the last one (spec 6.4). Then the progress moves to the next Labyrinth, with no
-## collected Items and a new random seed above Labyrinth 20 (spec 12.2). Returns the Sea friend.
+## back, never the last one (spec 6.4). At Labyrinth 21 no Sea friend came back yet, so the last
+## one is the last Sea friend of the Collection. Then the progress moves to the next Labyrinth, with
+## no collected Items and a new random seed above Labyrinth 20 (spec 12.2). Returns the Sea friend.
 func reach_goal() -> String:
 	var friend: String
 	if LabyrinthPlan.is_random(labyrinth_number):
-		friend = SeaFriends.pick_returning(collection, last_returning_friend, randi())
+		var last := last_returning_friend
+		if last.is_empty() and not collection.is_empty():
+			last = collection[collection.size() - 1]
+		friend = SeaFriends.pick_returning(collection, last, randi())
 		last_returning_friend = friend
 	else:
 		friend = SeaFriends.for_labyrinth(labyrinth_number)

@@ -25,22 +25,22 @@ signal move_started
 ## Emitted when the boat bumps at a wall (spec 5.3, 9.7).
 signal bumped
 
-## The progress of the Child. The save code can replace it, then call show_labyrinth().
+## The progress of the Child. _ready() loads it from the save file. Tests and tools can replace it,
+## then call show_labyrinth().
 var progress := Progress.new()
 ## The save file (spec 12). Tests set a store with their own folder before the scene enters the tree.
 var save_store := SaveStore.new()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
-var _busy := false
-## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth. Presses are
-## dropped (spec 5.4).
+## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth, and during the
+## fade-in at launch and after a reset. Presses are dropped (spec 5.4, 8.8). Only _unlock() clears it.
 var _locked := false
 ## One early press, kept while the boat is busy (spec 5.4). ZERO means none.
 var _kept_direction := Vector2i.ZERO
 var _tile_px := 0.0
 var _celebration: Tween
-## The slide or the bump of the boat while it runs.
+## The slide or the bump of the boat while it runs. The boat is busy while this is not null.
 var _move_tween: Tween
 
 @onready var _water: WaterView = $Water
@@ -56,6 +56,7 @@ var _move_tween: Tween
 @onready var _sea_friend: SeaFriendView = $SeaFriend
 @onready var _effects: EffectsView = $Effects
 @onready var _fade: FadeView = $Fade
+@onready var _settings: SettingsPanel = $Settings
 
 
 func _ready() -> void:
@@ -68,25 +69,30 @@ func _ready() -> void:
 	goal_reached.connect(save_progress.unbind(1))
 	get_viewport().size_changed.connect(_layout)
 	_wake.boat = _boat
+	_settings.reset_requested.connect(_reset_progress)
 	start_with_fade()
 
 
-## Shows the current Labyrinth of `progress` at once, with the boat on its start square. A Goal
-## celebration or a fade stops.
+## Shows the current Labyrinth of `progress` at once, with the boat on its start square, and the
+## Child can sail it. A Goal celebration or a fade stops. Tests and tools use it; the game starts
+## each Labyrinth with a fade-in.
 func show_labyrinth() -> void:
 	_stop_celebration()
 	_fade.stop()
 	_show_current_labyrinth()
-	labyrinth_ready.emit(progress.labyrinth_number)
+	_unlock()
 
 
 ## Shows the current Labyrinth of `progress`, and the screen fades in from dark in 500 ms with no
-## Area Item: at launch and after a Parent reset (spec 8.8).
+## Area Item: at launch and after a Parent reset (spec 8.8). The input is locked until the end of the
+## fade-in (spec 5.4).
 func start_with_fade() -> void:
 	_stop_celebration()
+	_locked = true
 	_fade.set_dark()
 	_show_current_labyrinth()
-	_fade.fade_in().finished.connect(_emit_ready)
+	_boat.idle = true
+	_fade.fade_in().finished.connect(_unlock)
 
 
 ## Writes the progress to the save file (spec 12.3). The Child gets no message if it fails.
@@ -96,16 +102,29 @@ func save_progress() -> void:
 		push_warning("The progress was not saved: %s" % error_string(error))
 
 
+## The Parent reset (spec 11.2): the progress goes back to Labyrinth 1 with an empty Collection and
+## a total of 0, the game writes the save (spec 12.2), and the screen fades in from dark (spec 8.8).
+func _reset_progress() -> void:
+	progress = Progress.new()
+	save_progress()
+	start_with_fade()
+
+
+## The settings pause play, and the input is locked while they are open. The game does not keep a
+## press while the input is locked, so the kept press goes (spec 5.4, 11.2).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED:
+		_kept_direction = Vector2i.ZERO
+
+
 func _show_current_labyrinth() -> void:
 	# A move of the old Labyrinth stops and never ends.
 	if _move_tween != null:
 		_move_tween.kill()
 		_move_tween = null
-	_busy = false
 	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
-	_boat.idle = true
 	_kept_direction = Vector2i.ZERO
 	_sea_friend.stop()
 	_effects.clear()
@@ -126,10 +145,12 @@ func _stop_celebration() -> void:
 	if _celebration != null:
 		_celebration.kill()
 		_celebration = null
+
+
+## The input unlocks, the boat rocks, and the Child can sail the shown Labyrinth.
+func _unlock() -> void:
 	_locked = false
-
-
-func _emit_ready() -> void:
+	_boat.idle = true
 	labyrinth_ready.emit(progress.labyrinth_number)
 
 
@@ -142,7 +163,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 	if _locked:
 		return
-	if _busy:
+	if _move_tween != null:
 		_kept_direction = direction
 	else:
 		_move(direction)
@@ -162,7 +183,6 @@ func _direction_of(event: InputEvent) -> Vector2i:
 
 func _move(direction: Vector2i) -> void:
 	var move := MoveRule.plan(labyrinth, boat_square, direction, progress.item_states(labyrinth))
-	_busy = true
 	_boat.idle = false
 	_wake.start(direction)
 	_boat.rotation = move.rotation
@@ -179,12 +199,16 @@ func _move(direction: Vector2i) -> void:
 		Motion.shape(tween.tween_property(_boat, "position", start, Motion.BUMP_BACK_SECONDS), Motion.BUMP_CURVE)
 	else:
 		Motion.shape(tween.tween_property(_boat, "position", _square_centre(move.target), move.duration), Motion.SLIDE_CURVE)
-	await tween.finished
+	# A new Labyrinth kills the tween. A killed tween does not emit `finished`, and nothing waits on it.
+	tween.finished.connect(_end_move.bind(move.target))
+
+
+## The move ends with the boat on `target`, and the boat is free again. The kept press runs.
+func _end_move(target: Vector2i) -> void:
 	_move_tween = null
 	_wake.stop()
-	boat_square = move.target
+	boat_square = target
 	_boat.position = _square_centre(boat_square)
-	_busy = false
 	_boat.idle = true
 	_arrive()
 	move_finished.emit()
@@ -266,16 +290,14 @@ func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
 			next_labyrinth_coming.emit(progress.labyrinth_number)
 			_fade.fade_out()
 		Motion.GoalStep.NEXT_LABYRINTH:
+			# The boat stays still until the input unlocks.
 			_show_current_labyrinth()
-			_boat.idle = false
 			_fade.fade_in()
 			if Motion.starts_new_area(progress.labyrinth_number):
 				_fade.show_area_item(Area.item_kinds(Area.for_labyrinth(progress.labyrinth_number))[0], _items.item_px())
 		Motion.GoalStep.UNLOCK:
-			_locked = false
-			_boat.idle = true
 			_celebration = null
-			labyrinth_ready.emit(progress.labyrinth_number)
+			_unlock()
 
 
 func _layout() -> void:

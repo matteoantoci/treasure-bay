@@ -229,7 +229,7 @@ When the Child presses an arrow key and the boat is free:
 
 - While the boat moves or bumps, it is busy. The game keeps one early key press. A newer press replaces it. When the boat is free again, the game runs the kept press.
 - An Item that flies to the top does not make the boat busy (motion prototype lines 60 to 64).
-- The input is locked from the arrival at the Goal to the end of the fade-in of the next Labyrinth (section 8.8). The input is also locked while the settings are open. The game drops presses while the input is locked. It does not keep them.
+- The input is locked from the arrival at the Goal to the end of the fade-in of the next Labyrinth (section 8.8). The input is also locked during the fade-in at launch and after a Parent reset (section 8.8), and while the settings are open. The game drops presses while the input is locked. It does not keep them. When the settings open, the game also drops the press that it kept while the boat was busy.
 
 ## 6. Items, Goal, rewards, Collection
 
@@ -260,7 +260,7 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 Source: [ticket 15](issues/15-reward-after-labyrinth-20.md), gap-audit default 30.
 
 - At each Goal from Labyrinth 21, a random Sea friend from the Collection comes back. It does the same arrival motion and plays its own sound.
-- The game never picks the same Sea friend two times in a row. The save keeps the last one in `last_returning_friend`, so the rule also holds after a restart.
+- The game never picks the same Sea friend two times in a row. The save keeps the last one in `last_returning_friend`, so the rule also holds after a restart. At the Goal of Labyrinth 21, `last_returning_friend` is `""`, so the game uses the last Sea friend of the Collection (the flamingo of Labyrinth 20) as the last one.
 - It flies back to its own slot in the strip. The strip does not grow.
 
 ### 6.5 Collection
@@ -279,7 +279,7 @@ Sources: [ticket 08](issues/08-visual-change-between-labyrinths.md), [ticket 13]
 
 - The look is top-down, from the Kenney Pirate Pack. The walls are islands with a sand coast and a grass top. The paths are water channels. The Labyrinth must look like islands in a sea, not like lines. Visual references: [Kenney sample](prototypes/art-PROTOTYPE/ref/kenney-pirate-sample.png) and the [sprite sheet](prototypes/art-PROTOTYPE/sprites/contact-light.png).
 - The water is not a tile. A `canvas_item` shader draws it on a full-screen node under the islands ([ticket 13](issues/13-polished-sea-look.md)).
-- Make the islands from the 31 Kenney tiles in `assets/kenney/tiles/`. These tiles are 128 × 128 px. Draw them with a `TileMapLayer` and a `TileSet` made in code ([godot4-facts §6](research/godot4-facts.md)). Use one `TileSetAtlasSource` for each tile PNG, with `texture_region_size` 128 × 128. Scale the layer to the tile size of section 10.
+- Make the islands from the 31 Kenney tiles in `assets/kenney/tiles/`. These tiles are 128 × 128 px. Draw them with a `TileMapLayer` and a `TileSet` made in code ([godot4-facts §6](research/godot4-facts.md)). Use one `TileSetAtlasSource` for each tile PNG, with `texture_region_size` 128 × 128. Draw each Labyrinth tile as 3 × 3 Kenney cells, and scale the layer so that 3 cells fill the tile size of section 10 (Resolved conflict 26).
 - Pick the coast tile for each island tile from its water neighbours, and check the result against the Kenney sample. See Open gap 1.
 - Tile groups, identified by eye. The repo has no Kenney tile list.
   - Sand and grass coast pieces: 06, 07, 08, 09, 22, 25, 36, 37, 38, 41, 52, 53, 54, 55, 56, 57.
@@ -386,7 +386,7 @@ An empty outline is the Item sprite at 35 % opacity, drawn grey and light (greys
 - 4.2 s: the screen fades to dark (`#0a1428`) in 500 ms (`inout`). The new Labyrinth shows. The screen fades in in 500 ms (`inout`).
 - The input is locked from the Goal to the end of the fade-in.
 - At the start of a new Area, the first Item kind of that Area pops up big in the centre of the screen. It scales from 0 to 2× of the Labyrinth Item size in 400 ms (`back`). It stays for 600 ms, then it fades out in 400 ms. It starts with the fade-in. It does not fly and does not fill an outline. The input unlocks at the end of the fade-in, before the Item fades out (gap-audit default 25).
-- At launch and after a Parent reset, the screen fades in from dark in 500 ms. No Area Item shows (gap-audit default 26).
+- At launch and after a Parent reset, the screen fades in from dark in 500 ms. No Area Item shows (gap-audit default 26). The input is locked until the end of this fade-in, so a press while the screen is dark does not move the boat.
 
 ## 9. Sound
 
@@ -414,6 +414,7 @@ All 4 file URLs returned HTTP 200 to `curl` on 2026-11-04. The lengths come from
 - Import each MP3 with Loop off. The game loops each track with a crossfade to its own start, so a jump at the loop point is not audible ([ticket 12](issues/12-listen-to-the-sounds.md)).
 - Before the import, cut the fade-out at the end of each track: `ffmpeg -i in.mp3 -t <end> -c copy out.mp3` ([sounds.md](research/sounds.md) Format notes). Open gap 7 describes how to find `<end>`.
 - **Crossfade** (pattern 3 of the [godot-audio skill](../../.claude/skills/godot-audio/SKILL.md)): use two `AudioStreamPlayer` nodes on `Music`. The crossfade takes 1.5 s. It starts when 1.5 s of the track remain. The new copy goes from −40 dB to the track level, and the old copy goes down to −40 dB, then stops.
+- A new crossfade can start during a crossfade, for example at a Parent reset. Then both players play. The louder copy goes down to −40 dB from its level at that time, then stops. The quieter player stops its copy and starts the new copy at −40 dB.
 - When the Area changes, the same crossfade goes to the new Area track. It starts with the fade to dark (section 8.8).
 - Set `process_mode = PROCESS_MODE_ALWAYS` on the music players, so the music continues while the settings pause the game. This setting is correct whether or not a paused tree stops an `AudioStreamPlayer`.
 
@@ -648,13 +649,13 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 - **Broken file:** rename it to `user://save.bak`. Replace an older `save.bak`. Then start at Labyrinth 1 with no message to the Child. A file is broken when:
   - the JSON does not parse, or it is not a dictionary,
   - a field is absent or has the wrong type,
-  - `version` is higher than 1,
+  - `version` is 0 or less (not a real version), or higher than 1,
   - `labyrinth` is below 1,
   - `labyrinth` is above 20 and `random_seed` is 0,
   - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
 - **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
-- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. Version 1 is the first version, so the chain is empty now.
+- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
 
 ### 12.4 Settings file
 
@@ -750,24 +751,25 @@ Tests:
    - Feed `InputEventKey` events with `Input.parse_input_event()` ([godot4-facts §7](research/godot4-facts.md)). That this also works in `--headless` is a source-trace fact.
    - An echo event does nothing.
    - While the boat is busy, the game keeps only the last press.
-   - While the input is locked, it drops each press.
+   - While the input is locked, it drops each press: also a press during the fade-in at launch and after a reset. A check that no move comes waits longer than the longest move, and it records the start of each move and each bump.
+   - When the settings open, the kept press is dropped.
 6. **Areas and Sea friends:**
    - The Area of n = 1 to 45 matches section 4.3.
    - The music track matches the Area.
    - The Sea friend of n = 1 to 20 matches section 4.7.
-   - In 1000 draws after Labyrinth 20, the Sea friend that comes back is never the same two times in a row, and it is always in the Collection.
+   - In 1000 draws after Labyrinth 20, the Sea friend that comes back is never the same two times in a row, and it is always in the Collection. At the Goal of Labyrinth 21, the flamingo of Labyrinth 20 does not come back.
 7. **Save:**
    - A save and a load give the same state.
    - No file gives Labyrinth 1.
    - A broken file (each case of section 12.3) becomes `save.bak` and gives Labyrinth 1.
-   - `version` 2 counts as broken.
+   - `version` 0 and `version` 2 count as broken.
    - The write goes to the `.tmp` file first.
    - After a reload, a collected Item does not count again.
    - An old Item ID of a square with no Item is removed. The other fields stay, and the file does not become `save.bak`.
    - A Goal save holds the new Sea friend and `labyrinth` + 1.
    - A reset keeps `settings.json`.
 8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip.
-9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`.
+9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`. A crossfade during a crossfade fades out the louder copy and does not cut it.
 10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. The length of each imported WAV file is the length of its source file, ±20 ms. `credits.txt` has a line for each sound file.
 11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`.
 
@@ -863,6 +865,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 23. Music loop: [ticket 10](issues/10-source-the-sounds.md) "music … with the Loop import option" against [ticket 12](issues/12-listen-to-the-sounds.md) "Every track uses the crossfade to its start". Ticket 12 wins: Loop off and a crossfade.
 24. Wall islands: gap-audit default 12 says "Wall islands get rocks and bushes". The tile list has one bush (tile 70) and a small plant (tile 72) that can look like a palm. The spec uses tile 70 only.
 25. Goal in a path: the recursive backtracker of section 4.2 (first text) against the Parent's report "Items are optional, but the Child must be able to reach each of them". The first generator put the Goal square in the middle of a path in 17 of the 20 fixed Labyrinths. The squares behind the Goal and their Items were lost, because the boat stops at the Goal. The Parent's report wins: the search does not continue from the Goal square (section 4.2). The Labyrinth shapes and Item squares changed, so section 12.3 removes old Item IDs on load.
+26. Island cells: section 7.1 (first text) "Scale the layer to the tile size of section 10", which gives one Kenney tile for each Labyrinth tile, against the Kenney coast tiles. The Kenney coast tiles need an island that is at least 2 tiles thick, and a wall island is only 1 Labyrinth tile thick ([ticket 24](issues/24-sea-look-areas-layout.md) notes). The Kenney tiles win: each Labyrinth tile is 3 × 3 Kenney cells (`IslandLook.CELLS_PER_TILE`), so each island has a sand coast around a grass top, like the Kenney sample.
 
 ## Open gaps
 

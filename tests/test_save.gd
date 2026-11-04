@@ -256,6 +256,7 @@ func _broken_files() -> Dictionary:
 		"an Item ID that is a number": {"collected_items": [3]},
 		"a Sea friend ID that is a number": {"collection": [1]},
 		"version 2": {"version": 2},
+		"version 0": {"version": 0},
 		"labyrinth 0": {"labyrinth": 0},
 		"labyrinth 21 with random seed 0": {"labyrinth": 21, "random_seed": 0, "collected_items": []},
 		"an Item ID outside the Labyrinth": {"collected_items": ["9,9"]},

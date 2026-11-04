@@ -177,7 +177,8 @@ func test_the_boat_rocks_only_when_it_does_not_move_and_leaves_a_wake(t) -> bool
 	t.assert_true(not boat.idle, "no rock while the boat moves")
 	var finished := [false]
 	main.move_finished.connect(func() -> void: finished[0] = true, CONNECT_ONE_SHOT)
-	while wake.rings.is_empty() and not finished[0]:
+	var timer: SceneTreeTimer = t.create_timer(Scene.MOVE_TIMEOUT)
+	while wake.rings.is_empty() and not finished[0] and timer.time_left > 0.0:
 		await t.process_frame
 	t.assert_true(wake.rings.size() > 0, "the moving boat leaves wake rings")
 	if not finished[0]:
@@ -191,12 +192,37 @@ func test_a_new_labyrinth_stops_a_running_move(t) -> bool:
 	var main := await Scene.add_main(t)
 	Scene.send_key(KEY_DOWN)
 	main.show_labyrinth()
-	t.assert_true(not await t.wait_for(main.move_finished, 0.25), "the old move never ends")
+	t.assert_true(not await t.wait_for(main.move_finished, Scene.NO_MOVE_SECONDS), "the old move never ends")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the boat is free for a new move")
 	t.assert_eq(main.boat_square, Vector2i(0, 2), "the new move runs")
 	await Scene.remove(t, main)
 	return true
+
+
+## Nothing waits for the end of a move that a new Labyrinth stopped, so the stopped move tween is
+## freed. A function that waits on its `finished` signal would hold it until the scene is freed.
+func test_a_stopped_move_leaves_nothing_waiting(t) -> bool:
+	var main := await Scene.add_main(t)
+	var refs := _refs_to_new_tweens(t, func() -> void: Scene.send_key(KEY_DOWN))
+	t.assert_eq(refs.size(), 1, "the move runs one tween")
+	main.show_labyrinth()
+	for frame in 3:
+		await t.process_frame
+	t.assert_true(refs.all(func(ref: WeakRef) -> bool: return ref.get_ref() == null), "the stopped move tween is freed")
+	await Scene.remove(t, main)
+	return true
+
+
+## Weak references to the tweens that `action` starts.
+func _refs_to_new_tweens(t, action: Callable) -> Array:
+	var before: Array = t.get_processed_tweens()
+	action.call()
+	var refs := []
+	for tween: Tween in t.get_processed_tweens():
+		if not before.has(tween):
+			refs.append(weakref(tween))
+	return refs
 
 
 ## The box on the screen of the opaque pixels of `texture`, drawn centred on `centre` with its

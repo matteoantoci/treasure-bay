@@ -3,6 +3,8 @@
 extends RefCounted
 
 const GOALS_AFTER_20 := 1000
+## With 20 Sea friends to pick from, about 1 seed in 20 picks a given Sea friend.
+const SEEDS_AT_LABYRINTH_21 := 200
 # Spec 4.7.
 const SEA_FRIENDS := [
 	"crab", "octopus", "spouting_whale", "whale", "dolphin",
@@ -110,6 +112,22 @@ func test_returning_sea_friend_rule_holds_after_a_restart(t) -> bool:
 	progress.last_returning_friend = "crab"
 	t.assert_eq(progress.reach_goal(), "octopus", "the other Sea friend comes back")
 	t.assert_eq(progress.last_returning_friend, "octopus", "last returning Sea friend")
+	return true
+
+
+## Spec 6.4: the game never picks the same Sea friend two times in a row. The Goal of Labyrinth 20
+## gives the flamingo, so the Goal of Labyrinth 21 does not bring it back. The check runs with many
+## random seeds.
+func test_the_sea_friend_of_labyrinth_20_does_not_come_back_at_labyrinth_21(t) -> bool:
+	var flamingos := 0
+	for seed_value in SEEDS_AT_LABYRINTH_21:
+		seed(seed_value)
+		var progress := Progress.new()
+		for n in range(1, 21):
+			progress.reach_goal()
+		if progress.reach_goal() == "flamingo":
+			flamingos += 1
+	t.assert_eq(flamingos, 0, "Goals of Labyrinth 21 that bring back the flamingo of Labyrinth 20")
 	return true
 
 
