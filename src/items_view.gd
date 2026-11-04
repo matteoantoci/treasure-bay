@@ -5,7 +5,7 @@ class_name ItemsView
 extends Node2D
 
 ## The Item size in px of the prototype tile (spec 10).
-const ITEM_PX := 60.0
+const ITEM_PX := 90.0
 const SPARKLE_COLOUR := Color.WHITE
 
 ## Seconds of idle motion.

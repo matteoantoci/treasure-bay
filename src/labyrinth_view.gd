@@ -11,8 +11,8 @@ const KENNEY_TILE_PX := 128
 const KENNEY_TILES_DIR := "res://assets/kenney/tiles/"
 const CHEST_CLOSED := preload("res://assets/sprites/goal/chest_closed.png")
 const CHEST_OPEN := preload("res://assets/sprites/goal/chest_open.png")
-## The chest has the Item size: 60 px of the prototype tile (spec 10, Open gap 3).
-const CHEST_PX := 60.0
+## The chest is 100 px of the prototype tile (spec 10, Open gap 3).
+const CHEST_PX := 100.0
 ## Sizes of a whole Kenney tile picture, in Labyrinth tiles: a rock or bush fills the grass top of
 ## its island, and the palm crown is larger than the chest.
 const DECORATION_TILES := 0.5
