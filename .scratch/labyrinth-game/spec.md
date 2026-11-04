@@ -130,7 +130,7 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 
 ### 4.3 The 20 fixed Labyrinths, sizes, Items, Areas
 
-- Labyrinths 1 to 20 are fixed. Labyrinth n uses seed n (gap-audit default 15). Labyrinth 1 is always the same Labyrinth.
+- Labyrinths 1 to 20 are fixed. Labyrinth n uses entry n of the seed table below ([play-improvements spec](../play-improvements/spec.md) part 3). This replaces the rule "Labyrinth n uses seed n" of gap-audit default 15. Labyrinth 1 is always the same Labyrinth.
 - The size grows by one column or one row after every 2 Labyrinths (gap-audit default 17).
 - Item count: `clamp(floor(W * H / 6), 2, 8)` (gap-audit default 18).
 - Area: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, and 16 to 20 Area 4. For every n: `area = ((n - 1) / 5) % 4 + 1`, with integer division ([ticket 15](issues/15-reward-after-labyrinth-20.md)).
@@ -148,6 +148,36 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 | 17, 18 | 9 × 6 | 19 × 13 | 8 |
 | 19, 20 | 9 × 7 | 19 × 15 | 8 |
 | 21 and later (random) | 10 × 7 | 21 × 15 | 8 |
+
+**Seed table.** Each Labyrinth 1 to 20 is a little harder than the one before. The seed-search tool `tools/seed_search.gd` selects the seed of each Labyrinth by measured difficulty and prints the table. Run it headless: `godot --headless --path . --script res://tools/seed_search.gd`. The Parent can change T or the conditions in the tool and run it again to tune the curve. Then copy the printed seeds into `LabyrinthPlan.FIXED_SEEDS`, and update `tests/spec_port.py` and the pins of the tests.
+
+- The measure of a Labyrinth with its Items (`src/labyrinth_measure.gd`):
+  - **Main path:** the only chain of squares P from the start P[0] to the Goal P[L]. The **main path length** L counts moves.
+  - **Presses:** the arrow presses along the main path with the move rule of section 5.2. Each Item on the path that is not collected is a stop.
+  - **Decisions:** main-path squares with 3 or more open sides. The start and the Goal never count.
+  - **Turns:** direction changes along the main path.
+  - **Largest side branch:** the largest group of off-path squares that connect without a main-path square.
+  - **Items on the path:** the count of Items on main-path squares.
+- For Labyrinth n, the tool takes the first seed from 1 upward that meets all of these conditions. Here `d = 1 + (n - 1) div 5`:
+  - presses = T(n), with T = 3, 5, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+  - decisions from d to d + 2,
+  - turns ≥ 2 for n ≥ 2,
+  - at least 1 Item on the main path,
+  - largest side branch ≤ max(6, main path length),
+  - the seed has a free dead end (section 4.6 rule 7), and it is not the seed of the other Labyrinth with the same size. The tool goes in number order, so Labyrinth 2i does not take the seed of Labyrinth 2i − 1.
+
+| Labyrinth | Seed | Presses | Decisions | Labyrinth | Seed | Presses | Decisions |
+|---|---|---|---|---|---|---|---|
+| 1 | 1 | 3 | 1 | 11 | 1 | 11 | 3 |
+| 2 | 17 | 5 | 2 | 12 | 69 | 12 | 4 |
+| 3 | 2 | 5 | 1 | 13 | 29 | 13 | 3 |
+| 4 | 9 | 5 | 1 | 14 | 73 | 14 | 4 |
+| 5 | 85 | 5 | 2 | 15 | 9 | 15 | 3 |
+| 6 | 10 | 6 | 2 | 16 | 28 | 16 | 4 |
+| 7 | 12 | 7 | 2 | 17 | 73 | 17 | 4 |
+| 8 | 9 | 8 | 2 | 18 | 127 | 18 | 5 |
+| 9 | 8 | 9 | 2 | 19 | 167 | 19 | 5 |
+| 10 | 23 | 10 | 2 | 20 | 30 | 20 | 4 |
 
 ### 4.4 Random Labyrinths after Labyrinth 20
 
@@ -658,6 +688,11 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
   - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
 - **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
+- **Save from before the seed table:** a save from before the seed table of section 4.3 keeps its Labyrinth number and its Collection ([play-improvements spec](../play-improvements/spec.md) part 3). The current fixed Labyrinth gets a new layout and new Item squares. A current random Labyrinth keeps its layout and gets new Item squares (section 4.6 rule 3). The load then does this with `collected_items`:
+  - The rule "Old Item ID" drops each collected Item ID that has no Item now. The Items of the new layout that the save does not name show on the water.
+  - A collected Item ID that matches a new Item square counts that new Item as collected. The Item does not show.
+  - `total_items` does not change on the load. An Item that comes back adds 1 again when the Child collects it.
+  - No save becomes broken, because each ID is still a free square: the start and Goal squares do not move.
 - **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain and the target version as inputs, so a test can run a chain of one migration. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
 - **Newer version:** a file with a `version` above the current version is from a newer build. It is not broken. Do not rename it to `save.bak`: it stays in place with the same bytes. The game plays Labyrinth 1 in memory. The save store goes into a no-write state for the session: each save call returns without a write and logs one warning. A reset makes no copy (play-improvements spec, part 5).
 
@@ -748,7 +783,8 @@ Tests:
    - no Item is on the start square or the Goal square,
    - all Item squares are different,
    - the kinds follow the Area list.
-   Seeds 1 to 20 are all valid. A random seed with no valid dead end moves to seed + 1. The Item IDs of Labyrinths 1 to 20 and of two random seeds are pinned from `tests/spec_port.py`. A random Labyrinth keeps its layout for its saved seed: the wall data of one random seed is pinned.
+   The seeds of the seed table of section 4.3 are all valid. A random seed with no valid dead end moves to seed + 1. The Item IDs of Labyrinths 1 to 20 and of two random seeds are pinned from `tests/spec_port.py`. A random Labyrinth keeps its layout for its saved seed: the wall data of one random seed is pinned.
+   **Fixed seeds:** for each Labyrinth 1 to 20, the measure of section 4.3 gives presses = T(n) and decisions from d to d + 2, and the other conditions of the seed search hold. The two Labyrinths of each size have different seeds. `tests/spec_port.py` runs its own seed search and checks that it gives the seed table.
 4. **Move rule:** on fixed small Labyrinths, the boat stops at:
    - a junction,
    - a bend,
@@ -778,6 +814,7 @@ Tests:
    - The write goes to the `.tmp` file first.
    - After a reload, a collected Item does not count again.
    - An old Item ID of a square with no Item is removed. The other fields stay, and the file does not become `save.bak`.
+   - A save of Labyrinth 7 from before the seed table, with collected Items, loads. The Labyrinth number, the Collection, and `total_items` stay. Each collected ID with no Item now is dropped, and the Items that the save does not name show on the water. A collected ID that matches a new Item square hides that Item. No `save.bak` exists.
    - A Goal save holds the new Sea friend and `labyrinth` + 1.
    - A reset keeps `settings.json`.
 8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip.
@@ -885,7 +922,7 @@ No source decides these facts. The build uses the stated value. The Parent can c
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
 2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
 3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (100 px × `s`, [play-improvements spec](../play-improvements/spec.md) part 2) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square.
-4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. A random seed moves to seed + 1. A test checks that seeds 1 to 20 are valid. If one of them is not valid, the build uses the next free number above 20 for that Labyrinth and pins it in the test.
+4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. A random seed moves to seed + 1. The seed search of section 4.3 takes only seeds with a free dead end, so the 20 seeds of the seed table are valid. A test checks them.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
 6. **Decoration and light-pattern values.** Ticket 19 Q3 names the decorations, but no source gives their counts, sizes, or speeds, and no source gives values for the light patterns on the water. The spec values, in prototype px (multiply by `s`):
    - Area 1 waves: 6 crests, 24 × 8 px, drift at 15 px/s.
