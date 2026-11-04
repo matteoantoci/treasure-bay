@@ -34,16 +34,15 @@ static func item_count(number: int) -> int:
 
 ## A new seed for a random Labyrinth: randi(), and 0 becomes 1. Call randomize() one time at startup.
 static func new_random_seed() -> int:
-	var seed_value := randi()
-	return seed_value if seed_value != 0 else 1
+	return Prng.nonzero_seed(randi())
 
 
 ## The first seed from `seed_value` on whose W x H Labyrinth has a dead end that is not the start
 ## or the Goal (spec 4.6 rule 7). Each step adds 1 to the seed. A seed of 0 becomes 1.
 static func valid_seed(size: Vector2i, seed_value: int) -> int:
-	seed_value = _nonzero(seed_value)
+	seed_value = Prng.nonzero_seed(seed_value)
 	while not ItemPlacement.has_free_dead_end(LabyrinthGenerator.generate(size.x, size.y, Prng.new(seed_value))):
-		seed_value = _nonzero(seed_value + 1)
+		seed_value = Prng.nonzero_seed(seed_value + 1)
 	return seed_value
 
 
@@ -58,8 +57,3 @@ static func build(number: int, random_seed: int = 0) -> Labyrinth:
 	var kinds := Area.item_kinds(Area.for_labyrinth(number))
 	labyrinth.items = ItemPlacement.place(labyrinth, prng, item_count(number), kinds)
 	return labyrinth
-
-
-static func _nonzero(seed_value: int) -> int:
-	seed_value &= Prng.MASK
-	return seed_value if seed_value != 0 else 1

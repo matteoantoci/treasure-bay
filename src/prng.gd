@@ -7,11 +7,14 @@ const MASK := 0xFFFFFFFF
 var _state: int
 
 
-## Seed 0 becomes seed 1, because xorshift32 stays at 0.
 func _init(seed_value: int) -> void:
-	_state = seed_value & MASK
-	if _state == 0:
-		_state = 1
+	_state = nonzero_seed(seed_value)
+
+
+## The low 32 bits of `seed_value`, and seed 0 becomes seed 1, because xorshift32 stays at 0.
+static func nonzero_seed(seed_value: int) -> int:
+	seed_value &= MASK
+	return seed_value if seed_value != 0 else 1
 
 
 ## Returns the next output, from 1 to 2^32 - 1.
