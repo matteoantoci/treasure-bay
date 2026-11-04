@@ -1,4 +1,4 @@
-## The Kenney boat with the white sail, 54 x 86 px at a 130 px tile (spec 7.1, 10). The node scale
+## The Kenney boat with the white sail, 69 x 110 px at a 130 px tile (spec 7.1, 10). The node scale
 ## sets the tile size, and the node rotation the boat direction. The bow of boat_white_sail.png
 ## points down at rotation 0.
 ##
@@ -8,8 +8,9 @@ class_name BoatView
 extends Node2D
 
 const TEXTURE := preload("res://assets/kenney/ships/boat_white_sail.png")
-## The longer side in px of the prototype tile (ScreenLayout.PROTOTYPE_TILE_PX).
-const LENGTH_PX := 86.0
+## The longer side in px of the prototype tile (ScreenLayout.PROTOTYPE_TILE_PX). The shorter side
+## keeps the aspect of the picture.
+const LENGTH_PX := 110.0
 
 ## True while the boat does not move: it rocks and bobs.
 var idle := true
@@ -40,6 +41,11 @@ func bob() -> float:
 	return Motion.boat_bob(time) if idle else 0.0
 
 
+## The boat picture in node px, at rotation 0, without the rock, the bob, and the hop.
+func hull_rect() -> Rect2:
+	return ScreenLayout.sprite_rect(Vector2.ZERO, TEXTURE.get_size(), LENGTH_PX)
+
+
 func _process(delta: float) -> void:
 	time += delta
 	queue_redraw()
@@ -48,4 +54,4 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	# The bob goes down on the screen, whatever the boat direction.
 	draw_set_transform(Vector2(0, bob()).rotated(-rotation), rock(), Vector2(1, hop_scale))
-	draw_texture_rect(TEXTURE, ScreenLayout.sprite_rect(Vector2.ZERO, TEXTURE.get_size(), LENGTH_PX), false)
+	draw_texture_rect(TEXTURE, hull_rect(), false)

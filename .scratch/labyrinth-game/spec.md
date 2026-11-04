@@ -167,16 +167,16 @@ Source: [ticket 13](issues/13-polished-sea-look.md): "The islands are the walls,
 
 ### 4.6 Item placement
 
-Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issues/05-levels-and-difficulty.md), gap-audit default 19.
+Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issues/05-levels-and-difficulty.md), gap-audit default 19, [play-improvements spec Part 1](../play-improvements/spec.md).
 
 1. A dead end is a square with exactly one open side. The start square and the Goal square are not used.
 2. Item 1 goes in the dead end farthest from the start (breadth-first search distance). On a tie, take the lowest y, then the lowest x.
-3. The PRNG continues after the generator. It shuffles the other dead ends, then the other squares (Fisher-Yates with `prng.next() % (i + 1)`). The next Items go on the dead ends first, then on the other squares.
+3. The main path P is the only chain of squares from the start to the Goal. P[0] is the start, and P[L] is the Goal. L counts moves from square to square. The on-path count is `k = min(max(1, count div 3), L - 1)`, where count is the Item count of section 4.3. So 2 to 5 Items give 1 on-path Item, and 6 to 8 Items give 2 on-path Items. On-path Item j (1 to k) goes on `P[j * L div (k + 1)]`, with integer division. This index is from 1 to L − 1 and never repeats, so it is never the start or the Goal. A junction gets no special case. A main-path square is never a dead end. The PRNG continues after the generator. It shuffles the other dead ends, then the other squares without the k path squares (Fisher-Yates with `prng.next() % (i + 1)`). The placement order is: Item 1 on the farthest dead end, then the k on-path squares from the start to the Goal, then the shuffled other dead ends, then the shuffled other squares. With k = 0, this rule gives the placement from before play-improvements Part 1.
 4. Each Item has its own square. No Item is on the start square or the Goal square.
 5. Item i (0-based, in placement order) has kind `area_items[i % len(area_items)]` (section 7.2).
 6. The Item ID is `"x,y"` with the square coordinates.
 7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. For a random Labyrinth, add 1 to the seed and generate again. A test checks that seeds 1 to 20 are valid. See Open gap 4.
-8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2).
+8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2). The Child gets at least one Item on the way to the Goal, also when she sails straight to the chest.
 
 ### 4.7 Sea friend for each Labyrinth
 
@@ -247,7 +247,8 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 ### 6.2 Goal
 
 - The Goal square is the bottom-right square. The Goal island is the border tile to the right of the Goal square, tile (2W, 2H − 1).
-- The Goal island has a palm and a treasure chest. The chest is closed while the Child sails. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png` (ticket 19 Q5).
+- The Goal island has a palm and a treasure chest. The chest is closed while the Child sails. The closed chest shows the Item sparkle of section 8.2, with `i` equal to the Item count of the Labyrinth. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png`, and the sparkle stops (ticket 19 Q5, [play-improvements spec](../play-improvements/spec.md) part 2).
+- The palm has the modulate colour `Color(0.7, 0.85, 0.7)`, so it is darker than the grass ([play-improvements spec](../play-improvements/spec.md) part 2).
 - Wall islands have rocks and bushes and no palm (ticket 19 Q5).
 
 ### 6.3 Goal celebration and the Sea friend (Labyrinths 1 to 20)
@@ -342,7 +343,7 @@ All 7 motions stay, at the medium amount. The values below are the spec values. 
 |---|---|
 | Boat idle | Rock `0.06 * sin(1.6 t)` rad and bob `2 * sin(1.6 t + 1)` px. Only while the boat does not move. |
 | Item idle | Bob `4 * sin(2 t + i)` px, where i is the Item index. A white 8-point sparkle of radius 7 px at (+18, −18) px from the Item centre. It shows while `fract(0.7 t + 0.33 i) < 0.15`, with alpha `1 - fract / 0.15` (a cycle of 1.4 s). |
-| Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. |
+| Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. The closed chest shows the Item sparkle at (+18, −18) px from the chest centre, with `i` equal to the Item count of the Labyrinth. The open chest has no sparkle. |
 | Water waves | Short curved lines in the Area light colour, at 18 % opacity, 3 px wide. The rows are 34 px apart. In a row, a line starts every 90 px. Each line moves `8 * sin(1.2 t + 0.02 x + 0.05 y)` px. The shader also moves soft light patterns on the water (Open gap 6). |
 | Foam | A white line at 55 % opacity, 4 px wide, along each island coast. Dashes are 10 px on and 9 px off. The dashes move at 20 px/s. The line distance from the coast changes by `2 * sin(2 t)` px. |
 | Wake | While the boat moves, a new ring starts in 60 % of the frames at 60 fps (about 36 rings each second). Each ring starts 30 px behind the boat centre, on the move line. The rings start alternately a little to the left and to the right of the move line, so they make a V shape. Each ring is a white 2 px ellipse that grows from 4 × 2 px to 30 × 16 px, turned to the boat direction, and fades out in 900 ms. |
@@ -549,7 +550,7 @@ Read the visible size from `get_viewport().get_visible_rect().size`. With the as
 - **Top band:** height `round(Hv * 150 / 760)`, 237 px at 1200. It holds the Item row and the gear.
 - **Bottom strip:** height `round(Hv * 70 / 760)`, 111 px at 1200, colour black at 25 % opacity (`Color(0, 0, 0, 0.25)`). It is the Collection.
 - **Labyrinth:** `tile_px = floor(min((Hv - top - bottom) / (2H + 1), Wv / (2W + 1)))`. The Labyrinth is in the middle of the space between the top band and the strip. A 4 × 3 Labyrinth has 121 px tiles, and a 10 × 7 Labyrinth has 56 px tiles at 1920 × 1200. The water fills the whole screen.
-- **Sizes in the Labyrinth** (multiply by `s`): boat 54 × 86 px, Item 60 px, Sea friend 110 px, chest 60 px (Open gap 3).
+- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px, Sea friend 110 px, chest 100 px (Open gap 3). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4). These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2.
 - **Item row:** the outlines sit in a row at the centre of the top band, at `y = 60 * h`. The distance between outline centres is `90 * h`, and each outline is `56 * h` px. The row is centred left to right.
 - **Gear:** 64 px, in the top-right corner. Its centre has the same height as the Item row and the same distance from the right edge.
 - **Collection strip:** the total Item count at the left end as a number, in the Godot default font at `64 * h / (1200 / 760)` px (64 px at 1200). The 20 slots fill the rest of the strip with the same distance between their centres. Each slot icon is `44 * h` px (69 px at 1200).
@@ -746,13 +747,15 @@ Tests:
    - the Goal square has exactly one open side,
    - each square is reachable from the start with a breadth-first search that does not continue from the Goal square. No Labyrinth has a square behind the Goal.
    The full wall data of Labyrinth 1 is pinned. The pinned values of the tests come from `tests/spec_port.py`, a separate Python port of section 4.
-3. **Items:**
+3. **Items:** for Labyrinths 1 to 20 and for 200 random seeds:
    - the count matches section 4.3,
    - at least one Item is in a dead end,
+   - Item 1 is on the farthest dead end,
+   - at least k Items are on the main path (section 4.6 rule 3),
    - no Item is on the start square or the Goal square,
    - all Item squares are different,
    - the kinds follow the Area list.
-   Seeds 1 to 20 are all valid. A random seed with no valid dead end moves to seed + 1.
+   Seeds 1 to 20 are all valid. A random seed with no valid dead end moves to seed + 1. The Item IDs of Labyrinths 1 to 20 and of two random seeds are pinned from `tests/spec_port.py`. A random Labyrinth keeps its layout for its saved seed: the wall data of one random seed is pinned.
 4. **Move rule:** on fixed small Labyrinths, the boat stops at:
    - a junction,
    - a bend,
@@ -888,7 +891,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 No source decides these facts. The build uses the stated value. The Parent can change each value later.
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
 2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
-3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (60 px × `s`, the Item size) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square.
+3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (100 px × `s`, [play-improvements spec](../play-improvements/spec.md) part 2) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square.
 4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. A random seed moves to seed + 1. A test checks that seeds 1 to 20 are valid. If one of them is not valid, the build uses the next free number above 20 for that Labyrinth and pins it in the test.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
 6. **Decoration and light-pattern values.** Ticket 19 Q3 names the decorations, but no source gives their counts, sizes, or speeds, and no source gives values for the light patterns on the water. The spec values, in prototype px (multiply by `s`):

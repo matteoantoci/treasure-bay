@@ -57,9 +57,86 @@ func test_the_goal_island_has_the_palm_and_the_closed_chest(t) -> bool:
 		t.assert_true(view.palm.visible and view.chest.visible, label + "palm and chest show")
 		t.assert_true(island.has_point(view.palm.position) and view.palm.position.x > island.get_center().x, label + "palm at the far side of the Goal island")
 		t.assert_true(island.has_point(view.chest.position) and view.chest.position.x < island.get_center().x, label + "chest at the side next to the Goal square")
-		var chest_px: float = (view.chest.texture.get_size() * view.chest.scale).x
-		t.assert_true(absf(chest_px - 60.0 * tile_px / 130.0) < 0.01, label + "chest is 60 px of the 130 px tile")
+		t.assert_eq(view.palm.modulate, Color(0.7, 0.85, 0.7), label + "the palm is darker than the grass")
 		t.assert_true(not view.decorations().values().has(IslandLook.PALM), label + "no palm on a wall island")
+	await Scene.remove(t, main)
+	return true
+
+
+## The closed chest shows the Item sparkle of spec 8.2 with i = the Item count: white, radius 7 px
+## at (+18, -18) px from the chest centre, while fract(0.7 t + 0.33 i) < 0.15, with alpha
+## 1 - fract / 0.15. The open chest does not sparkle. Labyrinth 1 opens its chest, so Labyrinth 20
+## also checks that the chest of a new Labyrinth sparkles again.
+func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
+	var main := await Scene.add_main(t)
+	var view: LabyrinthView = main.get_node("LabyrinthView")
+	var sparkle: Polygon2D = view.get_node("ChestSparkle")
+	# Labyrinth -> [Item count, the first time of full alpha]: fract(0.66) = 0.66, so 0.34 / 0.7 s;
+	# fract(2.64) = 0.64, so 0.36 / 0.7 s.
+	var cases := {1: [2, 0.485714], 20: [8, 0.514286]}
+	for number: int in cases:
+		_show(main, number)
+		var label := "Labyrinth %d: " % number
+		t.assert_eq(main.labyrinth.items.size(), cases[number][0], label + "Item count")
+		# 0.1 ms after the cycle time, so the float rounding of the time does not hide the sparkle.
+		var start: float = cases[number][1] + 0.0001
+		var s := view.tile_px / 130.0
+		view.time = start - 0.01
+		t.assert_true(not sparkle.visible, label + "no sparkle just before its cycle time")
+		view.time = start
+		t.assert_true(sparkle.visible, label + "the sparkle shows")
+		t.assert_true(absf(sparkle.color.a - 1.0) < 0.002, label + "at full alpha")
+		t.assert_true(sparkle.color.is_equal_approx(Color(1, 1, 1, sparkle.color.a)), label + "white")
+		t.assert_true(sparkle.position.is_equal_approx(view.chest.position + Vector2(18, -18) * s), label + "at (+18, -18) px from the chest centre")
+		var radius := 0.0
+		for point in sparkle.polygon:
+			radius = maxf(radius, point.length())
+		t.assert_true(absf(radius - 7.0 * s) < 0.001, label + "radius 7 px")
+		view.time = start + 0.075 / 0.7
+		t.assert_true(absf(sparkle.color.a - 0.5) < 0.002, label + "half way through the sparkle")
+		view.time = start + 0.15 / 0.7 + 0.01
+		t.assert_true(not sparkle.visible, label + "no sparkle after 15 % of the cycle")
+		view.time = start + 1.0 / 0.7
+		t.assert_true(sparkle.visible and absf(sparkle.color.a - 1.0) < 0.002, label + "the next sparkle after 1 / 0.7 s")
+		view.open_chest()
+		view.time = start
+		t.assert_true(not sparkle.visible, label + "the open chest does not sparkle")
+	await Scene.remove(t, main)
+	return true
+
+
+## At 1920 x 1200, in the small Labyrinth 1 and the large Labyrinth 20, the Item is 90 px, the
+## boat 69 x 110 px, and the chest 100 px of the 130 px tile (play-improvements spec, part 2).
+func test_items_boat_and_chest_have_their_sizes_in_labyrinths_1_and_20(t) -> bool:
+	var main := await Scene.add_main(t)
+	# The headless window is square. The window size of a 16:10 screen gives the visible rect of
+	# the Child's screen.
+	var window_size: Vector2i = t.root.size
+	t.root.size = Vector2i(1920, 1200)
+	await t.process_frame
+	t.assert_eq(main.get_viewport().get_visible_rect().size, Vector2(1920, 1200), "the screen is 1920 x 1200")
+	var tile_px := {1: 121.0, 20: 56.0}
+	for number: int in tile_px:
+		_show(main, number)
+		var view: LabyrinthView = main.get_node("LabyrinthView")
+		var items: ItemsView = main.get_node("Items")
+		var boat: BoatView = main.get_node("Boat")
+		var s: float = view.tile_px / 130.0
+		var label := "Labyrinth %d: " % number
+		t.assert_eq(view.tile_px, tile_px[number], label + "tile px at 1920 x 1200")
+		t.assert_true(items.shown_ids().size() >= 2, label + "Items show")
+		for item_id in items.shown_ids():
+			var sprite := items.sprite_of(item_id)
+			var item_size := sprite.texture.get_size() * sprite.global_scale
+			t.assert_true(absf(maxf(item_size.x, item_size.y) - 90.0 * s) < 0.01, label + "Item %s is 90 px" % item_id)
+		var hull: Vector2 = boat.hull_rect().size * boat.global_scale
+		t.assert_true(absf(hull.y - 110.0 * s) < 0.01, label + "the boat is 110 px long")
+		t.assert_true(hull.x >= 69.0 * s and hull.x < 70.0 * s, label + "the boat is 69 px wide (%.2f)" % (hull.x / s))
+		var picture := BoatView.TEXTURE.get_size()
+		t.assert_true(absf(hull.x / hull.y - picture.x / picture.y) < 0.001, label + "the boat keeps the aspect of its picture")
+		var chest: Vector2 = view.chest.texture.get_size() * view.chest.global_scale
+		t.assert_true(absf(maxf(chest.x, chest.y) - 100.0 * s) < 0.01, label + "the chest is 100 px")
+	t.root.size = window_size
 	await Scene.remove(t, main)
 	return true
 

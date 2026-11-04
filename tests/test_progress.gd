@@ -40,9 +40,9 @@ func test_each_item_counts_only_one_time(t) -> bool:
 func test_item_states_map_each_item_square_to_collected(t) -> bool:
 	var progress := Progress.new()
 	var labyrinth := progress.build_labyrinth()
-	# Labyrinth 1 has its Items on 1,1 and 1,2 (tests/test_items.gd).
-	progress.collect_item("1,2")
-	t.assert_eq(progress.item_states(labyrinth), {Vector2i(1, 1): false, Vector2i(1, 2): true}, "Item states of Labyrinth 1")
+	# Labyrinth 1 has its Items on 1,1 and 0,2 (tests/test_items.gd).
+	progress.collect_item("0,2")
+	t.assert_eq(progress.item_states(labyrinth), {Vector2i(1, 1): false, Vector2i(0, 2): true}, "Item states of Labyrinth 1")
 	return true
 
 

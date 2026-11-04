@@ -1,4 +1,5 @@
-## Item placement of spec 4.6: the squares and kinds of the Items of one Labyrinth.
+## Item placement of spec 4.6 with the main-path Items of play-improvements Part 1: the squares and
+## kinds of the Items of one Labyrinth.
 class_name ItemPlacement
 extends RefCounted
 
@@ -19,24 +20,40 @@ static func has_free_dead_end(labyrinth: Labyrinth) -> bool:
 
 
 ## Places `count` Items. `prng` continues after the generator. Item i gets the kind
-## `kinds[i % kinds.size()]`. The Labyrinth must have a free dead end.
+## `kinds[i % kinds.size()]`. The Labyrinth must have a free dead end. The placement order is: Item 1
+## on the farthest free dead end, then the on-path squares from the start to the Goal, then the
+## shuffled other dead ends, then the shuffled other squares.
 static func place(labyrinth: Labyrinth, prng: Prng, count: int, kinds: PackedStringArray) -> Array[Item]:
 	var dead_ends := free_dead_ends(labyrinth)
 	var first := _farthest(labyrinth, dead_ends)
 	dead_ends.erase(first)
+	var path_squares := _on_path_squares(LabyrinthMeasure.main_path(labyrinth), count)
 	var others: Array[Vector2i] = []
 	for square in _free_squares(labyrinth):
-		if labyrinth.open_side_count(square) != 1:
+		if labyrinth.open_side_count(square) != 1 and not path_squares.has(square):
 			others.append(square)
 	_shuffle(dead_ends, prng)
 	_shuffle(others, prng)
 	var squares: Array[Vector2i] = [first]
+	squares.append_array(path_squares)
 	squares.append_array(dead_ends)
 	squares.append_array(others)
 	var items: Array[Item] = []
 	for i in mini(count, squares.size()):
 		items.append(Item.new(squares[i], kinds[i % kinds.size()]))
 	return items
+
+
+## The k on-path squares P[j * L div (k + 1)] for j = 1 to k, from the start to the Goal, with
+## k = min(max(1, count div 3), L - 1). L is the main path length in moves. A square is never the
+## start or the Goal, and no square repeats.
+static func _on_path_squares(path: Array[Vector2i], count: int) -> Array[Vector2i]:
+	var length := path.size() - 1
+	var k := mini(maxi(1, count / 3), length - 1)
+	var squares: Array[Vector2i] = []
+	for j in range(1, k + 1):
+		squares.append(path[j * length / (k + 1)])
+	return squares
 
 
 ## All squares except the start and the Goal, in row order.

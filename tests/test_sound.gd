@@ -79,8 +79,12 @@ func test_a_move_plays_the_swish_with_a_varied_pitch(t) -> bool:
 	var main: Node = added[0]
 	var calls: Array = added[1]
 	var sound: Sound = main.get_node("Sound")
+	# Labyrinth 1: down slides to the Item on the bend (0, 2). Right from there slides 2 squares with
+	# no Item.
+	await Scene.press(t, main, KEY_DOWN)
 	calls.clear()
-	t.assert_true(await Scene.press(t, main, KEY_DOWN), "move down is over")
+	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
+	t.assert_eq(main.boat_square, Vector2i(2, 2), "the boat slides 2 squares to the junction")
 	t.assert_eq(calls, [[EFFECTS + "move.wav", &"Effects"]], "one swish for one move of several squares")
 	var player := sound.move_player
 	t.assert_true(player.stream is AudioStreamRandomizer, "the swish is in a randomizer")
@@ -112,10 +116,9 @@ func test_an_item_plays_the_pop(t) -> bool:
 	var added := await _add_main(t, 1)
 	var main: Node = added[0]
 	var calls: Array = added[1]
-	await Scene.press(t, main, KEY_DOWN)
 	calls.clear()
-	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
-	t.assert_eq(main.boat_square, Vector2i(1, 2), "the boat stops on the Item")
+	t.assert_true(await Scene.press(t, main, KEY_DOWN), "move down is over")
+	t.assert_eq(main.boat_square, Vector2i(0, 2), "the boat stops on the Item")
 	t.assert_eq(calls, [[EFFECTS + "move.wav", &"Effects"], [EFFECTS + "item.wav", &"Effects"]], "swish, then pop")
 	var player: AudioStreamPlayer = main.get_node("Sound").item_player
 	_assert_db(t, player.volume_db, SoundLevels.volume_db(EFFECTS + "item.wav"), "pop level")

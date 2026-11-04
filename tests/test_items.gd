@@ -1,5 +1,5 @@
-## Spec 14.1 test 3: Item placement of spec 4.6, with the Item counts of spec 4.3 and the Item
-## kinds of spec 7.2.
+## Spec 14.1 test 3: Item placement of spec 4.6 with the main-path Items of play-improvements
+## Part 1, the Item counts of spec 4.3, and the Item kinds of spec 7.2.
 extends RefCounted
 
 const RANDOM_SEED_COUNT := 200
@@ -20,32 +20,43 @@ const AREA_KINDS := [
 # port of spec 4.1, 4.2, and 4.6. The candidate squares of each list are in row order (lowest y,
 # then lowest x) before the shuffle.
 const PINNED_IDS := {
-	1: ["1,1", "1,2"],
-	2: ["0,1", "2,2"],
-	3: ["2,1", "4,1"],
-	4: ["0,1", "4,1"],
-	5: ["4,0", "2,0", "3,2"],
-	6: ["3,3", "1,1", "1,2"],
-	7: ["2,0", "5,2", "1,2", "3,3"],
-	8: ["0,1", "4,1", "2,3", "1,1"],
-	9: ["0,3", "1,1", "5,3", "3,2"],
-	10: ["5,1", "0,3", "4,2", "3,2"],
-	11: ["0,4", "2,1", "4,2", "6,2", "3,4"],
-	12: ["5,1", "1,1", "5,4", "3,1", "4,2"],
-	13: ["2,4", "6,1", "1,1", "5,2", "7,3", "2,0"],
-	14: ["4,3", "6,1", "0,4", "6,4", "1,1", "0,2"],
-	15: ["7,1", "5,4", "1,4", "4,1", "2,1", "0,5", "7,0", "1,0"],
-	16: ["7,2", "0,3", "4,0", "5,2", "4,5", "2,5", "4,3", "2,0"],
-	17: ["7,3", "0,5", "2,2", "5,5", "5,2", "0,1", "6,0", "6,4"],
-	18: ["6,3", "4,5", "8,4", "3,1", "5,1", "3,5", "0,4", "4,3"],
-	19: ["4,6", "5,1", "3,3", "8,3", "2,5", "1,2", "0,6", "0,1"],
-	20: ["4,2", "1,4", "3,3", "8,1", "0,6", "2,5", "6,3", "3,1"],
+	1: ["1,1", "0,2"],
+	2: ["0,1", "2,0"],
+	3: ["2,1", "1,2"],
+	4: ["0,1", "3,1"],
+	5: ["4,0", "0,3", "3,2"],
+	6: ["3,3", "3,0", "1,1"],
+	7: ["2,0", "2,3", "5,2", "1,2"],
+	8: ["0,1", "3,0", "4,1", "4,0"],
+	9: ["0,3", "3,1", "1,1", "5,3"],
+	10: ["5,1", "2,2", "0,3", "4,2"],
+	11: ["0,4", "4,0", "2,1", "4,2", "6,2"],
+	12: ["5,1", "4,3", "1,1", "5,4", "3,1"],
+	13: ["2,4", "4,1", "5,2", "6,1", "1,1", "0,1"],
+	14: ["4,3", "3,1", "6,0", "6,1", "0,4", "6,4"],
+	15: ["7,1", "2,2", "3,5", "5,4", "1,4", "4,1", "2,1", "7,4"],
+	16: ["7,2", "3,2", "5,3", "0,3", "4,0", "5,2", "0,4", "2,4"],
+	17: ["7,3", "2,3", "3,0", "0,5", "2,2", "5,5", "5,2", "0,1"],
+	18: ["6,3", "2,5", "3,0", "4,5", "8,4", "3,1", "5,1", "4,1"],
+	19: ["4,6", "1,3", "6,2", "5,1", "3,3", "8,3", "2,5", "1,2"],
+	20: ["4,2", "3,5", "5,0", "1,4", "3,3", "8,1", "0,6", "2,5"],
 }
 # The same Python port, for random Labyrinths (10 x 7) with these seeds.
 const PINNED_RANDOM_IDS := {
-	4242: ["0,4", "0,6", "5,5", "9,0", "2,3", "7,3", "5,0", "3,4"],
-	123456789: ["6,4", "3,6", "2,3", "1,0", "4,2", "9,5", "6,1", "0,2"],
+	4242: ["0,4", "1,3", "6,0", "0,6", "5,5", "9,0", "2,3", "7,3"],
+	123456789: ["6,4", "0,4", "3,5", "3,6", "2,3", "1,0", "4,2", "9,5"],
 }
+# Random seed 4242 (10 x 7), wall bits of each square row by row (north 1, east 2, south 4, west 8),
+# from the same Python port. The layout of a saved seed is the same as before the main-path Items.
+const RANDOM_4242_WALLS := [
+	11, 13, 1, 5, 3, 13, 1, 3, 9, 7,
+	12, 5, 6, 9, 6, 9, 6, 10, 12, 3,
+	9, 5, 5, 6, 9, 4, 3, 12, 3, 10,
+	12, 3, 13, 1, 6, 9, 6, 11, 10, 10,
+	11, 12, 3, 14, 9, 6, 9, 2, 10, 10,
+	8, 3, 12, 5, 6, 11, 10, 12, 4, 6,
+	14, 12, 5, 5, 5, 4, 4, 5, 5, 7,
+]
 
 
 func test_item_count_matches_the_table(t) -> bool:
@@ -67,6 +78,16 @@ func test_item_squares_of_labyrinths_1_to_20_are_pinned(t) -> bool:
 func test_item_squares_of_random_labyrinths_are_pinned(t) -> bool:
 	for seed_value in PINNED_RANDOM_IDS:
 		t.assert_eq(_ids(LabyrinthPlan.build(21, seed_value)), PINNED_RANDOM_IDS[seed_value], "Item IDs of random seed %d" % seed_value)
+	return true
+
+
+func test_random_labyrinth_keeps_its_layout_for_its_seed(t) -> bool:
+	var labyrinth := LabyrinthPlan.build(21, 4242)
+	var bits := []
+	for y in labyrinth.height:
+		for x in labyrinth.width:
+			bits.append(labyrinth.wall_bits(Vector2i(x, y)))
+	t.assert_eq(bits, RANDOM_4242_WALLS, "wall bits of random seed 4242")
 	return true
 
 
@@ -125,7 +146,7 @@ func test_first_item_is_in_the_farthest_dead_end(t) -> bool:
 	return true
 
 
-## The rules of spec 4.6 and 14.1 test 3 for one Labyrinth.
+## The rules of spec 4.6, play-improvements Part 1, and spec 14.1 test 3 for one Labyrinth.
 func _check_items(t, labyrinth: Labyrinth, number: int, label: String) -> void:
 	var items: Array = labyrinth.items
 	t.assert_eq(items.size(), COUNTS.get(number, RANDOM_COUNT), label + ": Item count")
@@ -148,6 +169,14 @@ func _check_items(t, labyrinth: Labyrinth, number: int, label: String) -> void:
 	var first: Vector2i = items[0].square
 	for dead_end in ItemPlacement.free_dead_ends(labyrinth):
 		t.assert_true(distances[dead_end.y * labyrinth.width + dead_end.x] <= distances[first.y * labyrinth.width + first.x], label + ": Item 1 is in the farthest dead end")
+	var path := LabyrinthMeasure.main_path(labyrinth)
+	var length := path.size() - 1
+	var on_path_count := mini(maxi(1, items.size() / 3), length - 1)
+	var on_path := 0
+	for square in squares:
+		if path.has(square):
+			on_path += 1
+	t.assert_true(on_path >= on_path_count, label + ": at least %d Items on the main path (%d)" % [on_path_count, on_path])
 
 
 func _ids(labyrinth: Labyrinth) -> Array:

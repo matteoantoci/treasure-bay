@@ -34,13 +34,11 @@ func test_each_top_level_canvas_item_has_the_texture_filter(t) -> bool:
 func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	var main := await Scene.add_main(t)
 	# Labyrinth 1 (see test_generator.gd): the start has only its south side open. Its Items are on
-	# (1, 1) and (1, 2) (see test_items.gd).
+	# (1, 1) and (0, 2) (see test_items.gd).
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "bump is over")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "a bump keeps the boat on its square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "move down is over")
-	t.assert_eq(main.boat_square, Vector2i(0, 2), "one press slides down to the bend")
-	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
-	t.assert_eq(main.boat_square, Vector2i(1, 2), "the boat stops on the Item")
+	t.assert_eq(main.boat_square, Vector2i(0, 2), "one press slides down to the Item on the bend")
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
 	t.assert_eq(main.boat_square, Vector2i(2, 2), "the next press stops at the junction")
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
