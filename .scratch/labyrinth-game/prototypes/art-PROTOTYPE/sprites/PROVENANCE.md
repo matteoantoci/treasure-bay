@@ -8,11 +8,13 @@
   `omp -p --model xai-oauth/grok-4.7 --thinking high --config omp-imagegen.yml --no-session --auto-approve --no-title --max-time 10m --max-cost 3 @gen/<batch>.md "Follow the instructions in the attached file."`
 - Prompt files: `gen/batch01-crab.md` was written by hand; the others come from `tools/make_batch.py` (one style
   block, one subject per asset). Raw images: `gen/raw/<name>.jpg`. Logs and run times: `gen/logs/`.
-- Cleanup: `tools/cutout.py gen/raw/<name>.jpg sprites/<friends|items>/<name>.png` with the defaults (tolerance 48,
+- Cleanup: `tools/cutout.py gen/raw/<name>.jpg sprites/<friends|items|goal>/<name>.png` with the defaults (tolerance 48,
   erode 1 px, pad 4 %, longest side 512). Only background connected to the image border is removed (flood fill), so
-  white and pink parts inside the dark outline stay. No manual seeds were needed. All 23 files pass
+  white and pink parts inside the dark outline stay. No manual seeds were needed. All 30 files pass
   `asset_report.py --require-alpha`.
 - Contact sheets: `tools/contact_sheets.py` (wraps the skill's `build_preview_sheet.py`) → `contact-light.png`, `contact-dark.png`.
+  They show friends, then items, then the goal chests.
+- Batches 09 to 11 (5 new Items and the 2 chests, spec §13.2) were generated on 2026-11-04 with the same method, models and references.
 
 | Asset | Kind | Prompt file | References | Attempts | Notes |
 |---|---|---|---|---|---|
@@ -39,6 +41,13 @@
 | spiral_shell | item | gen/batch07.md | Kenney + dolphin | 1 | No face (Items are objects, not characters). |
 | starfish | item | gen/batch07.md | Kenney + dolphin | 1 | No face. |
 | pearl | item | gen/batch07.md | Kenney + dolphin | 1 | |
+| coral | item | gen/batch09-items.md | Kenney + dolphin | 1 | Pink, rounded tips. |
+| sand_dollar | item | gen/batch09-items.md | Kenney + dolphin | 1 | Near-white; the dark outline keeps it visible on light water. |
+| gem_stone | item | gen/batch09-items.md | Kenney + dolphin | 1 | Blue, flat facets. |
+| glowing_star | item | gen/batch11-glowing-star.md | Kenney + dolphin | 2 | Attempt 1 (gen/batch09-items.md, raw kept as `gen/raw/glowing_star-attempt1.jpg`) drew thin pale rays with no outline; the cutout dropped them as specks, so it looked like the plain star. Attempt 2 asks for outlined chunky rays (7 rays kept). |
+| star | item | gen/batch09-items.md | Kenney + dolphin | 1 | No rays. |
+| chest_closed | goal | gen/batch10-chest.md | Kenney + dolphin | 1 | Kind "item" in make_batch.py (no face). |
+| chest_open | goal | gen/batch10-chest.md | Kenney + dolphin | 1 | Same chest as chest_closed (planks, gold bands, lock), gold coins inside. |
 
 No asset failed. Rights: the Kenney reference is CC0; the generated images follow the xAI terms of the Parent's subscription.
 - Cost: the full batch of 23 sprites used about 2% of the weekly xAI subscription quota (Parent report, 2026-11-03).
