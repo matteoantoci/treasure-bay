@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
@@ -15,6 +15,8 @@
 [ext_resource type="Script" path="res://src/effects_view.gd" id="13_effects_view"]
 [ext_resource type="Script" path="res://src/fade_view.gd" id="14_fade_view"]
 [ext_resource type="Script" path="res://src/sound.gd" id="10_sound"]
+[ext_resource type="Script" path="res://src/settings_panel.gd" id="15_settings_panel"]
+[ext_resource type="Script" path="res://src/fullscreen_guard.gd" id="16_fullscreen_guard"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -65,3 +67,9 @@ script = ExtResource("14_fade_view")
 
 [node name="Sound" type="Node" parent="."]
 script = ExtResource("10_sound")
+
+[node name="Settings" type="CanvasLayer" parent="."]
+script = ExtResource("15_settings_panel")
+
+[node name="FullscreenGuard" type="Node" parent="."]
+script = ExtResource("16_fullscreen_guard")

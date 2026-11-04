@@ -25,10 +25,11 @@ static func add_main(t, save_dir: String = "") -> Node:
 	return main
 
 
-## Removes the main scene and its save folder. Then it waits a short real time, so the audio server
-## frees the stopped music playbacks before the runner exits.
+## Removes the main scene and its save folder, and ends a pause of the settings. Then it waits a
+## short real time, so the audio server frees the stopped music playbacks before the runner exits.
 static func remove(t, main: Node) -> void:
 	Engine.time_scale = 1.0
+	t.paused = false
 	var save_dir: String = main.save_store.dir
 	main.queue_free()
 	await t.process_frame
