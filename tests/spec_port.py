@@ -98,18 +98,32 @@ def dead_ends(walls, w, h):
             if (x, y) not in ((0, 0), goal) and open_sides(walls, x, y) == 1]
 
 
-def place(walls, w, h, prng, count):
-    """Item squares of spec 4.6 in placement order. Candidates are in row order before a shuffle."""
+def on_path_count(count, length):
+    """Play-improvements Part 1: k = min(max(1, count div 3), L - 1)."""
+    return min(max(1, count // 3), length - 1)
+
+
+def place(walls, w, h, prng, count, k=None):
+    """Item squares of spec 4.6 with play-improvements Part 1, in placement order: Item 1 on the
+    farthest free dead end, then the k on-path squares P[j * L div (k + 1)] (j = 1 to k) from the
+    start to the Goal, then the shuffled other dead ends, then the shuffled other squares without
+    the k path squares. Candidates are in row order before a shuffle. k=None uses the rule for k;
+    k=0 gives the placement before Part 1."""
     goal = (w - 1, h - 1)
     de = dead_ends(walls, w, h)
     dist = bfs(walls, w, h)
     first = min(de, key=lambda s: (-dist[s], s[1], s[0]))
     rest = [s for s in de if s != first]
+    path = main_path(walls, w, h)
+    length = len(path) - 1
+    if k is None:
+        k = on_path_count(count, length)
+    on_path = [path[j * length // (k + 1)] for j in range(1, k + 1)]
     others = [(x, y) for y in range(h) for x in range(w)
-              if (x, y) not in ((0, 0), goal) and (x, y) not in de]
+              if (x, y) not in ((0, 0), goal) and (x, y) not in de and (x, y) not in on_path]
     shuffle(rest, prng)
     shuffle(others, prng)
-    order = [first] + rest + others
+    order = [first] + on_path + rest + others
     return order[:count]
 
 
@@ -132,13 +146,13 @@ def valid_seed(w, h, seed):
     return seed
 
 
-def build(n, random_seed=0):
-    """Labyrinth n: (w, h, walls, Item squares)."""
+def build(n, random_seed=0, k=None):
+    """Labyrinth n: (w, h, walls, Item squares). k as in place()."""
     w, h = size(n)
     seed = n if n <= 20 else valid_seed(w, h, random_seed)
     prng = Prng(seed)
     walls = generate(w, h, prng)
-    return w, h, walls, place(walls, w, h, prng, count(w, h))
+    return w, h, walls, place(walls, w, h, prng, count(w, h), k)
 
 
 def tiles(walls, w, h):
@@ -259,7 +273,51 @@ def measure(walls, w, h, items):
     }
 
 
+# Item IDs of Labyrinths 1 to 20 and of the random seeds 4242 and 123456789 before
+# play-improvements Part 1. The rule with k = 0 must give them (Part 1: "this rule with k = 0
+# gives the placement of today").
+PLACEMENT_BEFORE_PART_1 = {
+    1: ["1,1", "1,2"], 2: ["0,1", "2,2"], 3: ["2,1", "4,1"], 4: ["0,1", "4,1"],
+    5: ["4,0", "2,0", "3,2"], 6: ["3,3", "1,1", "1,2"], 7: ["2,0", "5,2", "1,2", "3,3"],
+    8: ["0,1", "4,1", "2,3", "1,1"], 9: ["0,3", "1,1", "5,3", "3,2"], 10: ["5,1", "0,3", "4,2", "3,2"],
+    11: ["0,4", "2,1", "4,2", "6,2", "3,4"], 12: ["5,1", "1,1", "5,4", "3,1", "4,2"],
+    13: ["2,4", "6,1", "1,1", "5,2", "7,3", "2,0"], 14: ["4,3", "6,1", "0,4", "6,4", "1,1", "0,2"],
+    15: ["7,1", "5,4", "1,4", "4,1", "2,1", "0,5", "7,0", "1,0"],
+    16: ["7,2", "0,3", "4,0", "5,2", "4,5", "2,5", "4,3", "2,0"],
+    17: ["7,3", "0,5", "2,2", "5,5", "5,2", "0,1", "6,0", "6,4"],
+    18: ["6,3", "4,5", "8,4", "3,1", "5,1", "3,5", "0,4", "4,3"],
+    19: ["4,6", "5,1", "3,3", "8,3", "2,5", "1,2", "0,6", "0,1"],
+    20: ["4,2", "1,4", "3,3", "8,1", "0,6", "2,5", "6,3", "3,1"],
+    4242: ["0,4", "0,6", "5,5", "9,0", "2,3", "7,3", "5,0", "3,4"],
+    123456789: ["6,4", "3,6", "2,3", "1,0", "4,2", "9,5", "6,1", "0,2"],
+}
+
+
+def check_placement():
+    """Self-checks of play-improvements Part 1. Raises AssertionError on a failure."""
+    for key, expected in PLACEMENT_BEFORE_PART_1.items():
+        got = ids(build(key, k=0)[3]) if key <= 20 else ids(build(21, key, k=0)[3])
+        assert got == expected, ("k = 0 placement", key, got, expected)
+    seeds = list(range(1, 21)) + [(21, s) for s in range(1, 201)]
+    for key in seeds:
+        w, h, walls, items = build(key) if isinstance(key, int) else build(*key)
+        path = main_path(walls, w, h)
+        k = on_path_count(len(items), len(path) - 1)
+        dist = bfs(walls, w, h)
+        assert sum(1 for s in items if s in path) >= k, ("on-path Items", key)
+        assert (0, 0) not in items and (w - 1, h - 1) not in items, ("start or Goal", key)
+        assert len(set(items)) == len(items), ("Item squares differ", key)
+        assert dist[items[0]] == max(dist[s] for s in dead_ends(walls, w, h)), ("farthest dead end", key)
+
+
 if __name__ == "__main__":
+    check_placement()
+    print("placement self-checks pass")
+    for n in range(1, 21):
+        w, h, walls, items = build(n)
+        path = main_path(walls, w, h)
+        print("placement", n, "L", len(path) - 1, "k", on_path_count(len(items), len(path) - 1),
+              "on path", [i for i, s in enumerate(path) if s in items])
     w, h, walls, items = build(1)
     print("Labyrinth 1 walls", [b for row in walls for b in row])
     grid = tiles(walls, w, h)

@@ -34,8 +34,8 @@ func test_while_the_boat_is_busy_only_the_last_press_is_kept(t) -> bool:
 	var main := await Scene.add_main(t)
 	var squares := _record_stops(main)
 	var moves := Scene.record_moves(main)
-	# Labyrinth 1: down slides from (0, 0) to the bend (0, 2). From there, left is a bump and right
-	# stops on the Item (1, 2).
+	# Labyrinth 1: down slides from (0, 0) to the bend (0, 2), where the boat collects an Item. From
+	# there, left is a bump and right stops at the junction (2, 2).
 	Scene.send_key(KEY_DOWN)
 	Scene.send_key(KEY_LEFT)
 	Scene.send_key(KEY_RIGHT)
@@ -43,7 +43,7 @@ func test_while_the_boat_is_busy_only_the_last_press_is_kept(t) -> bool:
 	t.assert_true(await t.wait_for(main.move_finished, Scene.MOVE_TIMEOUT), "the kept press runs")
 	await t.create_timer(Scene.NO_MOVE_SECONDS).timeout
 	t.assert_eq(moves, ["move_started", "move_started"], "two slides: no bump for the replaced press, and no third move")
-	t.assert_eq(squares, [Vector2i(0, 2), Vector2i(1, 2)], "the slide down, then only the last press (right)")
+	t.assert_eq(squares, [Vector2i(0, 2), Vector2i(2, 2)], "the slide down, then only the last press (right)")
 	await Scene.remove(t, main)
 	return true
 

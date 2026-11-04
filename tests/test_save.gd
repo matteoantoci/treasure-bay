@@ -105,13 +105,13 @@ func test_the_write_goes_to_the_tmp_file_first(t) -> bool:
 func test_after_a_reload_a_collected_item_does_not_count_again(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var progress := Progress.new()
-	# Labyrinth 1 has its Items on 1,1 and 1,2 (tests/test_items.gd).
-	progress.collect_item("1,2")
+	# Labyrinth 1 has its Items on 1,1 and 0,2 (tests/test_items.gd).
+	progress.collect_item("0,2")
 	SaveStore.new(dir).save(progress)
 	var loaded := SaveStore.new(dir).load_progress()
-	t.assert_true(not loaded.collect_item("1,2"), "the saved Item does not count again")
+	t.assert_true(not loaded.collect_item("0,2"), "the saved Item does not count again")
 	t.assert_eq(loaded.total_items, 1, "total Items")
-	t.assert_eq(loaded.item_states(loaded.build_labyrinth()), {Vector2i(1, 1): false, Vector2i(1, 2): true}, "Item 1,2 stays collected")
+	t.assert_eq(loaded.item_states(loaded.build_labyrinth()), {Vector2i(1, 1): false, Vector2i(0, 2): true}, "Item 0,2 stays collected")
 	t.assert_true(loaded.collect_item("1,1"), "the other Item counts")
 	t.assert_eq(loaded.total_items, 2, "total Items after the other Item")
 	Fixtures.remove_save_dir(dir)
@@ -123,8 +123,8 @@ func test_after_a_reload_a_collected_item_does_not_count_again(t) -> bool:
 func test_an_old_item_id_with_no_item_now_is_dropped(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	# Before the Goal rule, Labyrinth 1 had its Items on 2,1 and 1,2, and Labyrinth 14 on 3,3, 4,1,
-	# 1,1, 0,2, 2,2, and 4,3. Now 1,2 and 1,1 are still Items, and 2,1, 3,3, and 4,1 are not.
-	for old in [[1, ["2,1", "1,2"], ["1,2"]], [14, ["3,3", "4,1", "1,1"], ["1,1"]]]:
+	# 1,1, 0,2, 2,2, and 4,3. Now 4,3 is still an Item, and 2,1, 1,2, 3,3, and 4,1 are not.
+	for old in [[1, ["2,1", "1,2"], []], [14, ["3,3", "4,1", "4,3"], ["4,3"]]]:
 		var data := _good_data()
 		data.merge({"labyrinth": old[0], "collected_items": old[1]}, true)
 		_write(dir.path_join("save.json"), JSON.stringify(data))

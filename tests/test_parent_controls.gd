@@ -188,7 +188,7 @@ func test_window_close_does_nothing_and_a_quit_hold_saves_and_quits(t) -> bool:
 	t.assert_true(text.contains("RUNNING AFTER SHORT HOLD"), "a quit hold of 2.75 s does not quit")
 	t.assert_true(not text.contains("DID NOT QUIT"), "a quit hold of 3 s quits")
 	var saved := SaveStore.new(dir).load_progress()
-	t.assert_eq(saved.collected_items, PackedStringArray(["1,2"]), "the quit writes the save first")
+	t.assert_eq(saved.collected_items, PackedStringArray(["0,2"]), "the quit writes the save first")
 	t.assert_eq(saved.total_items, 1, "the saved total")
 	Fixtures.remove_save_dir(dir)
 	return true
