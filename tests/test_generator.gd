@@ -18,15 +18,16 @@ const RANDOM_SIZE := Vector2i(10, 7)
 const RANDOM_SEED_COUNT := 200
 
 # Labyrinth 1 (seed 1, 4 x 3), wall bits of each square row by row: north 1, east 2, south 4,
-# west 8. From an independent Python run of spec 4.1 and 4.2. As tiles (spec 4.5):
+# west 8. From tests/spec_port.py, an independent Python port of spec 4.1 and 4.2. As tiles
+# (spec 4.5):
 #   #########
 #   #.#.....#
 #   #.#.###.#
-#   #.#...#.#
-#   #.#####.#
+#   #.#.#...#
+#   #.###.###
 #   #.......#
 #   #########
-const LABYRINTH_1_WALLS := [11, 9, 5, 3, 10, 12, 7, 10, 12, 5, 5, 6]
+const LABYRINTH_1_WALLS := [11, 9, 5, 3, 10, 14, 9, 6, 12, 5, 4, 7]
 
 
 func test_sizes_match_the_table(t) -> bool:

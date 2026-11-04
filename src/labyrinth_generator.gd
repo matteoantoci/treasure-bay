@@ -1,5 +1,7 @@
 ## Makes a perfect Labyrinth with the recursive backtracker (spec 4.2): an iterative depth-first
-## search with a stack. It removes no extra walls, so the Labyrinth has no loops.
+## search with a stack. It removes no extra walls, so the Labyrinth has no loops. The search never
+## goes on from the Goal square, so the Goal square is a dead end and no square is behind it: the
+## boat stops at the Goal (spec 5.2), so the Child could not reach an Item behind it.
 class_name LabyrinthGenerator
 extends RefCounted
 
@@ -10,6 +12,7 @@ static func generate(width: int, height: int, prng: Prng) -> Labyrinth:
 	var visited := PackedByteArray()
 	visited.resize(width * height)
 	var start := labyrinth.start_square()
+	var goal := labyrinth.goal_square()
 	visited[start.y * width + start.x] = 1
 	var stack: Array[Vector2i] = [start]
 	while not stack.is_empty():
@@ -26,7 +29,8 @@ static func generate(width: int, height: int, prng: Prng) -> Labyrinth:
 		var next := square + direction
 		labyrinth.open_wall(square, direction)
 		visited[next.y * width + next.x] = 1
-		stack.push_back(next)
+		if next != goal:
+			stack.push_back(next)
 	if not labyrinth.all_squares_reachable():
 		push_error("The generator left a square that the start cannot reach (%d x %d)." % [width, height])
 	return labyrinth
