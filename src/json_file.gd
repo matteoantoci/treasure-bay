@@ -7,11 +7,16 @@ extends RefCounted
 ## Writes `data` as JSON to `tmp_path`, closes it, then renames it to `path`. A crash leaves the old
 ## file or the new one, never half a file (spec 12.3). The folder of `path` is made first.
 static func write(data: Dictionary, path: String, tmp_path: String) -> Error:
+	return write_text(JSON.stringify(data, "  "), path, tmp_path)
+
+
+## Writes `text` to `tmp_path`, closes it, then renames it to `path`, with the rule of write().
+static func write_text(text: String, path: String, tmp_path: String) -> Error:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
-	var written := file.store_string(JSON.stringify(data, "  "))
+	var written := file.store_string(text)
 	file.close()
 	if not written:
 		return ERR_FILE_CANT_WRITE

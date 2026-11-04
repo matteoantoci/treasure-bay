@@ -200,16 +200,119 @@ func test_a_reset_keeps_settings_json(t) -> bool:
 	_write(dir.path_join("settings.json"), settings_text)
 	var main := await Scene.add_main(t, dir)
 	var panel: SettingsPanel = main.get_node("Settings")
-	panel.open()
-	panel.reset_button.button_down.emit()
-	panel.reset_button.advance(HoldButton.HOLD_SECONDS)
-	panel.reset_button.button_up.emit()
+	_reset(panel)
 	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(Progress.new()), "the save holds Labyrinth 1 after the reset")
 	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("settings.json")), settings_text, "settings.json is the same")
 	t.assert_eq([panel.settings.music_step, panel.settings.effects_step], [4, 0], "the volume steps stay")
 	t.assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index(Sound.EFFECTS_BUS)), "the effects stay muted")
 	await Scene.remove(t, main)
 	return true
+
+
+## Spec 11.2: before the reset writes the new save, the game keeps the old save file as
+## save.before-reset.json. The Parent can restore it by hand.
+func test_a_reset_keeps_a_copy_of_the_old_save(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	SaveStore.new(dir).save(_progress_7())
+	var old_text := FileAccess.get_file_as_string(dir.path_join("save.json"))
+	var main := await Scene.add_main(t, dir)
+	_reset(main.get_node("Settings"))
+	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.before-reset.json")), old_text, "the copy has the bytes of the old save")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json.tmp")), "the rename leaves no .tmp file")
+	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(Progress.new()), "save.json holds Labyrinth 1")
+	# The Parent restores the copy by hand: rename it to save.json.
+	DirAccess.rename_absolute(dir.path_join("save.before-reset.json"), dir.path_join("save.json"))
+	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), _good_data(), "the renamed copy loads as the old progress")
+	await Scene.remove(t, main)
+	return true
+
+
+## The copy goes to save.before-reset.json.tmp first, then a rename makes it
+## save.before-reset.json. A folder in place of the copy makes the rename fail, so the old progress
+## stays in the .tmp file.
+func test_the_copy_goes_to_the_tmp_file_first(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	SaveStore.new(dir).save(_progress_7())
+	var old_text := FileAccess.get_file_as_string(dir.path_join("save.json"))
+	DirAccess.make_dir_absolute(dir.path_join("save.before-reset.json"))
+	DirAccess.make_dir_absolute(dir.path_join("save.before-reset.json").path_join("keep"))
+	var main := await Scene.add_main(t, dir)
+	_reset(main.get_node("Settings"))
+	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.before-reset.json.tmp")), old_text, "the .tmp file holds the old save")
+	await Scene.remove(t, main)
+	return true
+
+
+## A reset of fresh progress (Labyrinth 1, an empty Collection, a total of 0) keeps the older copy.
+## So a second reset after a reset by mistake does not replace the real Collection.
+func test_two_resets_in_a_row_keep_the_first_copy(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	SaveStore.new(dir).save(_progress_7())
+	var old_text := FileAccess.get_file_as_string(dir.path_join("save.json"))
+	var main := await Scene.add_main(t, dir)
+	var panel: SettingsPanel = main.get_node("Settings")
+	_reset(panel)
+	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the first reset ends")
+	_reset(panel)
+	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.before-reset.json")), old_text, "the copy still holds the progress from before the first reset")
+	await Scene.remove(t, main)
+	return true
+
+
+## A reset after new play replaces the older copy: one collected Item is not fresh progress.
+func test_a_reset_after_new_play_replaces_the_copy(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	SaveStore.new(dir).save(_progress_7())
+	var main := await Scene.add_main(t, dir)
+	var panel: SettingsPanel = main.get_node("Settings")
+	_reset(panel)
+	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the first reset ends")
+	# Labyrinth 1: down, then right stops on the Item 1,2 (tests/test_main_rewards.gd).
+	await Scene.press(t, main, KEY_DOWN)
+	await Scene.press(t, main, KEY_RIGHT)
+	var new_text := FileAccess.get_file_as_string(dir.path_join("save.json"))
+	t.assert_eq(SaveStore.new(dir).load_progress().total_items, 1, "the save holds the new Item")
+	_reset(panel)
+	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.before-reset.json")), new_text, "the copy holds the new play")
+	await Scene.remove(t, main)
+	return true
+
+
+## With no save file, the reset makes no copy.
+func test_a_reset_with_no_save_file_makes_no_copy(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var main := await Scene.add_main(t, dir)
+	# Progress that is not fresh, with no save file yet.
+	main.progress.collect_item("1,2")
+	_reset(main.get_node("Settings"))
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json")), "no copy")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json.tmp")), "no .tmp copy")
+	t.assert_true(FileAccess.file_exists(dir.path_join("save.json")), "the reset writes the save")
+	await Scene.remove(t, main)
+	return true
+
+
+## A save of a newer build puts the save store in the no-write state (spec 12.3). Then the reset makes
+## no copy and writes no save: the newer save stays with the same bytes.
+func test_in_the_no_write_state_a_reset_makes_no_copy_and_writes_no_save(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var data := _good_data()
+	data["version"] = 2
+	var newer_text := JSON.stringify(data)
+	_write(dir.path_join("save.json"), newer_text)
+	var main := await Scene.add_main(t, dir)
+	# Labyrinth 1: down, then right stops on the Item 1,2, so the progress is not fresh.
+	await Scene.press(t, main, KEY_DOWN)
+	await Scene.press(t, main, KEY_RIGHT)
+	t.assert_eq(main.progress.total_items, 1, "the Child collects an Item")
+	_reset(main.get_node("Settings"))
+	t.assert_eq(main.progress.total_items, 0, "the reset goes on in memory")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json")), "no copy")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json.tmp")), "no .tmp copy")
+	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.json")), newer_text, "save.json has the same bytes")
+	await Scene.remove(t, main)
+	return true
+
 
 
 ## A later save schema adds its first migration to the chain (spec 12.3). A chain of one test
@@ -311,3 +414,11 @@ func _write(path: String, text: String) -> void:
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
+
+
+## Holds the reset button for its whole hold time, through the fake clock of HoldButton.
+func _reset(panel: SettingsPanel) -> void:
+	panel.open()
+	panel.reset_button.button_down.emit()
+	panel.reset_button.advance(panel.reset_button.hold_seconds)
+	panel.reset_button.button_up.emit()

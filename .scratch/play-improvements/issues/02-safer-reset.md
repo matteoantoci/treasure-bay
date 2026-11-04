@@ -18,3 +18,13 @@
 - [ ] In the no-write state of ticket 01, the reset makes no copy and writes no save.
 - [ ] The labyrinth-game build spec section 11.2 gives the 8 s hold, the ring colours, the copy, and the steps for the Parent to restore it: quit, then rename the copy to `save.json`.
 - [ ] The full test suite passes.
+
+## Comments
+
+Build note (pi/02-safer-reset):
+
+- `HoldButton.new(kind, hold_seconds, ring_full_colour)`: the hold time and the full ring colour are values of each button. `SettingsPanel` gives the reset 8 s and `#ff7a59`, and the quit 3 s and `#ffd447`. The constant `HoldButton.HOLD_SECONDS` is gone; tests and `tools/take_shots.gd` use `panel.reset_button.hold_seconds`, and `tests/quit_probe.gd` holds the quit for 3.0 s.
+- `SaveStore.copy_before_reset(progress)` copies the bytes of save.json to `save.before-reset.json` through `save.before-reset.json.tmp` and a rename (new `JsonFile.write_text`, which `JsonFile.write` now uses). It makes no copy for fresh progress (`Progress.is_fresh()`), with no save.json, or when `no_write` is true. `main.gd` `_reset_progress()` calls it before the new save.
+- Decision not in the spec: if the copy fails, the game logs one warning and the reset goes on (the Parent held the button for 8 s). Build spec 11.2 says this.
+- Tests: `tests/test_hold_button.gd` (own hold time and colour of each button), `tests/test_parent_controls.gd` (reset 7.9 s does nothing, 8 s resets; ring colours; quit probe 3 s), `tests/test_save.gd` (copy, restore by rename, .tmp first, two resets, reset after new play, no save file, no-write state).
+- A person must check: in the build spec, section 14.3 check 10 and section 15 criterion 17 still say "a hold of 3 s" for the reset. This ticket edits only section 11.2. No windowed run was done, so the orange ring on screen is not checked by eye.
