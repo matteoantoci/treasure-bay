@@ -1,5 +1,5 @@
-## The Sea friend table of spec 4.7, and the pick of the Sea friend that comes back after
-## Labyrinth 20 (spec 6.4).
+## The Sea friend table of spec 4.7, the Sea friends with an own sound (spec 9.4), and the pick of
+## the Sea friend that comes back after Labyrinth 20 (spec 6.4).
 class_name SeaFriends
 extends RefCounted
 
@@ -10,6 +10,11 @@ const IDS: PackedStringArray = [
 	"fish", "blowfish", "shark", "squid", "lobster",
 	"shrimp", "oyster", "seal", "turtle", "jellyfish",
 	"otter", "penguin", "duck", "swan", "flamingo",
+]
+## The 13 Sea friends with an own sound (spec 9.4). The other 7 play the splash.
+const WITH_OWN_SOUND: PackedStringArray = [
+	"crab", "octopus", "whale", "dolphin", "fish", "squid", "seal",
+	"jellyfish", "otter", "penguin", "duck", "swan", "flamingo",
 ]
 
 
@@ -25,6 +30,10 @@ static func slot_of(id: String) -> int:
 
 static func texture_path(id: String) -> String:
 	return "res://assets/sprites/friends/%s.png" % id
+
+
+static func has_own_sound(id: String) -> bool:
+	return WITH_OWN_SOUND.has(id)
 
 
 ## Picks the Sea friend that comes back: one of `collection`, never `last`. `random_value` is a

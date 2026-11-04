@@ -25,11 +25,6 @@ const SPLASH_PATH := "res://assets/audio/effects/splash.wav"
 ## The move swish varies its pitch, and up to 4 swishes can sound at one time (spec 9.3).
 const MOVE_PITCH_SEMITONES := 1.0
 const MOVE_POLYPHONY := 4
-## The 13 Sea friends with an own sound (spec 9.4). The other 7 play the splash.
-const SEA_FRIENDS_WITH_OWN_SOUND: PackedStringArray = [
-	"crab", "octopus", "whale", "dolphin", "fish", "squid", "seal",
-	"jellyfish", "otter", "penguin", "duck", "swan", "flamingo",
-]
 
 ## The two music players of the crossfade. `_active` is the one with the current track.
 var music_players: Array[AudioStreamPlayer] = []
@@ -56,7 +51,7 @@ static func add_buses() -> void:
 
 ## The sound file of a Sea friend: its own sound, or the splash (spec 9.4).
 static func sea_friend_sound_path(sea_friend: String) -> String:
-	if SEA_FRIENDS_WITH_OWN_SOUND.has(sea_friend):
+	if SeaFriends.has_own_sound(sea_friend):
 		return "res://assets/audio/friends/%s.wav" % sea_friend
 	return SPLASH_PATH
 
