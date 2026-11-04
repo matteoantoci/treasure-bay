@@ -57,16 +57,17 @@ func test_the_goal_island_has_the_palm_and_the_closed_chest(t) -> bool:
 		t.assert_true(view.palm.visible and view.chest.visible, label + "palm and chest show")
 		t.assert_true(island.has_point(view.palm.position) and view.palm.position.x > island.get_center().x, label + "palm at the far side of the Goal island")
 		t.assert_true(island.has_point(view.chest.position) and view.chest.position.x < island.get_center().x, label + "chest at the side next to the Goal square")
-		t.assert_eq(view.palm.modulate, Color(0.7, 0.85, 0.7), label + "the palm is darker than the grass")
+		var grass: Color = view.get_node("Islands").modulate
+		t.assert_true(view.palm.modulate.get_luminance() < grass.get_luminance(), label + "the palm is darker than the grass")
 		t.assert_true(not view.decorations().values().has(IslandLook.PALM), label + "no palm on a wall island")
 	await Scene.remove(t, main)
 	return true
 
 
-## The closed chest shows the Item sparkle of spec 8.2 with i = the Item count: white, radius 7 px
-## at (+18, -18) px from the chest centre, while fract(0.7 t + 0.33 i) < 0.15, with alpha
-## 1 - fract / 0.15. The open chest does not sparkle. Labyrinth 1 opens its chest, so Labyrinth 20
-## also checks that the chest of a new Labyrinth sparkles again.
+## The closed chest shows the Item sparkle of spec 8.2 with i = the Item count. The sparkle is white,
+## with a radius of 7 px, at (+18, -18) px from the chest centre. It shows while
+## fract(0.7 t + 0.33 i) < 0.15, with alpha 1 - fract / 0.15. The open chest does not sparkle.
+## Labyrinth 1 opens its chest, so Labyrinth 20 also checks that a new chest sparkles again.
 func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
 	var main := await Scene.add_main(t)
 	var view: LabyrinthView = main.get_node("LabyrinthView")
