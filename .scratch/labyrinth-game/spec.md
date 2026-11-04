@@ -456,9 +456,9 @@ The cut times are times in the preview file. The Parent chose them from clips of
 ### 9.5 Conversion and clip cuts
 
 - Convert each effect and each Sea friend sound to WAV, 16-bit, 44.1 kHz, mono ([sounds.md](research/sounds.md) Format notes): `ffmpeg -i in.mp3 -ac 1 -ar 44100 -c:a pcm_s16le out.wav`.
-- Each cut clip (Whale, Jellyfish, Otter, Swan, Flamingo) gets a fade-in of 0.05 s and a fade-out of 0.2 s, and no gain ([ticket 12](issues/12-listen-to-the-sounds.md), section "Clip processing"). Example for the Otter (start 33.3 s, length 1.5 s): `ffmpeg -i otter.mp3 -ss 33.3 -t 1.5 -af "afade=t=in:st=0:d=0.05,afade=t=out:st=1.3:d=0.2" -ac 1 -ar 44100 -c:a pcm_s16le otter.wav`. The Whale and the Jellyfish clips are 2.5 s long, so their fade-out starts at 2.3 s.
+- Each cut clip (Whale, Jellyfish, Otter, Swan, Flamingo) gets a fade-in of 0.05 s and a fade-out of 0.2 s, and no gain ([ticket 12](issues/12-listen-to-the-sounds.md), section "Clip processing"). Example for the Otter (start 33.3 s, length 1.5 s): `ffmpeg -i otter.mp3 -af "atrim=start=33.3:duration=1.5,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.05,afade=t=out:st=1.3:d=0.2" -ac 1 -ar 44100 -c:a pcm_s16le otter.wav`. For a clip with the start S and the length D, use `-af "atrim=start=S:duration=D,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.05,afade=t=out:st=D-0.2:d=0.2"`. Do not put `-ss` after `-i` together with `afade`: that order applies the fades before the seek, and the Otter, Swan, and Jellyfish clips became silent ([ticket 29](issues/29-sounds-and-credits.md)). The Whale and the Jellyfish clips are 2.5 s long, so their fade-out starts at 2.3 s.
 - Do not copy the −3 dB peak gain of the clips on the listen pages.
-- WAV import options: Edit > Trim on, Loop Mode "Disabled", Compress > Mode "Quite OK Audio" (the default).
+- WAV import options: Edit > Trim off, Loop Mode "Disabled", Compress > Mode "Quite OK Audio" (the default). Import trim removes real sound from the quiet recordings: it cut the Duck from 0.82 s to 0.16 s ([ticket 29](issues/29-sounds-and-credits.md)).
 
 ### 9.6 Loudness step
 
@@ -700,7 +700,7 @@ Do these steps in `.scratch/labyrinth-game/prototypes/art-PROTOTYPE/`:
 
 ### 13.4 Import
 
-Run `godot --headless --path . --import`. Set `mipmaps/generate=true` in every PNG `.import` file. Set Edit > Trim on in every WAV `.import` file. Run the import again (section 3.5).
+Run `godot --headless --path . --import`. Set `mipmaps/generate=true` in every PNG `.import` file. Set Edit > Trim off (`edit/trim=false`) in every WAV `.import` file, because import trim cut the Duck from 0.82 s to 0.16 s (section 9.5). Run the import again (section 3.5).
 
 ## 14. Tests
 
@@ -761,7 +761,7 @@ Tests:
    - A reset keeps `settings.json`.
 8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip.
 9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`.
-10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. `credits.txt` has a line for each sound file.
+10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. The length of each imported WAV file is the length of its source file, ±20 ms. `credits.txt` has a line for each sound file.
 11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`.
 
 ### 14.2 Screenshots
