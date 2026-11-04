@@ -14,6 +14,12 @@ signal item_collected(item: Item)
 signal goal_reached(sea_friend: String)
 ## Emitted when the Sea friend of the Goal appears next to the Goal island.
 signal sea_friend_appeared(sea_friend: String)
+## Emitted at 4.2 s of the Goal celebration, when the fade to the next Labyrinth starts (spec 8.8).
+signal next_labyrinth_coming(number: int)
+## Emitted when the boat starts a slide (spec 9.7).
+signal move_started
+## Emitted when the boat bumps at a wall (spec 5.3, 9.7).
+signal bumped
 
 ## Goal celebration times in seconds from the arrival on the Goal square (spec 6.3).
 const SEA_FRIEND_APPEARS_SECONDS := 1.4
@@ -121,6 +127,10 @@ func _move(direction: Vector2i) -> void:
 	var move := MoveRule.plan(labyrinth, boat_square, direction, progress.item_states(labyrinth))
 	_busy = true
 	_boat.rotation = move.rotation
+	if move.bump:
+		bumped.emit()
+	else:
+		move_started.emit()
 	var start := _square_centre(boat_square)
 	var tween := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	if move.bump:
@@ -167,6 +177,7 @@ func _reach_goal() -> void:
 	_celebration.tween_interval(SEA_FRIEND_IN_SLOT_SECONDS - SEA_FRIEND_APPEARS_SECONDS)
 	_celebration.tween_callback(_put_sea_friend_in_slot.bind(friend))
 	_celebration.tween_interval(NEXT_LABYRINTH_SECONDS - SEA_FRIEND_IN_SLOT_SECONDS)
+	_celebration.tween_callback(func() -> void: next_labyrinth_coming.emit(progress.labyrinth_number))
 	_celebration.tween_callback(show_labyrinth)
 
 
