@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://src/water_view.gd" id="7_water_view"]
 [ext_resource type="Script" path="res://src/area_decoration.gd" id="8_area_decoration"]
 [ext_resource type="Script" path="res://src/gear_view.gd" id="9_gear_view"]
+[ext_resource type="Script" path="res://src/sound.gd" id="10_sound"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -43,3 +44,6 @@ script = ExtResource("9_gear_view")
 
 [node name="SeaFriend" type="Sprite2D" parent="."]
 visible = false
+
+[node name="Sound" type="Node" parent="."]
+script = ExtResource("10_sound")
