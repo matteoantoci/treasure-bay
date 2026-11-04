@@ -1,6 +1,8 @@
 ## Helpers for the tests of the main scene. The runner does not run this file.
 extends RefCounted
 
+const Fixtures := preload("res://tests/fixtures.gd")
+
 ## Tweens and timers run faster, so the tests take less time. Engine.time_scale also speeds up the
 ## Goal celebration.
 const TIME_SCALE := 8.0
@@ -9,18 +11,24 @@ const MOVE_TIMEOUT := 10.0
 const NEXT_LABYRINTH_TIMEOUT := 10.0
 
 
-static func add_main(t) -> Node:
+## Adds the main scene. It loads and saves in `save_dir`, or in a new empty folder in the OS temp
+## folder, never in user://.
+static func add_main(t, save_dir: String = "") -> Node:
 	var main: Node = load("res://main.tscn").instantiate()
+	main.save_store = SaveStore.new(save_dir if not save_dir.is_empty() else Fixtures.new_save_dir())
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = TIME_SCALE
 	return main
 
 
+## Removes the main scene and its save folder.
 static func remove(t, main: Node) -> void:
 	Engine.time_scale = 1.0
+	var save_dir: String = main.save_store.dir
 	main.queue_free()
 	await t.process_frame
+	Fixtures.remove_save_dir(save_dir)
 
 
 ## Presses and releases an arrow key.

@@ -28,6 +28,8 @@ const SEA_FRIEND_RISE_PX := 30.0
 
 ## The progress of the Child. The save code can replace it, then call show_labyrinth().
 var progress := Progress.new()
+## The save file (spec 12). Tests set a store with their own folder before the scene enters the tree.
+var save_store := SaveStore.new()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
@@ -51,6 +53,10 @@ var _celebration: Tween
 
 func _ready() -> void:
 	randomize()
+	progress = save_store.load_progress()
+	# The game saves after each Item and at each Goal, before the celebration (spec 12.2).
+	item_collected.connect(save_progress.unbind(1))
+	goal_reached.connect(save_progress.unbind(1))
 	_water.color = WATER_COLOUR
 	get_viewport().size_changed.connect(_layout)
 	show_labyrinth()
@@ -73,6 +79,13 @@ func show_labyrinth() -> void:
 	_collection_strip.show_progress(progress)
 	_layout()
 	labyrinth_started.emit(progress.labyrinth_number)
+
+
+## Writes the progress to the save file (spec 12.3). The Child gets no message if it fails.
+func save_progress() -> void:
+	var error := save_store.save(progress)
+	if error != OK:
+		push_warning("The progress was not saved: %s" % error_string(error))
 
 
 func _unhandled_input(event: InputEvent) -> void:
