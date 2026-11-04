@@ -13,8 +13,8 @@ const CHEST_CLOSED := preload("res://assets/sprites/goal/chest_closed.png")
 const CHEST_OPEN := preload("res://assets/sprites/goal/chest_open.png")
 ## The chest is 100 px of the prototype tile (spec 10, Open gap 3).
 const CHEST_PX := 100.0
-## Sizes of a whole Kenney tile picture, in Labyrinth tiles: a rock or bush fills the grass top of
-## its island, and the palm crown is larger than the chest.
+## Sizes of a whole Kenney tile picture, in Labyrinth tiles. A rock or bush fills the grass top of
+## its island. The palm (91 px of the prototype tile) is a little smaller than the chest.
 const DECORATION_TILES := 0.5
 const PALM_TILES := 0.7
 ## On the Goal island tile, the chest is at the side next to the Goal square and the palm at the
