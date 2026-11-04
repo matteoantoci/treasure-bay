@@ -168,6 +168,9 @@ func _check_items(t, labyrinth: Labyrinth, number: int, label: String) -> void:
 		if path.has(square):
 			on_path += 1
 	t.assert_true(on_path >= on_path_count, label + ": at least %d Items on the main path (%d)" % [on_path_count, on_path])
+	# Items 2 to k + 1 are on P[j * L div (k + 1)], from the start to the Goal.
+	for j in range(1, on_path_count + 1):
+		t.assert_eq(items[j].square, path[j * length / (on_path_count + 1)], label + ": on-path Item %d is on its main-path square" % j)
 
 
 func _ids(labyrinth: Labyrinth) -> Array:
