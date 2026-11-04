@@ -132,10 +132,9 @@ func test_a_newer_save_plays_labyrinth_1_and_writes_nothing(t) -> bool:
 	main.goal_reached.connect(func(_friend: String) -> void: save_calls[0] += 1)
 	var log := WarningLog.new()
 	log.start()
-	# Labyrinth 1: down, then right stops on the Item 1,2 (tests/test_main_rewards.gd).
+	# Labyrinth 1: down stops on the Item 0,2 (tests/test_main_rewards.gd).
 	await Scene.press(t, main, KEY_DOWN)
-	await Scene.press(t, main, KEY_RIGHT)
-	t.assert_eq(main.progress.collected_items, PackedStringArray(["1,2"]), "the Item is collected in memory")
+	t.assert_eq(main.progress.collected_items, PackedStringArray(["0,2"]), "the Item is collected in memory")
 	t.assert_eq(FileAccess.get_file_as_string(save_path), text, "the collect writes nothing")
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
 	log.stop()
