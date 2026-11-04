@@ -16,8 +16,8 @@ const SPLASH_FRIENDS := ["spouting_whale", "blowfish", "shark", "lobster", "shri
 const CROSSFADE_WAIT := 2.0
 
 
-## Adds the main scene at saved Labyrinth `number`, with a recorder connected before the launch.
-## Returns [main, calls]; each call is [path, bus].
+## Adds the main scene at saved Labyrinth `number`, with a recorder connected before the launch, and
+## waits for the end of the launch fade-in. Returns [main, calls]; each call is [path, bus].
 static func _add_main(t, number: int) -> Array:
 	var dir := Fixtures.new_save_dir()
 	var saved := Progress.new()
@@ -30,6 +30,7 @@ static func _add_main(t, number: int) -> Array:
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = Scene.TIME_SCALE
+	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the launch fade-in ends")
 	return [main, calls]
 
 

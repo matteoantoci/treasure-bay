@@ -33,8 +33,8 @@ var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
 var _busy := false
-## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth. Presses are
-## dropped (spec 5.4).
+## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth, and during the
+## fade-in at launch and after a reset. Presses are dropped (spec 5.4, 8.8).
 var _locked := false
 ## One early press, kept while the boat is busy (spec 5.4). ZERO means none.
 var _kept_direction := Vector2i.ZERO
@@ -81,11 +81,13 @@ func show_labyrinth() -> void:
 
 
 ## Shows the current Labyrinth of `progress`, and the screen fades in from dark in 500 ms with no
-## Area Item: at launch and after a Parent reset (spec 8.8).
+## Area Item: at launch and after a Parent reset (spec 8.8). The input is locked until the end of the
+## fade-in (spec 5.4).
 func start_with_fade() -> void:
 	_stop_celebration()
 	_fade.set_dark()
 	_show_current_labyrinth()
+	_locked = true
 	_fade.fade_in().finished.connect(_emit_ready)
 
 
@@ -130,6 +132,7 @@ func _stop_celebration() -> void:
 
 
 func _emit_ready() -> void:
+	_locked = false
 	labyrinth_ready.emit(progress.labyrinth_number)
 
 

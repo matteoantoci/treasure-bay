@@ -45,7 +45,6 @@ func test_the_only_text_is_the_total_item_count(t) -> bool:
 ## key presses a settings button.
 func test_keys_other_than_the_arrow_keys_do_nothing(t) -> bool:
 	var main := await Scene.add_main(t)
-	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in ends")
 	var events := []
 	for event_name in ["move_started", "bumped", "move_finished"]:
 		main.connect(event_name, func() -> void: events.append(event_name))

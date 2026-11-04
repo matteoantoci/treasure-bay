@@ -18,14 +18,15 @@ const AUDIO_FREE_SECONDS := 0.1
 const NO_MOVE_SECONDS := 3.5
 
 
-## Adds the main scene. It loads and saves in `save_dir`, or in a new empty folder in the OS temp
-## folder, never in user://.
+## Adds the main scene and waits for the end of its launch fade-in, so the Child can sail. It loads
+## and saves in `save_dir`, or in a new empty folder in the OS temp folder, never in user://.
 static func add_main(t, save_dir: String = "") -> Node:
 	var main: Node = load("res://main.tscn").instantiate()
 	main.save_store = SaveStore.new(save_dir if not save_dir.is_empty() else Fixtures.new_save_dir())
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = TIME_SCALE
+	t.assert_true(await t.wait_for(main.labyrinth_ready, MOVE_TIMEOUT), "the launch fade-in ends")
 	return main
 
 
