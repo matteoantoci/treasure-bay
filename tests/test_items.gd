@@ -16,35 +16,35 @@ const AREA_KINDS := [
 	["gem_stone", "spiral_shell"],
 	["glowing_star", "star"],
 ]
-# Item IDs of Labyrinths 1 to 20 in placement order, from an independent Python run of spec 4.1,
-# 4.2, and 4.6. The candidate squares of each list are in row order (lowest y, then lowest x)
-# before the shuffle.
+# Item IDs of Labyrinths 1 to 20 in placement order, from tests/spec_port.py, an independent Python
+# port of spec 4.1, 4.2, and 4.6. The candidate squares of each list are in row order (lowest y,
+# then lowest x) before the shuffle.
 const PINNED_IDS := {
-	1: ["2,1", "1,2"],
-	2: ["0,2", "2,1"],
-	3: ["3,1", "2,2"],
+	1: ["1,1", "1,2"],
+	2: ["0,1", "2,2"],
+	3: ["2,1", "4,1"],
 	4: ["0,1", "4,1"],
-	5: ["3,1", "1,0", "4,2"],
-	6: ["2,2", "0,1", "1,2"],
-	7: ["4,1", "3,3", "1,2", "0,2"],
+	5: ["4,0", "2,0", "3,2"],
+	6: ["3,3", "1,1", "1,2"],
+	7: ["2,0", "5,2", "1,2", "3,3"],
 	8: ["0,1", "4,1", "2,3", "1,1"],
-	9: ["0,3", "1,1", "4,1", "0,2"],
-	10: ["5,1", "0,3", "3,2", "5,0"],
+	9: ["0,3", "1,1", "5,3", "3,2"],
+	10: ["5,1", "0,3", "4,2", "3,2"],
 	11: ["0,4", "2,1", "4,2", "6,2", "3,4"],
-	12: ["5,4", "1,1", "5,1", "3,1", "4,2"],
+	12: ["5,1", "1,1", "5,4", "3,1", "4,2"],
 	13: ["2,4", "6,1", "1,1", "5,2", "7,3", "2,0"],
-	14: ["3,3", "4,1", "1,1", "0,2", "2,2", "4,3"],
-	15: ["1,0", "1,4", "5,3", "4,1", "7,0", "0,5", "1,1", "2,0"],
-	16: ["7,2", "4,0", "6,4", "0,3", "5,2", "5,5", "3,5", "4,3"],
-	17: ["8,1", "2,2", "5,5", "0,5", "5,2", "0,1", "7,3", "6,0"],
+	14: ["4,3", "6,1", "0,4", "6,4", "1,1", "0,2"],
+	15: ["7,1", "5,4", "1,4", "4,1", "2,1", "0,5", "7,0", "1,0"],
+	16: ["7,2", "0,3", "4,0", "5,2", "4,5", "2,5", "4,3", "2,0"],
+	17: ["7,3", "0,5", "2,2", "5,5", "5,2", "0,1", "6,0", "6,4"],
 	18: ["6,3", "4,5", "8,4", "3,1", "5,1", "3,5", "0,4", "4,3"],
 	19: ["4,6", "5,1", "3,3", "8,3", "2,5", "1,2", "0,6", "0,1"],
 	20: ["4,2", "1,4", "3,3", "8,1", "0,6", "2,5", "6,3", "3,1"],
 }
-# The same Python run, for random Labyrinths (10 x 7) with these seeds.
+# The same Python port, for random Labyrinths (10 x 7) with these seeds.
 const PINNED_RANDOM_IDS := {
-	4242: ["9,0", "0,6", "5,5", "2,3", "7,3", "0,4", "5,0", "3,4"],
-	123456789: ["8,4", "0,2", "4,1", "9,2", "3,6", "1,0", "5,4", "2,1"],
+	4242: ["0,4", "0,6", "5,5", "9,0", "2,3", "7,3", "5,0", "3,4"],
+	123456789: ["6,4", "3,6", "2,3", "1,0", "4,2", "9,5", "6,1", "0,2"],
 }
 
 
@@ -104,7 +104,7 @@ func test_seeds_1_to_20_are_valid(t) -> bool:
 
 
 func test_random_seed_with_no_free_dead_end_moves_to_seed_plus_1(t) -> bool:
-	# At 3 x 2 squares, the Python run finds no free dead end for seeds 9, 15, and 16.
+	# At 3 x 2 squares, tests/spec_port.py finds no free dead end for seeds 9, 15, and 16.
 	var size := Vector2i(3, 2)
 	for seed_value in [9, 15, 16]:
 		var labyrinth := LabyrinthGenerator.generate(size.x, size.y, Prng.new(seed_value))
@@ -117,11 +117,11 @@ func test_random_seed_with_no_free_dead_end_moves_to_seed_plus_1(t) -> bool:
 
 
 func test_first_item_is_in_the_farthest_dead_end(t) -> bool:
-	# Labyrinth 2 (seed 2, 4 x 3). From the Python run: its free dead ends are (2, 1) at distance 9
-	# and (0, 2) at distance 10 from the start, so Item 1 is on (0, 2).
+	# Labyrinth 2 (seed 2, 4 x 3). From tests/spec_port.py: its free dead ends are (0, 1) at
+	# distance 9 and (2, 2) at distance 8 from the start, so Item 1 is on (0, 1).
 	var labyrinth := LabyrinthPlan.build(2)
-	t.assert_eq(ItemPlacement.free_dead_ends(labyrinth), [Vector2i(2, 1), Vector2i(0, 2)] as Array[Vector2i], "free dead ends of Labyrinth 2")
-	t.assert_eq(labyrinth.items[0].square, Vector2i(0, 2), "Item 1 of Labyrinth 2")
+	t.assert_eq(ItemPlacement.free_dead_ends(labyrinth), [Vector2i(0, 1), Vector2i(2, 2)] as Array[Vector2i], "free dead ends of Labyrinth 2")
+	t.assert_eq(labyrinth.items[0].square, Vector2i(0, 1), "Item 1 of Labyrinth 2")
 	return true
 
 

@@ -19,7 +19,7 @@ func test_starts_labyrinth_1_with_the_boat_on_the_start(t) -> bool:
 func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	var main := await Scene.add_main(t)
 	# Labyrinth 1 (see test_generator.gd): the start has only its south side open. Its Items are on
-	# (2, 1) and (1, 2) (see test_items.gd).
+	# (1, 1) and (1, 2) (see test_items.gd).
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "bump is over")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "a bump keeps the boat on its square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "move down is over")
@@ -27,7 +27,9 @@ func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
 	t.assert_eq(main.boat_square, Vector2i(1, 2), "the boat stops on the Item")
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
-	t.assert_eq(main.boat_square, Vector2i(3, 2), "the next press slides on to the Goal")
+	t.assert_eq(main.boat_square, Vector2i(2, 2), "the next press stops at the junction")
+	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
+	t.assert_eq(main.boat_square, Vector2i(3, 2), "the next press reaches the Goal")
 	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "the next Labyrinth starts")
 	t.assert_eq(main.progress.labyrinth_number, 2, "the Goal starts Labyrinth 2")
 	t.assert_eq(Scene.wall_list(main.labyrinth), Scene.wall_list(LabyrinthPlan.build(2)), "Labyrinth 2 walls")

@@ -52,15 +52,15 @@ func test_two_squares_with_a_wall_between_them(t) -> bool:
 
 
 func test_wall_island_decorations_of_labyrinth_1(t) -> bool:
-	# From an independent Python run of the rule: a PRNG with seed 1 + 1 gives one output r for each
-	# island tile in row order, except the Goal island. If r % 6 == 0, the tile gets a decoration:
-	# pick = (r / 6) % 12 is the bush for 0 to 5, else rock ROCKS[pick - 6].
+	# From tests/spec_port.py, an independent Python port of the rule: a PRNG with seed 1 + 1 gives
+	# one output r for each island tile in row order, except the Goal island. If r % 6 == 0, the
+	# tile gets a decoration: pick = (r / 6) % 12 is the bush for 0 to 5, else rock ROCKS[pick - 6].
 	var look := IslandLook.build(LabyrinthPlan.build(1))
 	t.assert_eq(look.decorations, {
 		Vector2i(0, 0): BUSH,
 		Vector2i(1, 0): 67,
 		Vector2i(2, 2): 49,
-		Vector2i(6, 3): 51,
+		Vector2i(4, 3): 51,
 		Vector2i(8, 3): BUSH,
 		Vector2i(4, 4): BUSH,
 	}, "Labyrinth 1 decorations")
