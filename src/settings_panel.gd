@@ -3,10 +3,14 @@
 ## plus), the reset button, and the quit button. Reset and quit act only after a hold of 3 s.
 ##
 ## A child of the main scene. It loads settings.json (spec 12.4) and sets the bus volumes when the
-## scene starts, and it uses the public part of the main scene: `save_store`, `progress`,
-## `save_progress()`, and `start_with_fade()`.
+## scene starts. It uses `save_store` and `save_progress()` of the main scene, and it emits
+## `reset_requested` for the reset.
 class_name SettingsPanel
 extends CanvasLayer
+
+## Emitted after a hold of 3 s on the reset button, when the panel is closed and play runs again.
+## The main scene resets the progress (spec 11.2).
+signal reset_requested
 
 ## Above the game, its effects, and its fade.
 const LAYER := 10
@@ -92,15 +96,11 @@ func change_step(bus: StringName, change: int) -> void:
 		push_warning("The settings were not saved: %s" % error_string(error))
 
 
-## The reset after a hold of 3 s: the panel closes and play unpauses, the progress goes back to
-## Labyrinth 1 with an empty Collection and a total of 0, the game writes the save, and the screen
-## fades in from dark (spec 8.8). The volume steps and settings.json stay (spec 12.4).
+## The reset after a hold of 3 s: the panel closes and play unpauses, then the main scene resets the
+## progress. The volume steps and settings.json stay (spec 12.4).
 func _reset() -> void:
 	close()
-	var main := get_parent()
-	main.progress = Progress.new()
-	main.save_progress()
-	main.start_with_fade()
+	reset_requested.emit()
 
 
 ## The quit after a hold of 3 s: the game writes the save, then quits. It is the only quit path

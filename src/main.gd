@@ -56,6 +56,7 @@ var _move_tween: Tween
 @onready var _sea_friend: SeaFriendView = $SeaFriend
 @onready var _effects: EffectsView = $Effects
 @onready var _fade: FadeView = $Fade
+@onready var _settings: SettingsPanel = $Settings
 
 
 func _ready() -> void:
@@ -68,6 +69,7 @@ func _ready() -> void:
 	goal_reached.connect(save_progress.unbind(1))
 	get_viewport().size_changed.connect(_layout)
 	_wake.boat = _boat
+	_settings.reset_requested.connect(_reset_progress)
 	start_with_fade()
 
 
@@ -98,6 +100,14 @@ func save_progress() -> void:
 	var error := save_store.save(progress)
 	if error != OK:
 		push_warning("The progress was not saved: %s" % error_string(error))
+
+
+## The Parent reset (spec 11.2): the progress goes back to Labyrinth 1 with an empty Collection and
+## a total of 0, the game writes the save (spec 12.2), and the screen fades in from dark (spec 8.8).
+func _reset_progress() -> void:
+	progress = Progress.new()
+	save_progress()
+	start_with_fade()
 
 
 ## The settings pause play, and the input is locked while they are open. The game does not keep a
