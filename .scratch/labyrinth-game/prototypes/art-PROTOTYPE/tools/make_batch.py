@@ -43,6 +43,16 @@ SUBJECTS: dict[str, tuple[str, str]] = {
     "spiral_shell": ("item", "A spiral sea snail shell (a small conch) seen from the side, cream and peach colours with a soft pink opening."),
     "starfish": ("item", "A five-armed orange starfish seen from above, plump rounded arms, small lighter dots on its arms."),
     "pearl": ("item", "One big round shiny pearl, creamy white with a soft lavender-pink tint, one bright white highlight. Only the pearl, nothing else."),
+    "coral": ("item", "A small branch of pink coral with rounded tips, seen from the side."),
+    "sand_dollar": ("item", "A round flat sand dollar seen from above, pale cream with a five-petal flower pattern in the middle."),
+    "gem_stone": ("item", "One blue gem stone with large flat facets and one bright white highlight. Only the gem, nothing else."),
+    # Attempt 1 (the spec sentence alone) drew thin pale rays with no outline; the cutout dropped them as specks,
+    # so the sprite looked like the plain star. Attempt 2 keeps the sentence and asks for outlined chunky rays.
+    "glowing_star": ("item", "A yellow five-point star with soft rounded points and short light rays around it. The rays are a few short chunky rounded yellow strokes close to the star, each with the same thick dark brown outline, clearly visible."),
+    "star": ("item", "A plain yellow five-point star with soft rounded points and no rays."),
+    # goal chest: kind "item" (an object, no face)
+    "chest_closed": ("item", "A small wooden treasure chest with gold metal bands and a gold lock, lid closed, seen in three-quarter view."),
+    "chest_open": ("item", "The same small wooden treasure chest with gold metal bands, lid open, gold coins inside, seen in three-quarter view."),
 }
 
 HEADER = """Generate {n} image(s) with the generate_image tool. Make exactly one tool call per image, one after the other. Use the exact wording below; do not shorten it.

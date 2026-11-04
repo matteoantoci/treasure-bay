@@ -20,7 +20,7 @@ BACKGROUNDS = {"light": (236, 244, 248), "dark": (28, 40, 64)}
 
 
 def main() -> int:
-    sprites = sorted((ROOT / "sprites/friends").glob("*.png")) + sorted((ROOT / "sprites/items").glob("*.png"))
+    sprites = [p for folder in ("friends", "items", "goal") for p in sorted((ROOT / "sprites" / folder).glob("*.png"))]
     for label, colour in BACKGROUNDS.items():
         with tempfile.TemporaryDirectory() as tmp:
             flat = []
@@ -29,7 +29,7 @@ def main() -> int:
                 side = max(im.size)
                 bg = Image.new("RGBA", (side, side), (*colour, 255))
                 bg.alpha_composite(im, ((side - im.width) // 2, (side - im.height) // 2))
-                # Prefix keeps friends first, items after (the script sorts by path).
+                # Prefix keeps the order friends, items, goal (the script sorts by path).
                 out = Path(tmp) / f"{i:02d}-{path.parent.name[0]}-{path.stem}.png"
                 bg.save(out)
                 flat.append(str(out))
