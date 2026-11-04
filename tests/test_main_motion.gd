@@ -47,11 +47,19 @@ func test_a_collected_item_flies_to_its_outline_and_fills_it(t) -> bool:
 	t.assert_eq(effects.flying_items().size(), 1, "the Item flies")
 	t.assert_eq(row.fills[1].modulate.a, 0.0, "its outline is still empty")
 	var bounce_scale: Vector2 = row.outlines[1].scale
+	var flying := effects.flying_items()[0]
+	var texture_px := maxf(flying.texture.get_width(), flying.texture.get_height())
+	var smallest := INF
 	while row.fills[1].modulate.a == 0.0 and _seconds_since(start) < 2.0:
+		if is_instance_valid(flying):
+			smallest = minf(smallest, texture_px * flying.scale.x)
 		await t.process_frame
 	_near(t, _seconds_since(start), Motion.item_fly_arrival(), "the outline starts to fill at the arrival of the Item")
 	t.assert_true(row.outlines[1].scale.x > bounce_scale.x, "the outline bounces from a larger size")
 	t.assert_eq(effects.flying_items().size(), 0, "the Item is in its outline")
+	# The Item is 90 px of the 130 px tile on the water, and it shrinks to 0.55 times that size.
+	var item_px: float = 90.0 * main.get_node("LabyrinthView").tile_px / 130.0
+	t.assert_true(absf(smallest / item_px - 0.55) < 0.02, "the Item shrinks to 0.55 times its size (%.3f)" % (smallest / item_px))
 	await Scene.remove(t, main)
 	return true
 
@@ -90,7 +98,9 @@ func test_the_goal_celebration_runs_on_the_spec_times(t) -> bool:
 
 ## The Sea friend grows next to the Goal island at the far side, away from the chest and the boat,
 ## so the open chest and the boat stay in view (spec 6.2, 8.5, 8.6, Open gap 3). The check uses the
-## box of the opaque pixels of each of the 20 Sea friend pictures at the end of the growth.
+## box of the opaque pixels of each of the 20 Sea friend pictures at the end of the growth. A corner
+## is at most a quarter of the chest box: the 100 px chest of the play-improvements spec reaches up
+## to the lower-left corner of the Sea friend.
 func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
 	var main := await Scene.add_main(t)
 	var view: LabyrinthView = main.get_node("LabyrinthView")
@@ -112,7 +122,7 @@ func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
 		var texture: Texture2D = load(SeaFriends.texture_path(id))
 		var shape := _opaque_rect(texture, friend.position, Motion.FRIEND_PX * Motion.FRIEND_SCALE * s)
 		var on_chest := shape.intersection(chest).get_area() / chest.get_area()
-		t.assert_true(on_chest <= 0.2, "%s covers at most a corner of the open chest (%.2f of its box)" % [id, on_chest])
+		t.assert_true(on_chest <= 0.25, "%s covers at most a corner of the open chest (%.2f of its box)" % [id, on_chest])
 		t.assert_true(not shape.intersects(boat_rect), "%s does not cover the boat" % id)
 	await Scene.remove(t, main)
 	return true
@@ -134,7 +144,6 @@ func test_the_screen_fades_between_labyrinths(t) -> bool:
 func test_a_new_area_shows_its_first_item_big_in_the_centre(t) -> bool:
 	var main := await Scene.add_main(t)
 	var fade: FadeView = main.get_node("Fade")
-	var items: ItemsView = main.get_node("Items")
 	_show(main, 5)
 	# The times start when Labyrinth 6 shows, with the fade-in.
 	var start := [0]
@@ -156,8 +165,9 @@ func test_a_new_area_shows_its_first_item_big_in_the_centre(t) -> bool:
 		if fade_out_at < 0.0 and fade.area_item.modulate.a < 1.0:
 			fade_out_at = _seconds_since(start[0])
 		await t.process_frame
-	var item_px: float = items.item_px()
-	t.assert_true(biggest > 1.99 * item_px and biggest < 2.4 * item_px, "it grows to 2 times the Item size (with the back overshoot)")
+	# The Item is 90 px of the 130 px tile of Labyrinth 6.
+	var item_px: float = 90.0 * main.get_node("LabyrinthView").tile_px / 130.0
+	t.assert_true(biggest > 1.99 * item_px and biggest < 2.4 * item_px, "it grows to 2 times the Item size of 90 px (with the back overshoot)")
 	# The first frame after the new Labyrinth can be long, so the times are measured between the
 	# steps: the unlock at 500 ms, the fade-out at 1 s, the end at 1.4 s.
 	var gone_at := _seconds_since(start[0])
