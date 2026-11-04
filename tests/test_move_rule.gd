@@ -3,7 +3,7 @@ extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
 
-# Two corridors joined at the right end: bends at (2, 0) and (2, 1), dead ends at (0, 0) and (0, 1).
+# Two corridors joined on the right side: bends at (2, 0) and (2, 1), dead ends at (0, 0) and (0, 1).
 const U_TURN := [
 	"#######",
 	"#.....#",
@@ -25,7 +25,7 @@ const CORRIDOR := [
 	"#.......#",
 	"#########",
 ]
-# An S-shaped channel. The Goal (2, 1) is at its end.
+# An S-shaped channel. The Goal (2, 1) is its last square.
 const S_CHANNEL := [
 	"#######",
 	"#.....#",

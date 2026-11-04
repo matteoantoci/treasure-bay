@@ -4,7 +4,7 @@ extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.
 signal labyrinth_started(number: int)
-## Emitted when a slide or a bump ends.
+## Emitted when the boat is free again after a slide or a bump.
 signal move_finished
 
 ## The deep water colour of Area 1 (spec 7.2).

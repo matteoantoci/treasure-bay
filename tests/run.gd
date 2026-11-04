@@ -9,7 +9,7 @@
 ## - The runner runs every file tests/test_*.gd, in file name order.
 ## - A test file extends RefCounted and has no class_name.
 ## - A test is a method whose name starts with "test_". It takes one argument `t`, this runner.
-##   It returns `true` at its end. The runner counts any other return value as a failure, also
+##   Its last statement is `return true`. The runner counts any other return value as a failure, also
 ##   the value of a test that stopped on a script error.
 ## - Check values with `t.assert_eq(actual, expected, label)` or `t.assert_true(condition, label)`.
 ##   assert_eq passes only when both values have the same Variant type and are equal, so 7 and

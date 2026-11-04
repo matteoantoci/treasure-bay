@@ -21,11 +21,11 @@ func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	var main := await _add_main(t)
 	Engine.time_scale = TIME_SCALE
 	# Labyrinth 1 (see test_generator.gd): the start has only its south side open.
-	t.assert_true(await _press(t, main, KEY_RIGHT), "bump finishes")
+	t.assert_true(await _press(t, main, KEY_RIGHT), "bump is over")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "a bump keeps the boat on its square")
-	t.assert_true(await _press(t, main, KEY_DOWN), "move down finishes")
+	t.assert_true(await _press(t, main, KEY_DOWN), "move down is over")
 	t.assert_eq(main.boat_square, Vector2i(0, 2), "one press slides down to the bend")
-	t.assert_true(await _press(t, main, KEY_RIGHT), "move right finishes")
+	t.assert_true(await _press(t, main, KEY_RIGHT), "move right is over")
 	t.assert_eq(main.labyrinth_number, 2, "the Goal starts Labyrinth 2")
 	t.assert_eq(_wall_list(main.labyrinth), _wall_list(LabyrinthPlan.build(2)), "Labyrinth 2 walls")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "boat on the start square of Labyrinth 2")
@@ -43,7 +43,7 @@ func test_sailing_each_goal_starts_the_next_labyrinth(t) -> bool:
 		while main.labyrinth_number == number and presses < 50:
 			var direction := _next_step(main.labyrinth, main.boat_square)
 			var before: Vector2i = main.boat_square
-			t.assert_true(await _press(t, main, _key_for(direction)), "move finishes")
+			t.assert_true(await _press(t, main, _key_for(direction)), "move is over")
 			if main.labyrinth_number == number:
 				var expected := MoveRule.plan(main.labyrinth, before, direction).target
 				t.assert_eq(main.boat_square, expected, "the boat stops where the move rule says")
@@ -67,7 +67,7 @@ func _remove(t, main: Node) -> void:
 	await t.process_frame
 
 
-## Presses and releases an arrow key. Returns true when the move or bump finishes in time.
+## Presses and releases an arrow key. Returns true when the boat is free again in time.
 func _press(t, main: Node, key: Key) -> bool:
 	for pressed in [true, false]:
 		var event := InputEventKey.new()
