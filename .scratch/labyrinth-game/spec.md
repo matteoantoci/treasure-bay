@@ -122,6 +122,8 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 - Data: one record for each square, with 4 wall bits (north, east, south, west). The view reads this data and never changes it.
 - The search starts at square (0, 0). At each step, list the unvisited neighbours in the order north, east, south, west. Pick index `prng.next() % count`. This is the same order as the [movement prototype](prototypes/movement-PROTOTYPE/index.html).
 - The generator removes no extra walls. The Labyrinth has no loops.
+- **Goal rule:** when the search moves into the Goal square, it opens the wall and marks the Goal square as visited. It does not push the Goal square on the stack, so the search never continues from the Goal square. The Goal square has exactly one open side, and no square is behind the Goal (Resolved conflict 25).
+- Reason for the Goal rule: the boat stops at the Goal (section 5.2), and the next Labyrinth starts. The Child cannot reach a square behind the Goal, or an Item on that square. The grid without the Goal square stays connected, so the search visits all squares.
 - **Start square:** (0, 0), top-left. **Goal square:** (W − 1, H − 1), bottom-right (gap-audit default 13).
 - After the generator, the code checks with a breadth-first search from the start that every square is reachable.
 
@@ -173,6 +175,7 @@ Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issu
 5. Item i (0-based, in placement order) has kind `area_items[i % len(area_items)]` (section 7.2).
 6. The Item ID is `"x,y"` with the square coordinates.
 7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. For a random Labyrinth, add 1 to the seed and generate again. A test checks that seeds 1 to 20 are valid. See Open gap 4.
+8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2).
 
 ### 4.7 Sea friend for each Labyrinth
 
@@ -648,8 +651,9 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
   - `version` is higher than 1,
   - `labyrinth` is below 1,
   - `labyrinth` is above 20 and `random_seed` is 0,
-  - an Item ID does not belong to the current Labyrinth,
+  - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
+- **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
 - **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. Version 1 is the first version, so the chain is empty now.
 
 ### 12.4 Settings file
@@ -724,8 +728,10 @@ Tests:
    - the size matches the table of section 4.3,
    - exactly W × H − 1 walls are open,
    - each square is reachable from the start,
-   - the wall bits of neighbour squares agree.
-   The full wall data of Labyrinth 1 is pinned.
+   - the wall bits of neighbour squares agree,
+   - the Goal square has exactly one open side,
+   - each square is reachable from the start with a breadth-first search that does not continue from the Goal square. No Labyrinth has a square behind the Goal.
+   The full wall data of Labyrinth 1 is pinned. The pinned values of the tests come from `tests/spec_port.py`, a separate Python port of section 4.
 3. **Items:**
    - the count matches section 4.3,
    - at least one Item is in a dead end,
@@ -757,6 +763,7 @@ Tests:
    - `version` 2 counts as broken.
    - The write goes to the `.tmp` file first.
    - After a reload, a collected Item does not count again.
+   - An old Item ID of a square with no Item is removed. The other fields stay, and the file does not become `save.bak`.
    - A Goal save holds the new Sea friend and `labyrinth` + 1.
    - A reset keeps `settings.json`.
 8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip.
@@ -855,6 +862,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 22. Clip times: [ticket 12](issues/12-listen-to-the-sounds.md) "Check them against the original file before the cut" and gap-audit default 39 (cross-correlation). Ticket 19 Q6 removes the original files, so the preview times apply directly. Default 39 does not apply.
 23. Music loop: [ticket 10](issues/10-source-the-sounds.md) "music … with the Loop import option" against [ticket 12](issues/12-listen-to-the-sounds.md) "Every track uses the crossfade to its start". Ticket 12 wins: Loop off and a crossfade.
 24. Wall islands: gap-audit default 12 says "Wall islands get rocks and bushes". The tile list has one bush (tile 70) and a small plant (tile 72) that can look like a palm. The spec uses tile 70 only.
+25. Goal in a path: the recursive backtracker of section 4.2 (first text) against the Parent's report "Items are optional, but the Child must be able to reach each of them". The first generator put the Goal square in the middle of a path in 17 of the 20 fixed Labyrinths. The squares behind the Goal and their Items were lost, because the boat stops at the Goal. The Parent's report wins: the search does not continue from the Goal square (section 4.2). The Labyrinth shapes and Item squares changed, so section 12.3 removes old Item IDs on load.
 
 ## Open gaps
 
