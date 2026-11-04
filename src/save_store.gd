@@ -9,6 +9,10 @@ const SAVE_FILE := "save.json"
 const TMP_FILE := "save.json.tmp"
 ## Holds only a broken file, never a last good copy (spec 12.3).
 const BROKEN_FILE := "save.bak"
+## The copy of save.json before a Parent reset (spec 11.2). The Parent restores it by hand: quit the
+## game, then rename it to save.json.
+const BEFORE_RESET_FILE := "save.before-reset.json"
+const BEFORE_RESET_TMP_FILE := "save.before-reset.json.tmp"
 ## The migration chain of save.json (spec 12.3): migrations[i] turns a save of version i + 1 into
 ## version i + 2. Version 1 is the first version, so the chain is empty now. A change to the save
 ## schema raises VERSION and appends its migration here, for example `_version_1_to_2`, a static
@@ -38,6 +42,10 @@ func broken_path() -> String:
 	return dir.path_join(BROKEN_FILE)
 
 
+func before_reset_path() -> String:
+	return dir.path_join(BEFORE_RESET_FILE)
+
+
 ## Writes `progress` to save.json.tmp, closes it, then renames it to save.json. A crash leaves the
 ## old save.json or the new one, never half a file. In the no-write state, the call writes nothing
 ## and logs one warning.
@@ -46,6 +54,21 @@ func save(progress: Progress) -> Error:
 		push_warning("The progress was not saved: save.json is from a newer build.")
 		return OK
 	return JsonFile.write(to_dictionary(progress), save_path(), tmp_path())
+
+
+## Copies save.json to save.before-reset.json before a reset of `progress`, the progress in memory
+## (spec 11.2). The copy uses the rule of save(): a temporary file, then a rename. It makes no copy
+## when `progress` is fresh, so a second reset keeps the copy of the real Collection. It makes no
+## copy when no save.json exists, or in the no-write state.
+func copy_before_reset(progress: Progress) -> Error:
+	if no_write or progress.is_fresh() or not FileAccess.file_exists(save_path()):
+		return OK
+	var file := FileAccess.open(save_path(), FileAccess.READ)
+	if file == null:
+		return FileAccess.get_open_error()
+	var text := file.get_as_text()
+	file.close()
+	return JsonFile.write_text(text, before_reset_path(), dir.path_join(BEFORE_RESET_TMP_FILE))
 
 
 ## Loads the progress. With no save.json, the game starts at Labyrinth 1. A broken file becomes

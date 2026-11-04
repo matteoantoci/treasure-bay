@@ -113,7 +113,7 @@ func test_presses_are_dropped_during_the_fade_in_after_a_reset(t) -> bool:
 	var moves := Scene.record_moves(main)
 	panel.open()
 	panel.reset_button.button_down.emit()
-	panel.reset_button.advance(HoldButton.HOLD_SECONDS)
+	panel.reset_button.advance(panel.reset_button.hold_seconds)
 	panel.reset_button.button_up.emit()
 	t.assert_true(not panel.is_open() and not t.paused, "the reset closes the settings and unpauses play")
 	t.assert_true(main.get_node("Fade").dark.color.a > 0.5, "the screen is dark")

@@ -30,7 +30,7 @@ func _initialize() -> void:
 	await _frames()
 	print("RUNNING AFTER SHORT HOLD")
 	panel.quit_button.button_down.emit()
-	panel.quit_button.advance(HoldButton.HOLD_SECONDS)
+	panel.quit_button.advance(3.0)
 	await create_timer(QUIT_WAIT_SECONDS, true, false, true).timeout
 	print("DID NOT QUIT")
 	quit(3)
