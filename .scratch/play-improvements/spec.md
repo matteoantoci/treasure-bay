@@ -1,6 +1,6 @@
 # Play improvements after the game review
 
-Status: ready-for-agent
+Status: resolved
 
 Source: the five-axis review of 2026-11-04 (child play, Labyrinth design, look and motion, sound, code). The Parent accepted review items 1 to 5.
 

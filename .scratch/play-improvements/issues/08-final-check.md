@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 (Safer reset), 03 (Fanfare under the Sea friend sound), 04 (Bigger Items, boat and chest), 07 (Fixed seeds by measured difficulty)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The full headless test suite passes, with exit code 0.
 - [x] The windowed smoke run prints `SMOKE OK`.

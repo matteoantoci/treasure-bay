@@ -4,20 +4,20 @@
 
 **Blocked by:** 01 (Migration chain and newer save files)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The hold time and the full ring colour are values of each hold button.
-- [ ] A reset hold of 7.9 s does nothing, and the ring goes back to empty. A reset hold of 8 s resets.
-- [ ] The reset ring fills in `#ff7a59`. The quit ring stays `#ffd447`.
-- [ ] A quit hold of 3 s still quits.
-- [ ] Before the reset writes the new save, `save.before-reset.json` holds the old progress. The copy uses a temporary file and then a rename.
-- [ ] The reset makes the copy only when the progress is not fresh. Fresh progress is Labyrinth 1, an empty Collection and `total_items` 0.
-- [ ] Two resets in a row keep the first copy: the copy still holds the progress from before the first reset.
-- [ ] A reset after new play (for example one collected Item) replaces the older copy.
-- [ ] With no save file, the reset makes no copy.
-- [ ] In the no-write state of ticket 01, the reset makes no copy and writes no save.
-- [ ] The labyrinth-game build spec section 11.2 gives the 8 s hold, the ring colours, the copy, and the steps for the Parent to restore it: quit, then rename the copy to `save.json`.
-- [ ] The full test suite passes.
+- [x] The hold time and the full ring colour are values of each hold button.
+- [x] A reset hold of 7.9 s does nothing, and the ring goes back to empty. A reset hold of 8 s resets.
+- [x] The reset ring fills in `#ff7a59`. The quit ring stays `#ffd447`.
+- [x] A quit hold of 3 s still quits.
+- [x] Before the reset writes the new save, `save.before-reset.json` holds the old progress. The copy uses a temporary file and then a rename.
+- [x] The reset makes the copy only when the progress is not fresh. Fresh progress is Labyrinth 1, an empty Collection and `total_items` 0.
+- [x] Two resets in a row keep the first copy: the copy still holds the progress from before the first reset.
+- [x] A reset after new play (for example one collected Item) replaces the older copy.
+- [x] With no save file, the reset makes no copy.
+- [x] In the no-write state of ticket 01, the reset makes no copy and writes no save.
+- [x] The labyrinth-game build spec section 11.2 gives the 8 s hold, the ring colours, the copy, and the steps for the Parent to restore it: quit, then rename the copy to `save.json`.
+- [x] The full test suite passes.
 
 ## Comments
 

@@ -4,15 +4,15 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] At `sea_friend_appeared`, the volume of the Goal player goes from its level to its level − 12 dB in 0.2 s.
-- [ ] At each `goal_reached`, the game kills an old duck tween, sets the Goal player to its level from the sound-levels table, and then plays the fanfare.
-- [ ] The duck tween pauses with the game, like the Goal player.
-- [ ] A reset during the celebration gives the full fanfare level at the next Goal.
-- [ ] The sound-levels table, the bus volumes and the music do not change.
-- [ ] The labyrinth-game build spec sections 9.3 and 9.7 describe the duck.
-- [ ] The full test suite passes.
+- [x] At `sea_friend_appeared`, the volume of the Goal player goes from its level to its level − 12 dB in 0.2 s.
+- [x] At each `goal_reached`, the game kills an old duck tween, sets the Goal player to its level from the sound-levels table, and then plays the fanfare.
+- [x] The duck tween pauses with the game, like the Goal player.
+- [x] A reset during the celebration gives the full fanfare level at the next Goal.
+- [x] The sound-levels table, the bus volumes and the music do not change.
+- [x] The labyrinth-game build spec sections 9.3 and 9.7 describe the duck.
+- [x] The full test suite passes.
 
 ## Comments
 
