@@ -4,7 +4,7 @@
 ##
 ## A child of the main scene. It loads settings.json (spec 12.4) and sets the bus volumes when the
 ## scene starts, and it uses the public part of the main scene: `save_store`, `progress`,
-## `save_progress()`, and `show_labyrinth()`.
+## `save_progress()`, and `start_with_fade()`.
 class_name SettingsPanel
 extends CanvasLayer
 
@@ -93,14 +93,14 @@ func change_step(bus: StringName, change: int) -> void:
 
 
 ## The reset after a hold of 3 s: the panel closes and play unpauses, the progress goes back to
-## Labyrinth 1 with an empty Collection and a total of 0, and the game writes the save. The volume
-## steps and settings.json stay (spec 12.4).
+## Labyrinth 1 with an empty Collection and a total of 0, the game writes the save, and the screen
+## fades in from dark (spec 8.8). The volume steps and settings.json stay (spec 12.4).
 func _reset() -> void:
 	close()
 	var main := get_parent()
 	main.progress = Progress.new()
 	main.save_progress()
-	main.show_labyrinth()
+	main.start_with_fade()
 
 
 ## The quit after a hold of 3 s: the game writes the save, then quits. It is the only quit path

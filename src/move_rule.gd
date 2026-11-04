@@ -1,13 +1,8 @@
-## The move rule of spec 5.2 and the bump of spec 5.3: where one arrow press takes the boat.
+## The move rule of spec 5.2 and the bump of spec 5.3: where one arrow press takes the boat. The
+## timings are in Motion.
 class_name MoveRule
 extends RefCounted
 
-## One tween for the whole slide: 180 ms for each tile that the boat crosses.
-const TILE_SECONDS := 0.18
-## A bump moves the boat toward the wall by 0.12 of a tile in 70 ms, then back in 110 ms.
-const BUMP_TILES := 0.12
-const BUMP_OUT_SECONDS := 0.07
-const BUMP_BACK_SECONDS := 0.11
 ## One move from a square to its neighbour crosses 2 tiles (spec 4.5).
 const TILES_PER_SQUARE := 2
 
@@ -40,7 +35,7 @@ static func plan(labyrinth: Labyrinth, from: Vector2i, direction: Vector2i, item
 	move.target = from
 	if labyrinth.has_wall(from, direction):
 		move.bump = true
-		move.duration = BUMP_OUT_SECONDS + BUMP_BACK_SECONDS
+		move.duration = Motion.BUMP_OUT_SECONDS + Motion.BUMP_BACK_SECONDS
 		return move
 	var squares := 0
 	var square := from
@@ -51,7 +46,7 @@ static func plan(labyrinth: Labyrinth, from: Vector2i, direction: Vector2i, item
 			break
 	move.target = square
 	move.tiles = squares * TILES_PER_SQUARE
-	move.duration = move.tiles * TILE_SECONDS
+	move.duration = move.tiles * Motion.TILE_SECONDS
 	return move
 
 
