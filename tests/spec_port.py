@@ -1,7 +1,9 @@
-"""Independent Python port of spec 4.1, 4.2, 4.6, and the wall island decoration of spec 7.1.
+"""Independent Python port of spec 4.1, 4.2, 4.6, 5.2, the wall island decoration of spec 7.1, and
+the Labyrinth measure of play-improvements spec Part 3.
 
 It gives the pinned values of the GDScript tests (tests/test_generator.gd, tests/test_items.gd,
-tests/test_island_look.gd, and the scene tests that sail Labyrinth 1). It does not read the
+tests/test_island_look.gd, tests/test_labyrinth_measure.gd, and the scene tests that sail
+Labyrinth 1). It does not read the
 GDScript code, so a pin from this port checks the GDScript code against the spec.
 
 Run: python3 tests/spec_port.py
@@ -179,6 +181,84 @@ def ids(squares):
     return [f"{x},{y}" for x, y in squares]
 
 
+def main_path(walls, w, h):
+    """The only chain of squares from the start P[0] to the Goal P[L] (a perfect Labyrinth)."""
+    goal = (w - 1, h - 1)
+    came_from = {(0, 0): None}
+    queue = [(0, 0)]
+    for (x, y) in queue:
+        for (dx, dy), bit, _ in DIRS:
+            if not walls[y][x] & bit:
+                n = (x + dx, y + dy)
+                if n not in came_from:
+                    came_from[n] = (x, y)
+                    queue.append(n)
+    path = [goal]
+    while came_from[path[-1]] is not None:
+        path.append(came_from[path[-1]])
+    return path[::-1]
+
+
+def wall_in(walls, square, direction):
+    x, y = square
+    for d, bit, _ in DIRS:
+        if d == direction:
+            return bool(walls[y][x] & bit)
+
+
+def press(walls, w, h, square, direction, uncollected):
+    """Spec 5.2 rule 3: the boat goes straight one square at a time and stops on the first square
+    where the next side is a wall, the square has 3 or more open sides, the square holds an Item
+    not collected, or the square is the Goal. The caller checks that the first side is open."""
+    goal = (w - 1, h - 1)
+    while True:
+        square = (square[0] + direction[0], square[1] + direction[1])
+        if (wall_in(walls, square, direction) or open_sides(walls, *square) >= 3
+                or square in uncollected or square == goal):
+            return square
+
+
+def measure(walls, w, h, items):
+    """Part 3 measure of a Labyrinth with its Item squares. All Items start not collected. The boat
+    sails the main path: each press goes toward the next path square (spec 5.2), and the boat
+    collects the Item where it stops (spec 5.2 rule 6)."""
+    path = main_path(walls, w, h)
+    index = {s: i for i, s in enumerate(path)}
+    uncollected = set(items)
+    presses, square = 0, path[0]
+    while square != path[-1]:
+        nxt = path[index[square] + 1]
+        direction = (nxt[0] - square[0], nxt[1] - square[1])
+        square = press(walls, w, h, square, direction, uncollected)
+        uncollected.discard(square)
+        presses += 1
+    steps = [(b[0] - a[0], b[1] - a[1]) for a, b in zip(path, path[1:])]
+    on_path = set(path)
+    # Largest group of off-path squares that connect without a main-path square.
+    seen, largest = set(), 0
+    for y in range(h):
+        for x in range(w):
+            if (x, y) in on_path or (x, y) in seen:
+                continue
+            seen.add((x, y))
+            group = [(x, y)]
+            for (gx, gy) in group:
+                for (dx, dy), bit, _ in DIRS:
+                    n = (gx + dx, gy + dy)
+                    if not walls[gy][gx] & bit and n not in on_path and n not in seen:
+                        seen.add(n)
+                        group.append(n)
+            largest = max(largest, len(group))
+    return {
+        "length": len(path) - 1,
+        "presses": presses,
+        "decisions": sum(1 for s in path[1:-1] if open_sides(walls, *s) >= 3),
+        "turns": sum(1 for a, b in zip(steps, steps[1:]) if a != b),
+        "largest_side_branch": largest,
+        "items_on_path": sum(1 for s in items if s in on_path),
+    }
+
+
 if __name__ == "__main__":
     w, h, walls, items = build(1)
     print("Labyrinth 1 walls", [b for row in walls for b in row])
@@ -189,6 +269,10 @@ if __name__ == "__main__":
         w, h, walls, items = build(n)
         print(n, (w, h), "dead_ends", len(dead_ends(walls, w, h)), "behind_goal", behind_goal(walls, w, h),
               "items", ids(items))
+    for n in range(1, 21):
+        w, h, walls, items = build(n)
+        m = measure(walls, w, h, items)
+        print("measure", n, ids(main_path(walls, w, h)) if n <= 2 else "", m)
     w, h, walls, _ = build(2)
     dist = bfs(walls, w, h)
     print("Labyrinth 2 free dead ends", [(s, dist[s]) for s in dead_ends(walls, w, h)])

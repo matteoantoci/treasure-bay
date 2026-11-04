@@ -15,3 +15,15 @@
 - [ ] The test "`version` 2 counts as broken" is replaced by the newer-save test.
 - [ ] The labyrinth-game build spec sections 12.3, 12.4 and 14.1 (test 7) describe the new rules.
 - [ ] The full test suite passes.
+
+## Comments
+
+Build note (pi/01-migration-chain-and-newer-saves):
+
+- `JsonFile.migrate(data, version, chain, target)` is the shared migration runner. `JsonFile.version_of(data)` gives the version, or 0 for a file with no whole-number version.
+- `SaveStore.migrations` and `SettingsStore.migrations` are the two chains (static vars, both empty now). A schema change raises `VERSION` and appends its migration.
+- No-write state: `SaveStore.no_write` and `SettingsStore.no_write` become true when the load finds a newer file. Then `save()` writes nothing, logs one warning, and returns `OK`, so `main.gd` and the settings panel log no second warning. Ticket 02: the copy before a reset must check `save_store.no_write` and make no copy when it is true.
+- A newer file is not broken even when its other fields are not valid for version 1 (a newer build can change them).
+- New test helper `tests/warning_log.gd` (a `Logger` added with `OS.add_logger`) counts the warnings for the "one warning per save call" checks.
+- Tests: newer save at store level (`tests/test_save.gd`) and in the main scene (`tests/test_main_save.gd`), migration chain of one (`tests/test_save.gd`), newer settings at store level (`tests/test_settings.gd`) and through the volume buttons (`tests/test_parent_controls.gd`). Broken cases add `version -1`; the `version 2` broken cases are gone.
+- A person can check: no windowed run was done for this ticket.

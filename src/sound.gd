@@ -25,6 +25,9 @@ const SPLASH_PATH := "res://assets/audio/effects/splash.wav"
 ## The move swish varies its pitch, and up to 4 swishes can sound at one time (spec 9.3).
 const MOVE_PITCH_SEMITONES := 1.0
 const MOVE_POLYPHONY := 4
+## When a Sea friend appears, the fanfare goes 12 dB down in 0.2 s, so the Sea friend sound is clear.
+const DUCK_DB := 12.0
+const DUCK_SECONDS := 0.2
 
 ## The two music players of the crossfade. `_active` is the one with the current track.
 var music_players: Array[AudioStreamPlayer] = []
@@ -36,6 +39,7 @@ var sea_friend_player: AudioStreamPlayer
 
 var _active := 0
 var _crossfade: Tween
+var _duck: Tween
 
 
 ## Adds the `Music` and `Effects` buses, each sending to `Master`, if they do not exist yet (spec 9.1).
@@ -78,7 +82,7 @@ func _ready() -> void:
 	main.move_started.connect(_play.bind(move_player, MOVE_PATH))
 	main.bumped.connect(_play.bind(wall_player, WALL_PATH))
 	main.item_collected.connect(_play.bind(item_player, ITEM_PATH).unbind(1))
-	main.goal_reached.connect(_play.bind(goal_player, GOAL_PATH).unbind(1))
+	main.goal_reached.connect(play_goal.unbind(1))
 	main.sea_friend_appeared.connect(play_sea_friend)
 
 
@@ -120,12 +124,30 @@ func play_area(area: int) -> void:
 		_crossfade_to(path)
 
 
+## Plays the fanfare at its level from the sound-levels table. A duck of an earlier Goal stops.
+func play_goal() -> void:
+	if _duck != null:
+		_duck.kill()
+	goal_player.volume_db = SoundLevels.volume_db(GOAL_PATH)
+	_play(goal_player, GOAL_PATH)
+
+
 ## Plays the sound of a Sea friend when it appears (spec 9.4).
 func play_sea_friend(sea_friend: String) -> void:
 	var path := sea_friend_sound_path(sea_friend)
 	sea_friend_player.stream = load(path)
 	sea_friend_player.volume_db = SoundLevels.volume_db(path)
 	_play(sea_friend_player, path)
+	_duck_goal()
+
+
+## The fanfare goes 12 dB down from its level. The tween belongs to the Goal player, so it pauses
+## with the game like the Goal player.
+func _duck_goal() -> void:
+	if _duck != null:
+		_duck.kill()
+	_duck = goal_player.create_tween()
+	_duck.tween_property(goal_player, "volume_db", SoundLevels.volume_db(GOAL_PATH) - DUCK_DB, DUCK_SECONDS)
 
 
 func _on_labyrinth_started(number: int) -> void:

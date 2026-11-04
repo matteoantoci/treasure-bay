@@ -3,6 +3,7 @@
 extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
+const WarningLog := preload("res://tests/warning_log.gd")
 
 
 func test_no_file_gives_the_default_steps(t) -> bool:
@@ -51,8 +52,8 @@ func test_a_broken_file_gives_the_default_steps(t) -> bool:
 		"a step with a fraction": "{\"version\": 1, \"music_step\": 4, \"effects_step\": 0.5}",
 		"a step below 0": "{\"version\": 1, \"music_step\": 4, \"effects_step\": -1}",
 		"a step above 4": "{\"version\": 1, \"music_step\": 5, \"effects_step\": 0}",
-		"version 2": "{\"version\": 2, \"music_step\": 4, \"effects_step\": 0}",
 		"version 0": "{\"version\": 0, \"music_step\": 4, \"effects_step\": 0}",
+		"version -1": "{\"version\": -1, \"music_step\": 4, \"effects_step\": 0}",
 	}
 	_write(path, "{\"version\": 1, \"music_step\": 4, \"effects_step\": 0}")
 	var good := SettingsStore.new(dir).load_settings()
@@ -61,6 +62,28 @@ func test_a_broken_file_gives_the_default_steps(t) -> bool:
 		_write(path, cases[case_name])
 		var settings := SettingsStore.new(dir).load_settings()
 		t.assert_eq([settings.music_step, settings.effects_step], [2, 3], "%s: the default steps" % case_name)
+	Fixtures.remove_save_dir(dir)
+	return true
+
+
+## Test 12 of the play improvements: a settings file of a newer build gives the default steps in
+## memory. It stays in place with the same bytes, and the store does not write it in this session.
+func test_a_newer_file_gives_the_default_steps_and_stays(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var path := dir.path_join("settings.json")
+	var text := "{\"version\": 2, \"music_step\": 4, \"effects_step\": 0, \"voice_step\": 1}"
+	_write(path, text)
+	var store := SettingsStore.new(dir)
+	var settings := store.load_settings()
+	t.assert_eq([settings.music_step, settings.effects_step], [2, 3], "the default steps")
+	var log := WarningLog.new()
+	log.start()
+	settings.music_step = 4
+	store.save(settings)
+	log.stop()
+	t.assert_eq(log.warnings().size(), 1, "the save call logs one warning")
+	t.assert_eq(FileAccess.get_file_as_string(path), text, "settings.json has the same bytes")
+	t.assert_eq(DirAccess.get_files_at(dir), PackedStringArray(["settings.json"]), "no other file")
 	Fixtures.remove_save_dir(dir)
 	return true
 

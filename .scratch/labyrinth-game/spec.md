@@ -435,6 +435,7 @@ All effect URLs are the Freesound `-hq.mp3` preview files. They download with no
 - The move sound goes in an `AudioStreamRandomizer` with `random_pitch_semitones = 1.0`. Its player has `max_polyphony = 4` ([sounds.md](research/sounds.md), [audio-design skill](../../.claude/skills/audio-design/SKILL.md)).
 - The move sound plays one time for each move, not for each square.
 - The fanfare cut: `ffmpeg -i goal.mp3 -t 3.7 -af "afade=t=out:st=3.2:d=0.5" -ac 1 -ar 44100 -c:a pcm_s16le goal.wav` (ticket 11, gap-audit default 37).
+- **Fanfare duck:** when a Sea friend appears, a tween moves the volume of the Goal player from its level to its level − 12 dB in 0.2 s. The tween pauses with the game, like the Goal player. At each Goal arrival, the game kills an old duck tween, sets the Goal player to its level from the sound-levels table, and then plays the fanfare. So a reset during the celebration needs no extra step.
 - The new-Area Item makes no sound (gap-audit default 38).
 
 ### 9.4 Sea friend sounds
@@ -483,8 +484,8 @@ Source: [sounds.md](research/sounds.md) Download and preparation, [audio-design 
 | Move starts | `move.wav` |
 | Bump | `wall.wav` |
 | Item collected | `item.wav` |
-| Goal arrival | `goal.wav` |
-| Sea friend appears (1.4 s) | Its own sound, or `splash.wav` |
+| Goal arrival | `goal.wav` at its level |
+| Sea friend appears (1.4 s) | Its own sound, or `splash.wav`. The fanfare goes 12 dB down in 0.2 s (section 9.3) |
 | Area change | Music crossfade to the new Area track |
 
 ### 9.8 `credits.txt`
@@ -651,19 +652,23 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 - **Broken file:** rename it to `user://save.bak`. Replace an older `save.bak`. Then start at Labyrinth 1 with no message to the Child. A file is broken when:
   - the JSON does not parse, or it is not a dictionary,
   - a field is absent or has the wrong type,
-  - `version` is 0 or less (not a real version), or higher than 1,
+  - `version` is not a whole number, or it is 0 or less (not a real version),
   - `labyrinth` is below 1,
   - `labyrinth` is above 20 and `random_seed` is 0,
   - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
 - **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
-- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
+- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain and the target version as inputs, so a test can run a chain of one migration. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
+- **Newer version:** a file with a `version` above the current version is from a newer build. It is not broken. Do not rename it to `save.bak`: it stays in place with the same bytes. The game plays Labyrinth 1 in memory. The save store goes into a no-write state for the session: each save call returns without a write and logs one warning. A reset makes no copy (play-improvements spec, part 5).
 
 ### 12.4 Settings file
 
 - `user://settings.json` holds `{"version": 1, "music_step": 2, "effects_step": 3}`.
 - A Parent reset does not change this file.
-- An absent or broken settings file gives the default steps.
+- An absent or broken settings file gives the default steps. The settings file uses the version rules of section 12.3:
+  - A `version` of 0 or less is broken and gives the default steps.
+  - A `version` above the current version is from a newer build. It gives the default steps in memory, it stays in place with the same bytes, and the game does not write it in that session.
+  - An older version goes through its own migration chain, separate from the chain of `save.json`. That chain is empty now.
 
 ## 13. Asset acquisition steps
 
@@ -764,7 +769,10 @@ Tests:
    - A save and a load give the same state.
    - No file gives Labyrinth 1.
    - A broken file (each case of section 12.3) becomes `save.bak` and gives Labyrinth 1.
-   - `version` 0 and `version` 2 count as broken.
+   - `version` 0 counts as broken.
+   - A `version` 2 save stays in place with the same bytes, and no `save.bak` exists. The game is at Labyrinth 1. A collect and a Goal write nothing, and each save call logs one warning.
+   - A chain of one test migration from version 1 to version 2 gives the migrated fields.
+   - A `version` 2 settings file gives the default steps and stays in place with the same bytes.
    - The write goes to the `.tmp` file first.
    - After a reload, a collected Item does not count again.
    - An old Item ID of a square with no Item is removed. The other fields stay, and the file does not become `save.bak`.
