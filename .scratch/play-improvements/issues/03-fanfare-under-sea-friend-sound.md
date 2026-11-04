@@ -13,3 +13,7 @@
 - [ ] The sound-levels table, the bus volumes and the music do not change.
 - [ ] The labyrinth-game build spec sections 9.3 and 9.7 describe the duck.
 - [ ] The full test suite passes.
+
+## Comments
+
+Build note: `src/sound.gd` has `play_goal()` (kills the old duck, sets the Goal player to its table level, plays the fanfare) and `_duck_goal()` after each Sea friend sound (tween on the Goal player, level − 12 dB in 0.2 s). The tween is made by the Goal player, so it pauses with it. No value differs from the spec. Tests in `tests/test_sound.gd`: the duck, the restore at the next Goal, and the pause. Build spec 9.3 and 9.7 describe the duck. A person must listen at a Goal: the crab sound must be clear over the fanfare.
