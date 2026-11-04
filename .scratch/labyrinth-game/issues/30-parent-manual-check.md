@@ -89,3 +89,5 @@ NOTE: Do these steps after the Goal fix. The Goal fix changes the shape of each 
     - Do the key test of spec 11.4 for each key.
     - In the build report, write the result of each key in a table: blocked, not blocked, or other effect.
     - In the build report, write the result of each item of spec 14.3.
+
+**Parent decision (2026-11-04):** the Parent accepted the Sea friend position. It shows on the right side of the Goal island, and it hides the palm for approximately 2 seconds. Cmd+Q stays blocked: the door button is the only quit path. The Parent also checked that Cmd+Q does nothing and that the 3-second door hold quits the game.
