@@ -6,7 +6,6 @@ extends Node2D
 
 ## The Item size in px of the prototype tile (spec 10).
 const ITEM_PX := 90.0
-const SPARKLE_COLOUR := Color.WHITE
 
 ## Seconds of idle motion.
 var time := 0.0
@@ -110,4 +109,4 @@ func _draw_sparkles() -> void:
 		if alpha <= 0.0:
 			continue
 		var centre: Vector2 = _sprites[item_id].position + Motion.SPARKLE_OFFSET_PX * s
-		_sparkles.draw_colored_polygon(Burst.star_points(centre, Motion.SPARKLE_RADIUS_PX * s), Color(SPARKLE_COLOUR, alpha))
+		_sparkles.draw_colored_polygon(Burst.star_points(centre, Motion.SPARKLE_RADIUS_PX * s), Color(Motion.SPARKLE_COLOUR, alpha))

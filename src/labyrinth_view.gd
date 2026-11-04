@@ -126,7 +126,7 @@ func _idle() -> void:
 	if labyrinth != null and _is_chest_closed():
 		alpha = Motion.item_sparkle_alpha(time, labyrinth.items.size())
 	chest_sparkle.visible = alpha > 0.0
-	chest_sparkle.color = Color(ItemsView.SPARKLE_COLOUR, alpha)
+	chest_sparkle.color = Color(Motion.SPARKLE_COLOUR, alpha)
 
 
 func _show_look() -> void:

@@ -49,6 +49,7 @@ const SPARKLE_INDEX_SHIFT := 0.33
 const SPARKLE_SHOWS := 0.15
 const SPARKLE_RADIUS_PX := 7.0
 const SPARKLE_OFFSET_PX := Vector2(18, -18)
+const SPARKLE_COLOUR := Color.WHITE
 ## The palm of the Goal island sways 0.08 sin(1.5 t) rad.
 const PALM_SWAY_RAD := 0.08
 const PALM_SWAY_RATE := 1.5
