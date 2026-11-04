@@ -11,7 +11,7 @@ The game is complete and follows its build spec, but the review found five probl
 1. In 11 of the 20 fixed Labyrinths, no Item is on the path to the Goal. A Child who sails straight to the chest gets no Item. Ticket 04 of the labyrinth-game map asked for Items "on the path".
 2. From Labyrinth 19 on, the chest and the Items are 26 px and the boat is 23 px wide at 1920 × 1200. The palm is green on green grass. The Child cannot find the Goal at a glance.
 3. The difficulty does not rise smoothly. The fewest presses to the Goal are 13, 7 and 5 for Labyrinths 13 to 15, and then 26 for Labyrinth 16. The Child can get stuck at Labyrinth 16.
-4. The Goal fanfare is still loud when the Sea friend sound starts. The Crab sound of Labyrinth 1 is 10 dB quieter than the fanfare, so the Child does not hear her reward.
+4. The Goal fanfare is still loud when the Sea friend sound starts. The Crab sound of Labyrinth 1 is 10 dB quieter than the fanfare, so the Child does not hear her Sea friend.
 5. A 3 s hold on the reset button deletes the whole Collection, and no undo exists. The spec says that the Child can use the settings too. Also, a save file from a newer build counts as broken, and the game replaces it with Labyrinth 1.
 
 ## Solution
@@ -56,7 +56,7 @@ The game is complete and follows its build spec, but the review found five probl
 
 ### Sound
 
-22. As the Child, I want to hear the sound of each Sea friend clearly, so that each reward feels different.
+22. As the Child, I want to hear the sound of each Sea friend clearly, so that each Sea friend feels different.
 23. As the Child, I want the fanfare to start at its full level at each Goal, so that the celebration stays the same.
 24. As the Parent, I want the music and the volume settings to work as before, so that the change has no other effect.
 
@@ -92,7 +92,7 @@ The game is complete and follows its build spec, but the review found five probl
   2. Items 2 to k + 1: the on-path squares, in order from the start to the Goal.
   3. The shuffled other dead ends.
   4. The shuffled other squares.
-- Before the shuffle, remove the k path squares from the list of other squares. A main-path square is never a dead end, so the dead-end list does not change. The PRNG calls do not change.
+- Before the shuffle, remove the k path squares from the list of other squares. A main-path square is never a dead end, so the dead-end list does not change. The PRNG calls come in the same order. The second shuffle has k fewer entries, so it makes k fewer `prng.next()` calls.
 - The Item count and the kinds rule (`kinds[i % len]`) do not change.
 - The review checked that this rule with k = 0 gives the placement of today for Labyrinths 1 to 20.
 
@@ -194,7 +194,7 @@ The game is complete and follows its build spec, but the review found five probl
 - A good test checks behaviour that the Child or the Parent can see: the squares of the Items, the presses to the Goal, the sizes on screen, the sound calls and levels, and the files on disk. A test does not check private fields, constant values or the text of the code.
 - The tests use the seams of today. They add no new seam:
   - **Labyrinth content:** the Labyrinth plan build function for a Labyrinth number and a random seed. Prior art: the Items tests and the generator tests, which pin values from the separate Python port.
-  - **Look:** the main scene node tree, with the global sizes of the sprites. Prior art: the main look tests and the HUD layout tests.
+  - **Look:** the main scene node tree, with the global sizes of the sprites. Prior art: the main look tests and the HUD layout tests. The boat draws its picture in `_draw()` and has no sprite, so its size comes from the public `BoatView.hull_rect()` times the boat global scale.
   - **Sound:** the main scene signals into the Sound node, with its sound-played signal and the player volumes. Prior art: the sound tests.
   - **Save and reset:** the save store and the settings store on a temporary folder, and the hold buttons through their fake clock. Prior art: the save tests, the settings tests, the hold button tests and the Parent controls tests.
 - The Python port gets the new placement rule, the measure and the fixed seed table. The build writes it from the text of this spec, not from the GDScript, so the cross-check stays independent. The tests pin the Item IDs of Labyrinths 1 to 20 and of two random seeds with values from the port.
@@ -216,7 +216,7 @@ The game is complete and follows its build spec, but the review found five probl
 
 ## Out of Scope
 
-- The other review suggestions: faint shapes in the empty Collection slots, gold stars for all Items, fixed screen sizes for the rewards, larger Area decorations, other sound targets for each event, a limiter pass and a limiter on the Master bus, loop points in the music, more sound variety, and keyboard close of the settings.
+- The other review suggestions: faint shapes in the empty Collection slots, gold stars for all Items, fixed screen sizes for the Sea friends, larger Area decorations, other sound targets for each event, a limiter pass and a limiter on the Master bus, loop points in the music, more sound variety, and keyboard close of the settings.
 - A music duck during the celebration.
 - A smaller top band.
 - A difficulty band for random Labyrinths 21 and later. The review listed it as a later item, and the Parent did not choose it.
