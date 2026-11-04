@@ -1,0 +1,46 @@
+Sounds, music, and art in this game
+
+Only one file below needs a credit by its licence (CC BY 4.0).
+The other files are CC0 or Pixabay Content License and need no credit.
+We list them all to thank the authors.
+
+== CC BY 4.0 (credit necessary) ==
+"Otters Squeaking.wav" by Motion_S
+  https://freesound.org/people/Motion_S/sounds/221761/
+  Licence: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/
+  Change: we cut a short part (0:33.3 to 0:34.8) of the Freesound preview file and converted it to WAV.
+
+== Pixabay Content License (no credit necessary) ==
+https://pixabay.com/service/license-summary/
+"Ocean Joy" by AndriiComposer - https://pixabay.com/music/cartoons-ocean-joy-380628/
+"Marine Melody" by AndriiComposer - https://pixabay.com/music/happy-childrens-tunes-marine-melody-380629/
+"Fairy Land" by AndriiComposer - https://pixabay.com/music/happy-childrens-tunes-fairy-land-440535/
+"Cloud of Dreams" by AndriiComposer - https://pixabay.com/music/acoustic-group-cloud-of-dreams-380619/
+
+== CC0 1.0 (public domain, no credit necessary) ==
+https://creativecommons.org/publicdomain/zero/1.0/
+Effects
+"Water Swish" by dslrguide - https://freesound.org/people/dslrguide/sounds/321489/
+"Boing 2" by magnuswaker - https://freesound.org/people/magnuswaker/sounds/540790/
+"Bubble Pop" by YehawSnail - https://freesound.org/people/YehawSnail/sounds/683587/
+"Success Fanfare Trumpets.mp3" by FunWithSound - https://freesound.org/people/FunWithSound/sounds/456966/
+"Splash" by swordofkings128 - https://freesound.org/people/swordofkings128/sounds/398032/
+Sea friends
+"scissors;snips.wav" by Abir19 - https://freesound.org/people/Abir19/sounds/629513/
+"Cartoon - Smoochy Squeak + Plop" by Breviceps - https://freesound.org/people/Breviceps/sounds/444494/
+"Whale.wav" by claretcanelon - https://freesound.org/people/claretcanelon/sounds/458626/
+"Dolphin Noise-.wav" by jfournier18 - https://freesound.org/people/jfournier18/sounds/456151/
+"Bubbles Light Short Descend.wav" by murraysortz - https://freesound.org/people/murraysortz/sounds/192496/
+"Bottle Squirt.wav" by jimbo555 - https://freesound.org/people/jimbo555/sounds/630484/
+"Sound of a Seal" by florianreichelt - https://freesound.org/people/florianreichelt/sounds/450751/
+"Bubble.wav" by megmcduffee - https://freesound.org/people/megmcduffee/sounds/332597/
+"Penguin Squeak" by Breviceps - https://freesound.org/people/Breviceps/sounds/705839/
+"single quack from a duck" by Mikes-MultiMedia - https://freesound.org/people/Mikes-MultiMedia/sounds/418509/
+"Trumpeter Swans little honks 2pm TTP B 180531.mp3" by TRP - https://freesound.org/people/TRP/sounds/572743/
+"Flamingos" by Breviceps - https://freesound.org/people/Breviceps/sounds/535778/
+
+== Art ==
+"Pirate Pack" by Kenney (www.kenney.nl), CC0 - https://kenney.nl/assets/pirate-pack
+The Sea friends, the Items, and the treasure chest were generated for this family game
+with xai-oauth/grok-imagine-image (the Parent's xAI subscription), in the style of the
+Kenney Pirate Pack. Their rights follow the xAI terms of that subscription.
