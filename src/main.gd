@@ -189,10 +189,15 @@ func _move(direction: Vector2i) -> void:
 		Motion.shape(tween.tween_property(_boat, "position", start, Motion.BUMP_BACK_SECONDS), Motion.BUMP_CURVE)
 	else:
 		Motion.shape(tween.tween_property(_boat, "position", _square_centre(move.target), move.duration), Motion.SLIDE_CURVE)
-	await tween.finished
+	# A new Labyrinth kills the tween. A killed tween does not emit `finished`, and nothing waits on it.
+	tween.finished.connect(_end_move.bind(move.target))
+
+
+## The move ends with the boat on `target`, and the boat is free again. The kept press runs.
+func _end_move(target: Vector2i) -> void:
 	_move_tween = null
 	_wake.stop()
-	boat_square = move.target
+	boat_square = target
 	_boat.position = _square_centre(boat_square)
 	_busy = false
 	_boat.idle = true

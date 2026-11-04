@@ -200,6 +200,31 @@ func test_a_new_labyrinth_stops_a_running_move(t) -> bool:
 	return true
 
 
+## Nothing waits for the end of a move that a new Labyrinth stopped, so the stopped move tween is
+## freed. A function that waits on its `finished` signal would hold it until the scene is freed.
+func test_a_stopped_move_leaves_nothing_waiting(t) -> bool:
+	var main := await Scene.add_main(t)
+	var refs := _refs_to_new_tweens(t, func() -> void: Scene.send_key(KEY_DOWN))
+	t.assert_eq(refs.size(), 1, "the move runs one tween")
+	main.show_labyrinth()
+	for frame in 3:
+		await t.process_frame
+	t.assert_true(refs.all(func(ref: WeakRef) -> bool: return ref.get_ref() == null), "the stopped move tween is freed")
+	await Scene.remove(t, main)
+	return true
+
+
+## Weak references to the tweens that `action` starts.
+func _refs_to_new_tweens(t, action: Callable) -> Array:
+	var before: Array = t.get_processed_tweens()
+	action.call()
+	var refs := []
+	for tween: Tween in t.get_processed_tweens():
+		if not before.has(tween):
+			refs.append(weakref(tween))
+	return refs
+
+
 ## The box on the screen of the opaque pixels of `texture`, drawn centred on `centre` with its
 ## longer side `px` long and no rotation.
 func _opaque_rect(texture: Texture2D, centre: Vector2, px: float) -> Rect2:
