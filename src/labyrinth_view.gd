@@ -42,10 +42,7 @@ var chest := Sprite2D.new()
 ## The Item sparkle of the closed chest (spec 8.2), with the Item count as its Item index.
 var chest_sparkle := Polygon2D.new()
 ## Seconds of palm sway and chest sparkle.
-var time := 0.0:
-	set(value):
-		time = value
-		_idle()
+var time := 0.0
 
 var _islands := TileMapLayer.new()
 ## Labyrinth tile -> the Sprite2D of its rock or bush.
@@ -116,6 +113,7 @@ func open_chest() -> void:
 
 func _process(delta: float) -> void:
 	time += delta
+	_idle()
 
 
 func _is_chest_closed() -> bool:
