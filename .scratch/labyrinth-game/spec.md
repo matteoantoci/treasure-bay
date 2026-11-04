@@ -260,7 +260,7 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 Source: [ticket 15](issues/15-reward-after-labyrinth-20.md), gap-audit default 30.
 
 - At each Goal from Labyrinth 21, a random Sea friend from the Collection comes back. It does the same arrival motion and plays its own sound.
-- The game never picks the same Sea friend two times in a row. The save keeps the last one in `last_returning_friend`, so the rule also holds after a restart.
+- The game never picks the same Sea friend two times in a row. The save keeps the last one in `last_returning_friend`, so the rule also holds after a restart. At the Goal of Labyrinth 21, `last_returning_friend` is `""`, so the game uses the last Sea friend of the Collection (the flamingo of Labyrinth 20) as the last one.
 - It flies back to its own slot in the strip. The strip does not grow.
 
 ### 6.5 Collection
