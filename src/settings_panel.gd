@@ -115,6 +115,8 @@ func _quit() -> void:
 
 func _build() -> void:
 	var centre := CenterContainer.new()
+	# A CanvasItem under a CanvasLayer does not inherit the filter of the main scene (spec 3.5).
+	centre.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	centre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(centre)

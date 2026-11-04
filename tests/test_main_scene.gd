@@ -16,6 +16,21 @@ func test_starts_labyrinth_1_with_the_boat_on_the_start(t) -> bool:
 	return true
 
 
+## Spec 3.5 step 2: each top-level CanvasItem has the texture filter, and its children inherit it. A
+## CanvasItem under a CanvasLayer (the settings panel) is a top-level CanvasItem too.
+func test_each_top_level_canvas_item_has_the_texture_filter(t) -> bool:
+	var main := await Scene.add_main(t)
+	var top_level := []
+	for node in main.find_children("*", "CanvasItem", true, false):
+		if not node.get_parent() is CanvasItem:
+			top_level.append(node)
+	t.assert_true(not top_level.is_empty(), "the settings panel has a top-level CanvasItem")
+	for node: CanvasItem in top_level:
+		t.assert_eq(node.texture_filter, CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, "texture filter of %s" % main.get_path_to(node))
+	await Scene.remove(t, main)
+	return true
+
+
 func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	var main := await Scene.add_main(t)
 	# Labyrinth 1 (see test_generator.gd): the start has only its south side open. Its Items are on
