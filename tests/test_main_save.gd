@@ -61,6 +61,27 @@ func test_a_broken_file_starts_at_labyrinth_1(t) -> bool:
 	return true
 
 
+## A save from before the Goal rule of spec 4.2: Labyrinth 14 with the old Items 3,3 and 4,1 and
+## the Item 1,1 collected. Now 1,1 is Item 5 of 6, and 3,3 and 4,1 hold no Item.
+func test_an_old_save_starts_at_its_labyrinth_with_its_count(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({
+		"version": 1, "labyrinth": 14, "random_seed": 0, "collected_items": ["3,3", "4,1", "1,1"],
+		"collection": SeaFriends.IDS.slice(0, 13), "total_items": 40, "last_returning_friend": "",
+	}))
+	file.close()
+	var main := await Scene.add_main(t, dir)
+	t.assert_eq(main.progress.labyrinth_number, 14, "Labyrinth 14")
+	t.assert_eq(main.get_node("CollectionStrip").count_text(), "40", "the total count stays")
+	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), SeaFriends.IDS.slice(0, 13), "13 Sea friends in the strip")
+	t.assert_eq(main.get_node("ItemRow").filled, [false, false, false, false, true, false] as Array[bool], "only Item 1,1 fills its outline")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["4,3", "6,1", "0,4", "6,4", "0,2"]), "the other 5 Items are on the water")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "the old save is not broken")
+	await Scene.remove(t, main)
+	return true
+
+
 func test_the_scene_saves_after_each_item(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var main := await Scene.add_main(t, dir)

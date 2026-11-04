@@ -4,7 +4,7 @@
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
-## Long enough for a move of Labyrinth 1 (at most 6 tiles, 1.08 s) at the test time scale.
+## Long enough for a move of Labyrinth 1 (at most 4 tiles, 0.72 s) at the test time scale.
 const NO_MOVE_SECONDS := 0.25
 
 

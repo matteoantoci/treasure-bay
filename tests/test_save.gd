@@ -105,15 +105,37 @@ func test_the_write_goes_to_the_tmp_file_first(t) -> bool:
 func test_after_a_reload_a_collected_item_does_not_count_again(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var progress := Progress.new()
-	# Labyrinth 1 has its Items on 2,1 and 1,2 (tests/test_items.gd).
+	# Labyrinth 1 has its Items on 1,1 and 1,2 (tests/test_items.gd).
 	progress.collect_item("1,2")
 	SaveStore.new(dir).save(progress)
 	var loaded := SaveStore.new(dir).load_progress()
 	t.assert_true(not loaded.collect_item("1,2"), "the saved Item does not count again")
 	t.assert_eq(loaded.total_items, 1, "total Items")
-	t.assert_eq(loaded.item_states(loaded.build_labyrinth()), {Vector2i(2, 1): false, Vector2i(1, 2): true}, "Item 1,2 stays collected")
-	t.assert_true(loaded.collect_item("2,1"), "the other Item counts")
+	t.assert_eq(loaded.item_states(loaded.build_labyrinth()), {Vector2i(1, 1): false, Vector2i(1, 2): true}, "Item 1,2 stays collected")
+	t.assert_true(loaded.collect_item("1,1"), "the other Item counts")
 	t.assert_eq(loaded.total_items, 2, "total Items after the other Item")
+	Fixtures.remove_save_dir(dir)
+	return true
+
+
+## A save from before the Goal rule of spec 4.2 can name a square that has no Item now. The load
+## drops that ID and keeps all other fields, also the total count. The file is not broken.
+func test_an_old_item_id_with_no_item_now_is_dropped(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	# Before the Goal rule, Labyrinth 1 had its Items on 2,1 and 1,2, and Labyrinth 14 on 3,3, 4,1,
+	# 1,1, 0,2, 2,2, and 4,3. Now 1,2 and 1,1 are still Items, and 2,1, 3,3, and 4,1 are not.
+	for old in [[1, ["2,1", "1,2"], ["1,2"]], [14, ["3,3", "4,1", "1,1"], ["1,1"]]]:
+		var data := _good_data()
+		data.merge({"labyrinth": old[0], "collected_items": old[1]}, true)
+		_write(dir.path_join("save.json"), JSON.stringify(data))
+		var progress := SaveStore.new(dir).load_progress()
+		var label := "old save of Labyrinth %d" % old[0]
+		t.assert_eq(progress.labyrinth_number, old[0], label + ": Labyrinth")
+		t.assert_eq(progress.collected_items, PackedStringArray(old[2]), label + ": only the IDs of Items stay")
+		t.assert_eq(progress.collection, PackedStringArray(data["collection"]), label + ": Collection")
+		t.assert_eq(progress.total_items, 23, label + ": the total count stays")
+		t.assert_true(FileAccess.file_exists(dir.path_join("save.json")), label + ": save.json stays")
+		t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), label + ": no save.bak")
 	Fixtures.remove_save_dir(dir)
 	return true
 
@@ -238,6 +260,9 @@ func _broken_files() -> Dictionary:
 		"labyrinth 21 with random seed 0": {"labyrinth": 21, "random_seed": 0, "collected_items": []},
 		"an Item ID outside the Labyrinth": {"collected_items": ["9,9"]},
 		"the start square as an Item ID": {"collected_items": ["0,0"]},
+		"the Goal square as an Item ID": {"collected_items": ["5,3"]},
+		"an Item ID that is not x,y": {"collected_items": ["shell"]},
+		"an Item ID with a sign": {"collected_items": ["+1,2"]},
 		"a Sea friend ID not in spec 4.7": {"collection": ["crab", "unicorn"]},
 		"a last returning Sea friend not in spec 4.7": {"last_returning_friend": "unicorn"},
 	}

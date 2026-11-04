@@ -9,7 +9,7 @@ const LOCK_CHECK_SECONDS := 0.1
 
 func test_labyrinth_1_shows_its_items_and_empty_outlines(t) -> bool:
 	var main := await Scene.add_main(t)
-	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["2,1", "1,2"]), "Items on the water")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["1,1", "1,2"]), "Items on the water")
 	t.assert_eq(main.get_node("ItemRow").kinds, PackedStringArray(["spiral_shell", "starfish"]), "outline kinds")
 	t.assert_eq(main.get_node("ItemRow").filled, [false, false] as Array[bool], "no outline is filled")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "empty strip")
@@ -28,17 +28,16 @@ func test_an_item_fills_its_outline_and_counts_one_time(t) -> bool:
 	t.assert_eq(collected, ["1,2"], "item_collected fired for Item 1,2")
 	t.assert_eq(main.progress.total_items, 1, "total Items")
 	t.assert_eq(main.get_node("ItemRow").filled, [false, true] as Array[bool], "Item 2 fills outline 2")
-	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["2,1"]), "Item 1,2 left the water")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["1,1"]), "Item 1,2 left the water")
 	t.assert_eq(main.get_node("CollectionStrip").count_text(), "1", "total count")
 	# Back over the collected Item: the boat does not stop on it, and it does not count again.
 	t.assert_true(await Scene.press(t, main, KEY_LEFT), "move left is over")
 	t.assert_eq(main.boat_square, Vector2i(0, 2), "back at the bend")
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
-	t.assert_eq(main.boat_square, Vector2i(3, 2), "the boat passes the collected Item")
+	t.assert_eq(main.boat_square, Vector2i(2, 2), "the boat passes the collected Item to the junction")
 	t.assert_eq(collected, ["1,2"], "no second item_collected")
 	t.assert_eq(main.progress.total_items, 1, "the Item counts one time")
 	t.assert_eq(main.get_node("ItemRow").filled, [false, true] as Array[bool], "the row does not change")
-	await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT)
 	await Scene.remove(t, main)
 	return true
 
@@ -57,7 +56,7 @@ func test_goal_of_labyrinth_1_brings_the_crab_to_the_strip(t) -> bool:
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 2 starts, and its fade-in ends")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(["crab"]), "the crab is in its slot")
 	t.assert_eq(main.get_node("ItemRow").filled, [false, false] as Array[bool], "Labyrinth 2 starts with empty outlines")
-	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["0,2", "2,1"]), "Items of Labyrinth 2")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["0,1", "2,2"]), "Items of Labyrinth 2")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the input is free again")
 	await Scene.remove(t, main)

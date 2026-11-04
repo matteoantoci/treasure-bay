@@ -77,8 +77,10 @@ static func to_dictionary(progress: Progress) -> Dictionary:
 
 ## The progress of a parsed save.json, or null when the file is broken (spec 12.3): not a
 ## dictionary, a field absent or of the wrong type, a version above VERSION, a Labyrinth below 1, a
-## random Labyrinth with seed 0, an Item ID that is not an Item of the Labyrinth, or a Sea friend ID
-## that is not in spec 4.7. JSON reads each number as a float, so the numbers become int here.
+## random Labyrinth with seed 0, an Item ID that is not a square where an Item can be, or a Sea
+## friend ID that is not in spec 4.7. An Item ID of a square with no Item now is dropped: a save
+## from before the Goal rule of spec 4.2 can have one. JSON reads each number as a float, so the
+## numbers become int here.
 static func from_dictionary(data: Variant) -> Progress:
 	if not data is Dictionary or not _is_whole_number(data.get("version")):
 		return null
@@ -105,12 +107,17 @@ static func from_dictionary(data: Variant) -> Progress:
 		return null
 	if LabyrinthPlan.is_random(progress.labyrinth_number) and progress.random_seed == 0:
 		return null
+	var labyrinth := progress.build_labyrinth()
 	var item_ids := PackedStringArray()
-	for item in progress.build_labyrinth().items:
+	for item in labyrinth.items:
 		item_ids.append(item.id)
+	var kept := PackedStringArray()
 	for id in progress.collected_items:
-		if not item_ids.has(id):
+		if not _is_free_square_id(labyrinth, id):
 			return null
+		if item_ids.has(id):
+			kept.append(id)
+	progress.collected_items = kept
 	for id in progress.collection:
 		if not SeaFriends.IDS.has(id):
 			return null
@@ -125,6 +132,18 @@ static func migrate(data: Dictionary, version: int) -> Dictionary:
 		data = MIGRATIONS[version - 1].call(data)
 		version += 1
 	return data
+
+
+## True if `id` is the "x,y" ID of a square where an Item can be: inside `labyrinth`, and not the
+## start square or the Goal square (spec 4.6 rule 4).
+static func _is_free_square_id(labyrinth: Labyrinth, id: String) -> bool:
+	var parts := id.split(",")
+	if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
+		return false
+	var square := Vector2i(parts[0].to_int(), parts[1].to_int())
+	if Item.id_of(square) != id or not labyrinth.contains(square):
+		return false
+	return square != labyrinth.start_square() and square != labyrinth.goal_square()
 
 
 func _keep_broken_file() -> void:
