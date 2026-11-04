@@ -9,7 +9,6 @@ const TILES_PER_SQUARE := 2
 
 ## The result of one press.
 class Move:
-	var direction: Vector2i
 	## The boat turns at once to this rotation, also before a bump.
 	var rotation: float
 	## True when the side in `direction` is a wall: the boat bumps and stays.
@@ -30,7 +29,6 @@ static func rotation_for(direction: Vector2i) -> float:
 ## Labyrinth to true if the Child has collected it. The boat stops on an Item not collected.
 static func plan(labyrinth: Labyrinth, from: Vector2i, direction: Vector2i, items: Dictionary = {}) -> Move:
 	var move := Move.new()
-	move.direction = direction
 	move.rotation = rotation_for(direction)
 	move.target = from
 	if labyrinth.has_wall(from, direction):
