@@ -1,3 +1,4 @@
 .scratch/labyrinth-game/prototypes/sounds-LISTEN/clips/
 .godot/
 .DS_Store
+__pycache__/
