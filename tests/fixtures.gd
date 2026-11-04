@@ -1,6 +1,30 @@
 ## Helpers that several test files share. The runner does not run this file.
 extends RefCounted
 
+static var _save_dir_count := 0
+
+
+## A new empty folder for save files in the OS temp folder. Tests never use user://, the folder of
+## the real save of the Child.
+static func new_save_dir() -> String:
+	_save_dir_count += 1
+	var dir := OS.get_temp_dir().path_join("labyrinth-test-saves-%d-%d" % [OS.get_process_id(), _save_dir_count])
+	remove_save_dir(dir)
+	DirAccess.make_dir_recursive_absolute(dir)
+	return dir
+
+
+## Removes a folder of new_save_dir() with all that is in it. It never removes a folder outside the
+## OS temp folder.
+static func remove_save_dir(dir: String) -> void:
+	if not dir.begins_with(OS.get_temp_dir()) or not DirAccess.dir_exists_absolute(dir):
+		return
+	for name in DirAccess.get_directories_at(dir):
+		remove_save_dir(dir.path_join(name))
+	for name in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(name))
+	DirAccess.remove_absolute(dir)
+
 
 ## Builds a Labyrinth from a tile picture of spec 4.5: "." is water, "#" is island.
 ## The picture has 2W + 1 columns and 2H + 1 rows. Square (x, y) is tile (2x + 1, 2y + 1),

@@ -27,6 +27,8 @@ func _initialize() -> void:
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		root.add_child(viewport)
 		var main: Node = load("res://main.tscn").instantiate()
+		# A save folder with no save file: the tool never reads or changes the real save.
+		main.save_store = SaveStore.new(OS.get_temp_dir().path_join("labyrinth-shots-no-save"))
 		viewport.add_child(main)
 		main.progress = _progress(shot[1])
 		main.show_labyrinth()
