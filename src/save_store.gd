@@ -9,12 +9,17 @@ const SAVE_FILE := "save.json"
 const TMP_FILE := "save.json.tmp"
 ## Holds only a broken file, never a last good copy (spec 12.3).
 const BROKEN_FILE := "save.bak"
-## MIGRATIONS[i] turns a save of version i + 1 into version i + 2 (spec 12.3). Version 1 is the
-## first version, so the chain is empty.
-const MIGRATIONS: Array[Callable] = []
+## The migration chain of save.json (spec 12.3): migrations[i] turns a save of version i + 1 into
+## version i + 2. Version 1 is the first version, so the chain is empty now. A change to the save
+## schema raises VERSION and appends its migration here, for example `_version_1_to_2`, a static
+## function that takes the dictionary and returns the new one.
+static var migrations: Array[Callable] = []
 
 ## The folder of the save files.
 var dir: String
+## True after load_progress() finds a save of a newer build (spec 12.3). The store then writes no
+## file for the rest of the session, so the newer save stays correct.
+var no_write := false
 
 
 func _init(save_dir: String = "user://") -> void:
@@ -34,20 +39,28 @@ func broken_path() -> String:
 
 
 ## Writes `progress` to save.json.tmp, closes it, then renames it to save.json. A crash leaves the
-## old save.json or the new one, never half a file.
+## old save.json or the new one, never half a file. In the no-write state, the call writes nothing
+## and logs one warning.
 func save(progress: Progress) -> Error:
+	if no_write:
+		push_warning("The progress was not saved: save.json is from a newer build.")
+		return OK
 	return JsonFile.write(to_dictionary(progress), save_path(), tmp_path())
 
 
-## Loads the progress. With no save.json, the game starts at Labyrinth 1. A broken or newer file
-## becomes save.bak (it replaces an older save.bak), and the game starts at Labyrinth 1. The Child
-## gets no message.
+## Loads the progress. With no save.json, the game starts at Labyrinth 1. A broken file becomes
+## save.bak (it replaces an older save.bak), and the game starts at Labyrinth 1. A file with a
+## version above VERSION is from a newer build and is not broken: it stays in place, the game
+## starts at Labyrinth 1, and the store goes into the no-write state. The Child gets no message.
 func load_progress() -> Progress:
 	if not FileAccess.file_exists(save_path()):
 		return Progress.new()
 	var json := JSON.new()
 	var progress: Progress = null
 	if json.parse(FileAccess.get_file_as_string(save_path())) == OK:
+		if JsonFile.version_of(json.data) > VERSION:
+			no_write = true
+			return Progress.new()
 		progress = from_dictionary(json.data)
 	if progress == null:
 		_keep_broken_file()
@@ -68,18 +81,17 @@ static func to_dictionary(progress: Progress) -> Dictionary:
 
 
 ## The progress of a parsed save.json, or null when the file is broken (spec 12.3): not a
-## dictionary, a field absent or of the wrong type, a version above VERSION, a Labyrinth below 1, a
+## dictionary, a version of 0 or less, a field absent or of the wrong type, a Labyrinth below 1, a
 ## random Labyrinth with seed 0, an Item ID that is not a square where an Item can be, or a Sea
-## friend ID that is not in spec 4.7. An Item ID of a square with no Item now is dropped: a save
-## from before the Goal rule of spec 4.2 can have one. JSON reads each number as a float, so the
-## numbers become int here.
+## friend ID that is not in spec 4.7. A version above VERSION also gives null: this build cannot
+## read it, and load_progress() keeps that file. An older version goes through `migrations` first.
+## An Item ID of a square with no Item now is dropped: a save from before the Goal rule of spec 4.2
+## can have one. JSON reads each number as a float, so the numbers become int here.
 static func from_dictionary(data: Variant) -> Progress:
-	if not data is Dictionary or not JsonFile.is_whole_number(data.get("version")):
-		return null
-	var version := int(data["version"])
+	var version := JsonFile.version_of(data)
 	if version < 1 or version > VERSION:
 		return null
-	data = migrate(data, version)
+	data = JsonFile.migrate(data, version, migrations, VERSION)
 	for field in ["labyrinth", "random_seed", "total_items"]:
 		if not JsonFile.is_whole_number(data.get(field)):
 			return null
@@ -116,14 +128,6 @@ static func from_dictionary(data: Variant) -> Progress:
 	if progress.last_returning_friend != "" and not SeaFriends.IDS.has(progress.last_returning_friend):
 		return null
 	return progress
-
-
-## Runs the chain of MIGRATIONS from `version` up to VERSION.
-static func migrate(data: Dictionary, version: int) -> Dictionary:
-	while version < VERSION:
-		data = MIGRATIONS[version - 1].call(data)
-		version += 1
-	return data
 
 
 ## True if `id` is the "x,y" ID of a square where an Item can be: inside `labyrinth`, and not the
