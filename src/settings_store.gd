@@ -28,15 +28,7 @@ func tmp_path() -> String:
 ## Writes the steps to settings.json.tmp, closes it, then renames it to settings.json, like the save
 ## file (spec 12.3).
 func save(settings: VolumeSettings) -> Error:
-	DirAccess.make_dir_recursive_absolute(dir)
-	var file := FileAccess.open(tmp_path(), FileAccess.WRITE)
-	if file == null:
-		return FileAccess.get_open_error()
-	var written := file.store_string(JSON.stringify(to_dictionary(settings), "  "))
-	file.close()
-	if not written:
-		return ERR_FILE_CANT_WRITE
-	return DirAccess.rename_absolute(tmp_path(), settings_path())
+	return JsonFile.write(to_dictionary(settings), settings_path(), tmp_path())
 
 
 ## Loads the steps. An absent or broken file gives the default steps, and the load writes no file.
@@ -65,7 +57,7 @@ static func from_dictionary(data: Variant) -> VolumeSettings:
 	if not data is Dictionary:
 		return null
 	for field in ["version", "music_step", "effects_step"]:
-		if not _is_whole_number(data.get(field)):
+		if not JsonFile.is_whole_number(data.get(field)):
 			return null
 	if int(data["version"]) != VERSION:
 		return null
@@ -76,9 +68,3 @@ static func from_dictionary(data: Variant) -> VolumeSettings:
 	settings.music_step = int(data["music_step"])
 	settings.effects_step = int(data["effects_step"])
 	return settings
-
-
-static func _is_whole_number(value: Variant) -> bool:
-	if value is int:
-		return true
-	return value is float and is_finite(value) and value == floorf(value)
