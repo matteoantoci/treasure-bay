@@ -1,4 +1,5 @@
-## The write and the number check that save.json and settings.json share (spec 12.3, 12.4).
+## The write, the number check, the version rules and the migration runner that save.json and
+## settings.json share (spec 12.3, 12.4).
 class_name JsonFile
 extends RefCounted
 
@@ -22,3 +23,20 @@ static func is_whole_number(value: Variant) -> bool:
 	if value is int:
 		return true
 	return value is float and is_finite(value) and value == floorf(value)
+
+
+## The "version" of a parsed file, or 0 when the file is not a dictionary or its version is absent
+## or not a whole number. A version of 0 or less is not a real version: the file is broken.
+static func version_of(data: Variant) -> int:
+	if not data is Dictionary or not is_whole_number(data.get("version")):
+		return 0
+	return int(data["version"])
+
+
+## Runs `chain` on `data`, version by version, from `version` up to `target`. chain[i] turns a file
+## of version i + 1 into version i + 2. Each entry takes the dictionary and returns the new one.
+static func migrate(data: Dictionary, version: int, chain: Array[Callable], target: int) -> Dictionary:
+	while version < target:
+		data = chain[version - 1].call(data)
+		version += 1
+	return data

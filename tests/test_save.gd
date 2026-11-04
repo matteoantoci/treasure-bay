@@ -4,6 +4,7 @@ extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
 const Scene := preload("res://tests/scene_helpers.gd")
+const WarningLog := preload("res://tests/warning_log.gd")
 
 
 func test_a_save_and_a_load_give_the_same_state(t) -> bool:
@@ -69,15 +70,31 @@ func test_each_broken_file_becomes_save_bak_and_gives_labyrinth_1(t) -> bool:
 	return true
 
 
-func test_version_2_counts_as_broken(t) -> bool:
+## A save of a newer build is not broken (spec 12.3). It stays in place with the same bytes, and
+## the game plays Labyrinth 1 in memory. The store writes nothing in this session, and each save
+## call logs one warning.
+func test_a_newer_save_stays_and_the_store_writes_nothing(t) -> bool:
 	var dir := Fixtures.new_save_dir()
+	var save_path := dir.path_join("save.json")
 	var data := _good_data()
 	data["version"] = 2
+	# A newer build can change a field, so a field that version 1 calls broken does not count.
+	data["labyrinth"] = "seven"
+	data["a_new_field"] = true
 	var text := JSON.stringify(data)
-	_write(dir.path_join("save.json"), text)
-	t.assert_eq(SaveStore.new(dir).load_progress().labyrinth_number, 1, "Labyrinth 1")
-	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.bak")), text, "the version 2 file is save.bak")
-	t.assert_true(not FileAccess.file_exists(dir.path_join("save.json")), "save.json is gone")
+	_write(save_path, text)
+	var store := SaveStore.new(dir)
+	var progress := store.load_progress()
+	t.assert_eq(SaveStore.to_dictionary(progress), SaveStore.to_dictionary(Progress.new()), "Labyrinth 1 with nothing collected")
+	var log := WarningLog.new()
+	log.start()
+	store.save(_progress_7())
+	progress.collect_item("1,2")
+	store.save(progress)
+	log.stop()
+	t.assert_eq(log.warnings().size(), 2, "each save call logs one warning")
+	t.assert_eq(FileAccess.get_file_as_string(save_path), text, "save.json has the same bytes")
+	t.assert_eq(DirAccess.get_files_at(dir), PackedStringArray(["save.json"]), "no save.bak and no other file")
 	Fixtures.remove_save_dir(dir)
 	return true
 
@@ -195,6 +212,22 @@ func test_a_reset_keeps_settings_json(t) -> bool:
 	return true
 
 
+## A later save schema adds its first migration to the chain (spec 12.3). A chain of one test
+## migration turns a version 1 save into version 2.
+func test_a_chain_of_one_migration_turns_version_1_into_version_2(t) -> bool:
+	var to_version_2 := func(data: Dictionary) -> Dictionary:
+		var migrated := data.duplicate()
+		migrated["version"] = 2
+		migrated["labyrinth_number"] = migrated["labyrinth"]
+		migrated.erase("labyrinth")
+		migrated["music_seen"] = false
+		return migrated
+	var chain: Array[Callable] = [to_version_2]
+	var version_1 := {"version": 1, "labyrinth": 7, "total_items": 23}
+	t.assert_eq(JsonFile.migrate(version_1, 1, chain, 2), {"version": 2, "labyrinth_number": 7, "total_items": 23, "music_seen": false}, "the migrated fields")
+	return true
+
+
 ## The Item IDs of Labyrinth `number`.
 func _item_ids(number: int, random_seed: int = 0) -> PackedStringArray:
 	var ids := PackedStringArray()
@@ -255,8 +288,8 @@ func _broken_files() -> Dictionary:
 		"labyrinth 7.5": {"labyrinth": 7.5},
 		"an Item ID that is a number": {"collected_items": [3]},
 		"a Sea friend ID that is a number": {"collection": [1]},
-		"version 2": {"version": 2},
 		"version 0": {"version": 0},
+		"version -1": {"version": -1},
 		"labyrinth 0": {"labyrinth": 0},
 		"labyrinth 21 with random seed 0": {"labyrinth": 21, "random_seed": 0, "collected_items": []},
 		"an Item ID outside the Labyrinth": {"collected_items": ["9,9"]},
