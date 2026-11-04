@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")"
+v=$(godot --version)
+case "$v" in
+  4.7.*) ;;
+  *) echo "This game needs Godot 4.7. Found: $v" >&2 ;;
+esac
+godot --headless --path . --import
+exec godot --path .
