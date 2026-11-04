@@ -15,8 +15,6 @@ signal goal_reached(sea_friend: String)
 ## Emitted when the Sea friend of the Goal appears next to the Goal island.
 signal sea_friend_appeared(sea_friend: String)
 
-## The deep water colour of Area 1 (spec 7.2).
-const WATER_COLOUR := Color("#3fb4d8")
 ## Goal celebration times in seconds from the arrival on the Goal square (spec 6.3).
 const SEA_FRIEND_APPEARS_SECONDS := 1.4
 const SEA_FRIEND_IN_SLOT_SECONDS := 3.7
@@ -40,18 +38,19 @@ var _kept_direction := Vector2i.ZERO
 var _tile_px := 0.0
 var _celebration: Tween
 
-@onready var _water: ColorRect = $Water
+@onready var _water: WaterView = $Water
+@onready var _area_decoration: AreaDecoration = $AreaDecoration
 @onready var _labyrinth_view: LabyrinthView = $LabyrinthView
 @onready var _items: ItemsView = $Items
 @onready var _boat: BoatView = $Boat
 @onready var _item_row: ItemRow = $ItemRow
 @onready var _collection_strip: CollectionStrip = $CollectionStrip
+@onready var _gear: GearView = $Gear
 @onready var _sea_friend: Sprite2D = $SeaFriend
 
 
 func _ready() -> void:
 	randomize()
-	_water.color = WATER_COLOUR
 	get_viewport().size_changed.connect(_layout)
 	show_labyrinth()
 
@@ -67,6 +66,9 @@ func show_labyrinth() -> void:
 	_kept_direction = Vector2i.ZERO
 	_locked = false
 	_sea_friend.visible = false
+	var area := Area.for_labyrinth(progress.labyrinth_number)
+	_water.show_area(area)
+	_area_decoration.show_labyrinth(labyrinth, area)
 	_labyrinth_view.labyrinth = labyrinth
 	_items.show_items(labyrinth, progress)
 	_item_row.show_items(labyrinth, progress)
@@ -176,14 +178,16 @@ func _put_sea_friend_in_slot(friend: String) -> void:
 
 func _layout() -> void:
 	var visible := get_viewport().get_visible_rect()
-	_water.position = visible.position
-	_water.size = visible.size
 	_item_row.layout(visible.size)
 	_collection_strip.layout(visible.size)
+	_gear.layout(visible.size)
 	if labyrinth == null:
 		return
 	var rect := ScreenLayout.labyrinth_rect(visible.size, labyrinth.tile_count())
 	_tile_px = rect.size.x / labyrinth.tile_count().x
+	_water.layout(visible, rect, _tile_px)
+	_area_decoration.position = rect.position
+	_area_decoration.set_tile_px(_tile_px)
 	_labyrinth_view.position = rect.position
 	_labyrinth_view.tile_px = _tile_px
 	_items.position = rect.position

@@ -4,6 +4,8 @@ extends RefCounted
 
 ## The prototype tile size. The sizes in the Labyrinth are px of this tile (spec 8.1).
 const PROTOTYPE_TILE_PX := 130.0
+## The gear size in px (spec 10).
+const GEAR_PX := 64.0
 
 
 ## The factor s of spec 8.1 for a Labyrinth value in prototype px.
@@ -57,6 +59,14 @@ static func item_outline_centres(visible: Vector2, count: int) -> PackedVector2A
 
 static func item_outline_px(visible: Vector2) -> float:
 	return 56.0 * hud_scale(visible)
+
+
+## The gear is in the top-right corner. Its centre is at the height of the Item row and the same
+## distance from the right edge.
+static func gear_rect(visible: Vector2) -> Rect2:
+	var row_y := 60.0 * hud_scale(visible)
+	var centre := Vector2(visible.x - row_y, row_y)
+	return Rect2(centre - Vector2.ONE * GEAR_PX / 2.0, Vector2.ONE * GEAR_PX)
 
 
 ## The total Item count sits at the left end of the strip, in an area 2 strip heights wide.
