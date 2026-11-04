@@ -22,6 +22,12 @@ func build_labyrinth() -> Labyrinth:
 	return LabyrinthPlan.build(labyrinth_number, random_seed)
 
 
+## True for the progress of a new game or of a reset: Labyrinth 1, an empty Collection, and a total
+## of 0 (spec 11.2).
+func is_fresh() -> bool:
+	return labyrinth_number == 1 and collection.is_empty() and total_items == 0
+
+
 func is_collected(item_id: String) -> bool:
 	return collected_items.has(item_id)
 

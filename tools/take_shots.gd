@@ -44,7 +44,7 @@ func _initialize() -> void:
 			var panel: SettingsPanel = main.get_node("Settings")
 			panel.open()
 			panel.reset_button.button_down.emit()
-			panel.reset_button.advance(HoldButton.HOLD_SECONDS / 2.0)
+			panel.reset_button.advance(panel.reset_button.hold_seconds / 2.0)
 		for frame in 5:
 			await process_frame
 		await RenderingServer.frame_post_draw

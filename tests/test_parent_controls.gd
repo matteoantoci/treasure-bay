@@ -1,6 +1,6 @@
 ## The settings and the Parent controls in the main scene (spec 11, 12.4): the gear opens and closes
 ## the settings and pauses play, the volume buttons, the reset and quit holds, and the window rules
-## of spec 11.1. The holds use HoldButton.advance() as a fake clock, so no test waits 3 s.
+## of spec 11.1. The holds use HoldButton.advance() as a fake clock, so no test waits for a full hold.
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
@@ -115,7 +115,7 @@ func test_a_newer_settings_file_stays_after_a_volume_click(t) -> bool:
 	return true
 
 
-func test_a_3_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
+func test_an_8_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	SaveStore.new(dir).save(_progress_7())
 	var main := await Scene.add_main(t, dir)
@@ -125,16 +125,16 @@ func test_a_3_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	await _click(t, main.get_node("Gear"))
 	# A shorter hold does nothing.
 	_mouse(t, panel.reset_button, true)
-	panel.reset_button.advance(2.75)
-	t.assert_true(panel.reset_button.ring > 0.9, "the ring is nearly full after 2.75 s")
+	panel.reset_button.advance(7.9)
+	t.assert_true(panel.reset_button.ring > 0.98, "the ring is nearly full after 7.9 s")
 	_mouse(t, panel.reset_button, false)
 	t.assert_eq(panel.reset_button.ring, 0.0, "the release empties the ring")
-	t.assert_eq(main.progress.labyrinth_number, 7, "a shorter hold does not reset")
+	t.assert_eq(main.progress.labyrinth_number, 7, "a hold of 7.9 s does not reset")
 	t.assert_true(panel.is_open() and t.paused, "a shorter hold keeps the settings open")
 	t.assert_eq(SaveStore.new(dir).load_progress().labyrinth_number, 7, "a shorter hold writes no save")
-	# A hold of 3 s resets.
+	# A hold of 8 s resets.
 	_mouse(t, panel.reset_button, true)
-	panel.reset_button.advance(3.0)
+	panel.reset_button.advance(8.0)
 	t.assert_true(not panel.is_open(), "the reset closes the settings")
 	t.assert_true(not t.paused, "the reset unpauses play")
 	t.assert_eq(SaveStore.to_dictionary(main.progress), SaveStore.to_dictionary(Progress.new()), "Labyrinth 1, empty Collection, total 0")
@@ -152,6 +152,17 @@ func test_a_3_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	await Scene.remove(t, main)
 	return true
 
+## Spec 11.2: the reset ring fills in orange and the quit ring in yellow, so the Parent sees which
+## hold runs.
+func test_the_reset_ring_is_orange_and_the_quit_ring_is_yellow(t) -> bool:
+	var main := await Scene.add_main(t)
+	var panel: SettingsPanel = main.get_node("Settings")
+	t.assert_eq(panel.reset_button.ring_full_colour, Color("#ff7a59"), "the full reset ring is #ff7a59")
+	t.assert_eq(panel.quit_button.ring_full_colour, Color("#ffd447"), "the full quit ring is #ffd447")
+	await Scene.remove(t, main)
+	return true
+
+
 
 ## The Parent can open the settings while the boat slides. The reset stops the slide of the old
 ## Labyrinth: the boat stays on the start square of Labyrinth 1, and it sails again.
@@ -166,7 +177,7 @@ func test_a_reset_during_a_slide_starts_labyrinth_1_on_its_start_square(t) -> bo
 	t.assert_eq(moves[0], 1, "the boat slides")
 	panel.open()
 	panel.reset_button.button_down.emit()
-	panel.reset_button.advance(HoldButton.HOLD_SECONDS)
+	panel.reset_button.advance(panel.reset_button.hold_seconds)
 	panel.reset_button.button_up.emit()
 	await t.create_timer(1.0).timeout
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")

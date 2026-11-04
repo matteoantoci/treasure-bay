@@ -1,6 +1,7 @@
 ## The settings panel (spec 11.2): a click on the gear opens it and pauses play, a second click
 ## closes it. It shows pictures only: the music row and the effects row (picture, minus, 4 bars,
-## plus), the reset button, and the quit button. Reset and quit act only after a hold of 3 s.
+## plus), the reset button, and the quit button. Reset acts only after a hold of 8 s, and quit only
+## after a hold of 3 s.
 ##
 ## A child of the main scene. It loads settings.json (spec 12.4) and sets the bus volumes when the
 ## scene starts. It uses `save_store` and `save_progress()` of the main scene, and it emits
@@ -8,7 +9,7 @@
 class_name SettingsPanel
 extends CanvasLayer
 
-## Emitted after a hold of 3 s on the reset button, when the panel is closed and play runs again.
+## Emitted after a hold of 8 s on the reset button, when the panel is closed and play runs again.
 ## The main scene resets the progress (spec 11.2).
 signal reset_requested
 
@@ -22,6 +23,12 @@ const MARGIN := 40
 const ROW_GAP := 36
 const ITEM_GAP := 24
 const HOLD_GAP := 96
+## The reset needs a long hold, so the Child cannot reset the game by accident. Its ring has its own
+## colour, so the Parent sees which hold runs.
+const RESET_HOLD_SECONDS := 8.0
+const RESET_RING_COLOUR := Color("#ff7a59")
+const QUIT_HOLD_SECONDS := 3.0
+const QUIT_RING_COLOUR := Color("#ffd447")
 ## Before the quit, the players stop, and the audio server frees their playbacks in a later mix
 ## step. Without this wait, the quit prints a leaked music playback.
 const AUDIO_STOP_SECONDS := 0.1
@@ -96,7 +103,7 @@ func change_step(bus: StringName, change: int) -> void:
 		push_warning("The settings were not saved: %s" % error_string(error))
 
 
-## The reset after a hold of 3 s: the panel closes and play unpauses, then the main scene resets the
+## The reset after a hold of 8 s: the panel closes and play unpauses, then the main scene resets the
 ## progress. The volume steps and settings.json stay (spec 12.4).
 func _reset() -> void:
 	close()
@@ -135,8 +142,8 @@ func _build() -> void:
 	effects_bars = effects[1]
 	effects_plus = effects[2]
 	var hold_row := _add_row(rows, HOLD_GAP)
-	reset_button = HoldButton.new(SettingsPicture.Kind.RESET)
-	quit_button = HoldButton.new(SettingsPicture.Kind.DOOR)
+	reset_button = HoldButton.new(SettingsPicture.Kind.RESET, RESET_HOLD_SECONDS, RESET_RING_COLOUR)
+	quit_button = HoldButton.new(SettingsPicture.Kind.DOOR, QUIT_HOLD_SECONDS, QUIT_RING_COLOUR)
 	hold_row.add_child(reset_button)
 	hold_row.add_child(quit_button)
 
