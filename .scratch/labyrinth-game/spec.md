@@ -434,6 +434,7 @@ All effect URLs are the Freesound `-hq.mp3` preview files. They download with no
 - The move sound goes in an `AudioStreamRandomizer` with `random_pitch_semitones = 1.0`. Its player has `max_polyphony = 4` ([sounds.md](research/sounds.md), [audio-design skill](../../.claude/skills/audio-design/SKILL.md)).
 - The move sound plays one time for each move, not for each square.
 - The fanfare cut: `ffmpeg -i goal.mp3 -t 3.7 -af "afade=t=out:st=3.2:d=0.5" -ac 1 -ar 44100 -c:a pcm_s16le goal.wav` (ticket 11, gap-audit default 37).
+- **Fanfare duck:** when a Sea friend appears, a tween moves the volume of the Goal player from its level to its level − 12 dB in 0.2 s. The tween pauses with the game, like the Goal player. At each Goal arrival, the game kills an old duck tween, sets the Goal player to its level from the sound-levels table, and then plays the fanfare. So a reset during the celebration needs no extra step.
 - The new-Area Item makes no sound (gap-audit default 38).
 
 ### 9.4 Sea friend sounds
@@ -482,8 +483,8 @@ Source: [sounds.md](research/sounds.md) Download and preparation, [audio-design 
 | Move starts | `move.wav` |
 | Bump | `wall.wav` |
 | Item collected | `item.wav` |
-| Goal arrival | `goal.wav` |
-| Sea friend appears (1.4 s) | Its own sound, or `splash.wav` |
+| Goal arrival | `goal.wav` at its level |
+| Sea friend appears (1.4 s) | Its own sound, or `splash.wav`. The fanfare goes 12 dB down in 0.2 s (section 9.3) |
 | Area change | Music crossfade to the new Area track |
 
 ### 9.8 `credits.txt`
