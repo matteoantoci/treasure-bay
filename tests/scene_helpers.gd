@@ -10,6 +10,8 @@ const MOVE_TIMEOUT := 10.0
 ## The next Labyrinth shows 4.7 s after the arrival on the Goal, and its fade-in ends at 5.2 s
 ## (spec 6.3, 8.8).
 const NEXT_LABYRINTH_TIMEOUT := 10.0
+## The audio server frees a stopped playback in a later mix step.
+const AUDIO_FREE_SECONDS := 0.1
 
 
 ## Adds the main scene. It loads and saves in `save_dir`, or in a new empty folder in the OS temp
@@ -23,13 +25,15 @@ static func add_main(t, save_dir: String = "") -> Node:
 	return main
 
 
-## Removes the main scene and its save folder.
+## Removes the main scene and its save folder. Then it waits a short real time, so the audio server
+## frees the stopped music playbacks before the runner exits.
 static func remove(t, main: Node) -> void:
 	Engine.time_scale = 1.0
 	var save_dir: String = main.save_store.dir
 	main.queue_free()
 	await t.process_frame
 	Fixtures.remove_save_dir(save_dir)
+	await t.create_timer(AUDIO_FREE_SECONDS, true, false, true).timeout
 
 
 ## Presses and releases an arrow key.

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://src/sea_friend_view.gd" id="12_sea_friend_view"]
 [ext_resource type="Script" path="res://src/effects_view.gd" id="13_effects_view"]
 [ext_resource type="Script" path="res://src/fade_view.gd" id="14_fade_view"]
+[ext_resource type="Script" path="res://src/sound.gd" id="10_sound"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -61,3 +62,6 @@ script = ExtResource("13_effects_view")
 
 [node name="Fade" type="Node2D" parent="."]
 script = ExtResource("14_fade_view")
+
+[node name="Sound" type="Node" parent="."]
+script = ExtResource("10_sound")

@@ -3,7 +3,12 @@
 ## Labyrinth 20 (spec 6.4).
 extends RefCounted
 
+const Scene := preload("res://tests/scene_helpers.gd")
+const Fixtures := preload("res://tests/fixtures.gd")
+
 const DRAWS := 1000
+# Saved Labyrinths whose music the scene test checks: one of each Area, and Areas after 20.
+const MUSIC_LABYRINTHS := [1, 6, 11, 16, 21, 26, 36]
 
 # Spec 4.3 and 4.4: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, 16 to 20 Area 4,
 # then 21 to 25 Area 1 again, and so on.
@@ -45,6 +50,25 @@ func test_music_track_matches_the_area(t) -> bool:
 	for area in MUSIC:
 		t.assert_eq(Area.music_path(area), MUSIC[area], "music of Area %d" % area)
 	t.assert_eq(Area.music_path(Area.for_labyrinth(26)), MUSIC[2], "music of Labyrinth 26")
+	return true
+
+
+## The music player of the main scene plays the track of the Area of the saved Labyrinth.
+func test_the_music_player_plays_the_track_of_the_area(t) -> bool:
+	for n in MUSIC_LABYRINTHS:
+		var dir := Fixtures.new_save_dir()
+		var saved := Progress.new()
+		saved.labyrinth_number = n
+		saved.random_seed = 4242
+		SaveStore.new(dir).save(saved)
+		var main := await Scene.add_main(t, dir)
+		var player: AudioStreamPlayer = main.get_node("Sound").active_music_player()
+		t.assert_eq(main.progress.labyrinth_number, n, "the scene starts at Labyrinth %d" % n)
+		var area := Area.for_labyrinth(n)
+		t.assert_true(player.playing, "music plays at Labyrinth %d" % n)
+		t.assert_eq(player.stream.resource_path, MUSIC[area], "music of Labyrinth %d" % n)
+		t.assert_eq(player.bus, &"Music", "music bus at Labyrinth %d" % n)
+		await Scene.remove(t, main)
 	return true
 
 

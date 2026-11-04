@@ -20,6 +20,10 @@ signal next_labyrinth_coming(number: int)
 ## Emitted when the Child can sail the shown Labyrinth: at once after show_labyrinth(), or at the end
 ## of the fade-in (spec 5.4, 8.8).
 signal labyrinth_ready(number: int)
+## Emitted when the boat starts a slide (spec 9.7).
+signal move_started
+## Emitted when the boat bumps at a wall (spec 5.3, 9.7).
+signal bumped
 
 ## The progress of the Child. The save code can replace it, then call show_labyrinth().
 var progress := Progress.new()
@@ -160,6 +164,10 @@ func _move(direction: Vector2i) -> void:
 	_boat.idle = false
 	_wake.start(direction)
 	_boat.rotation = move.rotation
+	if move.bump:
+		bumped.emit()
+	else:
+		move_started.emit()
 	var start := _square_centre(boat_square)
 	var tween := create_tween()
 	_move_tween = tween

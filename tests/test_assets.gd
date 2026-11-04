@@ -50,3 +50,29 @@ func test_every_png_loads_as_texture_with_mipmaps(t) -> bool:
 		if tex != null:
 			t.assert_true(tex.get_image().has_mipmaps(), path + " has mipmaps")
 	return true
+
+
+# Spec §9.5 and §13.4: each WAV keeps its full length after import (Edit > Trim off).
+# The durations come from `ffprobe` on the source WAV files.
+const WAV_SECONDS := {
+	"effects/move.wav": 0.875, "effects/wall.wav": 1.133, "effects/item.wav": 0.471,
+	"effects/goal.wav": 3.700, "effects/splash.wav": 1.331,
+	"friends/crab.wav": 2.393, "friends/octopus.wav": 0.659, "friends/whale.wav": 2.500,
+	"friends/dolphin.wav": 2.580, "friends/fish.wav": 2.040, "friends/squid.wav": 0.959,
+	"friends/seal.wav": 2.250, "friends/jellyfish.wav": 2.500, "friends/otter.wav": 1.500,
+	"friends/penguin.wav": 0.600, "friends/duck.wav": 0.817, "friends/swan.wav": 1.500,
+	"friends/flamingo.wav": 1.500,
+}
+
+
+func test_each_imported_wav_keeps_its_source_length(t) -> bool:
+	t.assert_eq(WAV_SECONDS.size(), 18, "WAV count of spec §9.3 and §9.4")
+	for file in WAV_SECONDS:
+		var path: String = "res://assets/audio/" + file
+		var stream := load(path) as AudioStreamWAV
+		t.assert_true(stream != null, path + " loads as AudioStreamWAV")
+		if stream != null:
+			var length := stream.get_length()
+			t.assert_true(absf(length - WAV_SECONDS[file]) <= 0.02,
+				"%s length %.3f s, source %.3f s" % [path, length, WAV_SECONDS[file]])
+	return true
