@@ -140,8 +140,9 @@ func test_after_a_reload_a_collected_item_does_not_count_again(t) -> bool:
 func test_an_old_item_id_with_no_item_now_is_dropped(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	# Before the Goal rule, Labyrinth 1 had its Items on 2,1 and 1,2, and Labyrinth 14 on 3,3, 4,1,
-	# 1,1, 0,2, 2,2, and 4,3. Now 4,3 is still an Item, and 2,1, 1,2, 3,3, and 4,1 are not.
-	for old in [[1, ["2,1", "1,2"], []], [14, ["3,3", "4,1", "4,3"], ["4,3"]]]:
+	# 1,1, 0,2, 2,2, and 4,3. With the seed table of play-improvements Part 3, 4,1 is an Item, and
+	# 2,1, 1,2, 3,3, and 4,3 are not.
+	for old in [[1, ["2,1", "1,2"], []], [14, ["3,3", "4,1", "4,3"], ["4,1"]]]:
 		var data := _good_data()
 		data.merge({"labyrinth": old[0], "collected_items": old[1]}, true)
 		_write(dir.path_join("save.json"), JSON.stringify(data))

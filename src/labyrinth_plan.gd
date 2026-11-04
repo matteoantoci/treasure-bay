@@ -2,8 +2,11 @@
 class_name LabyrinthPlan
 extends RefCounted
 
-## Labyrinths 1 to 20 are fixed. Labyrinth n uses seed n.
+## Labyrinths 1 to 20 are fixed. Labyrinth n uses seed FIXED_SEEDS[n - 1].
 const FIXED_COUNT := 20
+## The seeds of Labyrinths 1 to 20, by measured difficulty (play-improvements spec Part 3). The tool
+## tools/seed_search.gd selects them and prints this table.
+const FIXED_SEEDS: Array[int] = [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30]
 ## Sizes in squares of Labyrinths 1 and 2, 3 and 4, and so on to 19 and 20.
 const FIXED_SIZES: Array[Vector2i] = [
 	Vector2i(4, 3), Vector2i(5, 3), Vector2i(5, 4), Vector2i(6, 4), Vector2i(7, 4),
@@ -46,11 +49,18 @@ static func valid_seed(size: Vector2i, seed_value: int) -> int:
 	return seed_value
 
 
-## Generates Labyrinth `number` with its Items. Labyrinth n (1 to 20) uses seed n: all 20 are valid
-## (tests/test_items.gd). A random Labyrinth uses the first valid seed from `random_seed` on.
+## Generates Labyrinth `number` with its Items. Labyrinth n (1 to 20) uses seed FIXED_SEEDS[n - 1].
+## A random Labyrinth uses the first valid seed from `random_seed` on.
 static func build(number: int, random_seed: int = 0) -> Labyrinth:
+	if is_random(number):
+		return build_from_seed(number, valid_seed(size_for(number), random_seed))
+	return build_from_seed(number, FIXED_SEEDS[number - 1])
+
+
+## Generates Labyrinth `number` with its Items from `seed_value`. The W x H Labyrinth of the seed
+## must have a free dead end (spec 4.6 rule 7). tools/seed_search.gd tries seeds with it.
+static func build_from_seed(number: int, seed_value: int) -> Labyrinth:
 	var size := size_for(number)
-	var seed_value := valid_seed(size, random_seed) if is_random(number) else number
 	var prng := Prng.new(seed_value)
 	var labyrinth := LabyrinthGenerator.generate(size.x, size.y, prng)
 	labyrinth.seed_value = seed_value

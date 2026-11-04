@@ -63,7 +63,8 @@ func test_a_broken_file_starts_at_labyrinth_1(t) -> bool:
 
 
 ## A save from before the Goal rule of spec 4.2: Labyrinth 14 with the old Items 3,3, 4,1, and 4,3
-## collected. Now 4,3 is Item 1 of 6, and 3,3 and 4,1 hold no Item.
+## collected. With the seed table of play-improvements Part 3, 4,1 is Item 2 of 6, and 3,3 and 4,3
+## hold no Item.
 func test_an_old_save_starts_at_its_labyrinth_with_its_count(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
@@ -76,9 +77,32 @@ func test_an_old_save_starts_at_its_labyrinth_with_its_count(t) -> bool:
 	t.assert_eq(main.progress.labyrinth_number, 14, "Labyrinth 14")
 	t.assert_eq(main.get_node("CollectionStrip").count_text(), "40", "the total count stays")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), SeaFriends.IDS.slice(0, 13), "13 Sea friends in the strip")
-	t.assert_eq(main.get_node("ItemRow").filled, [true, false, false, false, false, false] as Array[bool], "only Item 4,3 fills its outline")
-	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["3,1", "6,0", "6,1", "0,4", "6,4"]), "the other 5 Items are on the water")
+	t.assert_eq(main.get_node("ItemRow").filled, [false, true, false, false, false, false] as Array[bool], "only Item 4,1 fills its outline")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["1,0", "2,4", "7,0", "6,2", "1,3"]), "the other 5 Items are on the water")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "the old save is not broken")
+	await Scene.remove(t, main)
+	return true
+
+
+## A save of Labyrinth 7 from before the seed table of play-improvements Part 3. Then Labyrinth 7
+## had its Items on 2,0, 2,3, 5,2, and 1,2, and the Child collected 2,0, 2,3, and 5,2. Now its Items
+## are on 5,2, 2,2, 0,3, and 1,0 (tests/spec_port.py).
+func test_a_save_from_before_the_seed_table_keeps_the_items_that_match(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({
+		"version": 1, "labyrinth": 7, "random_seed": 0, "collected_items": ["2,0", "2,3", "5,2"],
+		"collection": SeaFriends.IDS.slice(0, 6), "total_items": 23, "last_returning_friend": "",
+	}))
+	file.close()
+	var main := await Scene.add_main(t, dir)
+	t.assert_eq(main.progress.labyrinth_number, 7, "Labyrinth 7")
+	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), SeaFriends.IDS.slice(0, 6), "the Collection stays")
+	t.assert_eq(main.get_node("CollectionStrip").count_text(), "23", "the total count stays")
+	t.assert_eq(main.progress.collected_items, PackedStringArray(["5,2"]), "the IDs 2,0 and 2,3 with no Item now are dropped")
+	t.assert_eq(main.get_node("ItemRow").filled, [true, false, false, false] as Array[bool], "only Item 5,2 fills its outline")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["2,2", "0,3", "1,0"]), "the Items that the save does not name are on the water")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "no save.bak")
 	await Scene.remove(t, main)
 	return true
 
