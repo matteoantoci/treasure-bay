@@ -54,6 +54,8 @@ func _initialize() -> void:
 		print("%s: Labyrinth %d, %d x %d px" % [path, shot[1], image.get_width(), image.get_height()])
 		paused = false
 		viewport.queue_free()
+	# The audio server frees a stopped playback in a later mix step.
+	await create_timer(0.1, true, false, true).timeout
 	quit()
 
 

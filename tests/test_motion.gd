@@ -170,8 +170,9 @@ func test_goal_hop_and_confetti(t) -> bool:
 
 
 func test_sea_friend_arrival(t) -> bool:
-	# Spec 8.6.
-	t.assert_eq(Motion.FRIEND_START_PX, Vector2(-60, 60), "start place from the Goal island centre")
+	# Spec 8.6. The x of the start place is +60, at the far side of the Goal island, not -60: at -60
+	# the Sea friend covers the chest and the boat (ticket 28).
+	t.assert_eq(Motion.FRIEND_START_PX, Vector2(60, 60), "start place from the Goal island centre")
 	_near(t, Motion.FRIEND_PX, 110.0, "Sea friend size")
 	_near(t, Motion.FRIEND_SCALE, 1.3, "Sea friend scale next to the island")
 	_near(t, Motion.FRIEND_GROW_SECONDS, 0.45, "grow time")
