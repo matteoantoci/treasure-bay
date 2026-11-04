@@ -231,3 +231,21 @@ The game is complete and follows its build spec, but the review found five probl
 - At the new sizes, an Item is 69 % of a tile and the boat is 85 % of a tile long. The review checked no overlap with the islands. The build must look at the screenshots to confirm that the boat stays inside the channel when it turns.
 - The Parent must do the manual check of ticket 30 of the labyrinth-game map after this change, because the layout of each Labyrinth changes.
 - Time estimate for an agent: part 1 about 1.5 h, part 2 about 2.5 h, part 3 about 3 h, part 4 about 1 h, part 5 about 3 h.
+
+## Comments
+
+**Build report (ticket 08, 2026-11-04).** Tickets 01 to 07 are merged.
+
+Passed:
+- The full headless test suite: `Results: 14368 passed, 0 failed`, exit code 0.
+- The Python port `tests/spec_port.py`: exit code 0.
+- The windowed smoke run: `SMOKE OK: 3 Goals, no failure`.
+- The screenshot tool made new screenshots of Labyrinths 3, 8, 13 and 18 and of the settings panel. In each screenshot, the boat is inside the channel, the chest is easy to see, and no Item covers an island.
+
+Needs a person:
+- The chest edge: the left edge of the 100 px chest goes over the sand onto the foam line of the Goal square, and the chest hides the left fronds of the palm.
+- The boat in a turn: the screenshots show the boat only at the start.
+- The sound: the Sea friend sound must be clear over the ducked fanfare.
+- The 8 s reset hold and its orange ring on screen.
+- The Parent manual check of labyrinth-game ticket 30, again, because the layouts, the sizes and the reset hold changed. Ticket 30 has a comment with the changed steps.
+- Build spec text that still has old values (from the notes of tickets 02 and 07): section 14.3 check 10 and section 15 criterion 17 say a reset hold of 3 s, and section 4.6 rule 7 says that a test checks that seeds 1 to 20 are valid.
