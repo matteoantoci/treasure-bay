@@ -96,6 +96,25 @@ func test_the_volume_buttons_change_each_bus_in_5_steps(t) -> bool:
 	return true
 
 
+## A settings file of a newer build (spec 12.4): the game uses the default steps, and a volume
+## button changes the bus but does not write settings.json in this session.
+func test_a_newer_settings_file_stays_after_a_volume_click(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var settings_path := dir.path_join("settings.json")
+	var text := "{\"version\": 2, \"music_step\": 4, \"effects_step\": 0}"
+	_write(settings_path, text)
+	var main := await Scene.add_main(t, dir)
+	var panel: SettingsPanel = main.get_node("Settings")
+	_check_bus(t, Sound.MUSIC_BUS, 0.25, "music at the default step 2")
+	await _click(t, main.get_node("Gear"))
+	await _click(t, panel.music_plus)
+	_check_bus(t, Sound.MUSIC_BUS, 0.5625, "music plus sets step 3")
+	t.assert_eq(FileAccess.get_file_as_string(settings_path), text, "settings.json has the same bytes")
+	await _click(t, main.get_node("Gear"))
+	await Scene.remove(t, main)
+	return true
+
+
 func test_a_3_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	SaveStore.new(dir).save(_progress_7())
