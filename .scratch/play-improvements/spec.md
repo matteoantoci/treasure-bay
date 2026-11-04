@@ -241,10 +241,10 @@ Passed:
 - The Python port `tests/spec_port.py`: exit code 0.
 - The windowed smoke run: `SMOKE OK: 3 Goals, no failure`.
 - The screenshot tool made new screenshots of Labyrinths 3, 8, 13 and 18 and of the settings panel. In each screenshot, the boat is inside the channel, the chest is easy to see, and no Item covers an island.
+- The boat in a turn, in Labyrinths 18 and 20 at 1920 × 1200: the boat turns at once, with no rotation animation. In 93 frames of 31 turns (before, at and after each turn), the hull stays on the water. It does not touch the sand or an island.
 
 Needs a person:
 - The chest edge: the left edge of the 100 px chest goes over the sand onto the foam line of the Goal square, and the chest hides the left fronds of the palm.
-- The boat in a turn: the screenshots show the boat only at the start.
 - The sound: the Sea friend sound must be clear over the ducked fanfare.
 - The 8 s reset hold and its orange ring on screen.
 - The Parent manual check of labyrinth-game ticket 30, again, because the layouts, the sizes and the reset hold changed. Ticket 30 has a comment with the changed steps.

@@ -29,4 +29,8 @@
   - Labyrinth 3 (1920 × 1247): same result as Labyrinth 3 at 1920 × 1200.
   - Settings: the panel is open, and the reset ring is orange and half full (4 s of 8 s). The panel does not hide the gear.
 - Chest edge (note of ticket 04): in all four Labyrinths, the left edge of the chest goes over the sand of the Goal island and onto the foam line of the Goal square. It touches the water a little. The chest also hides the left fronds of the palm. It looks like the chest stands on the shore, and it does not hide the boat path. A person must decide if this is correct.
-- Not checked: a screenshot shows the boat only at the start, so it does not show the boat when it turns. The boat is 85 % of a tile long, so it is shorter than a tile in each direction, but a person must look at a turn in a real game. The sounds (fanfare under the crab sound) and the 8 s reset hold on screen need a person. Ticket 30 of the labyrinth-game map has the list.
+- Boat in a turn (agent TurnCheck, 2026-11-04): a throwaway capture script sailed the main path of Labyrinth 18 (65 px tiles) and Labyrinth 20 (56 px tiles) at 1920 × 1200.
+  - The boat turns at once at the start of a move (`MoveRule.rotation_for`). No rotation animation exists, so no frame shows a half turn.
+  - At each of the 31 turns (15 in Labyrinth 18, 16 in Labyrinth 20), the script took 3 frames: the boat stopped before the turn, the first frame after the turn, and the middle of the next slide.
+  - The agent looked at all 93 frames as close crops of 3 × 3 tiles around the boat. In each frame, the hull is on the water, inside the foam lines. No part of the hull goes onto the sand or onto an island.
+- Not checked: the sounds (fanfare under the crab sound) and the 8 s reset hold on screen need a person. Ticket 30 of the labyrinth-game map has the list.
