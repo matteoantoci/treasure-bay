@@ -40,7 +40,7 @@ static func plan(labyrinth: Labyrinth, from: Vector2i, direction: Vector2i, item
 	while true:
 		square += direction
 		squares += 1
-		if _stops_at(labyrinth, square, direction, items):
+		if stops_at(labyrinth, square, direction, items):
 			break
 	move.target = square
 	move.tiles = squares * TILES_PER_SQUARE
@@ -48,7 +48,9 @@ static func plan(labyrinth: Labyrinth, from: Vector2i, direction: Vector2i, item
 	return move
 
 
-static func _stops_at(labyrinth: Labyrinth, square: Vector2i, direction: Vector2i, items: Dictionary) -> bool:
+## True when a boat that moves in `direction` and arrives on `square` stops there (spec 5.2 rule 3).
+## `items` has the shape of plan(). LabyrinthMeasure counts the presses with it.
+static func stops_at(labyrinth: Labyrinth, square: Vector2i, direction: Vector2i, items: Dictionary = {}) -> bool:
 	if labyrinth.has_wall(square, direction):
 		return true
 	if labyrinth.open_side_count(square) >= 3:
