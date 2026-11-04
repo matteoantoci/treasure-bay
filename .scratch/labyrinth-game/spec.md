@@ -82,6 +82,7 @@ exec godot --path .
 - The import step is necessary. Without it, PNG, WAV, and MP3 files do not load, and `class_name` types are unknown ([godot4-facts §2](research/godot4-facts.md)).
 - A version other than 4.7 prints the message and the game still starts (gap-audit default 11).
 - Make the file executable (`chmod +x play`).
+- Double-click start: `tools/make_app.sh` builds `~/Applications/Labyrinth.app`. The app runs `./play` from the repo with the brew Godot, and it opens no Terminal window. The app holds no copy of the game. If you move the repo, run the script again. The Godot output goes to `~/Library/Logs/Labyrinth.log`. This is not a Godot export (section 3.1).
 
 ### 3.4 `project.godot` settings
 
