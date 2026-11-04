@@ -247,7 +247,8 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 ### 6.2 Goal
 
 - The Goal square is the bottom-right square. The Goal island is the border tile to the right of the Goal square, tile (2W, 2H − 1).
-- The Goal island has a palm and a treasure chest. The chest is closed while the Child sails. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png` (ticket 19 Q5).
+- The Goal island has a palm and a treasure chest. The chest is closed while the Child sails. The closed chest shows the Item sparkle of section 8.2, with `i` equal to the Item count of the Labyrinth. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png`, and the sparkle stops (ticket 19 Q5, [play-improvements spec](../play-improvements/spec.md) part 2).
+- The palm has the modulate colour `Color(0.7, 0.85, 0.7)`, so it is darker than the grass ([play-improvements spec](../play-improvements/spec.md) part 2).
 - Wall islands have rocks and bushes and no palm (ticket 19 Q5).
 
 ### 6.3 Goal celebration and the Sea friend (Labyrinths 1 to 20)
@@ -342,7 +343,7 @@ All 7 motions stay, at the medium amount. The values below are the spec values. 
 |---|---|
 | Boat idle | Rock `0.06 * sin(1.6 t)` rad and bob `2 * sin(1.6 t + 1)` px. Only while the boat does not move. |
 | Item idle | Bob `4 * sin(2 t + i)` px, where i is the Item index. A white 8-point sparkle of radius 7 px at (+18, −18) px from the Item centre. It shows while `fract(0.7 t + 0.33 i) < 0.15`, with alpha `1 - fract / 0.15` (a cycle of 1.4 s). |
-| Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. |
+| Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. The closed chest shows the Item sparkle at (+18, −18) px from the chest centre, with `i` equal to the Item count of the Labyrinth. The open chest has no sparkle. |
 | Water waves | Short curved lines in the Area light colour, at 18 % opacity, 3 px wide. The rows are 34 px apart. In a row, a line starts every 90 px. Each line moves `8 * sin(1.2 t + 0.02 x + 0.05 y)` px. The shader also moves soft light patterns on the water (Open gap 6). |
 | Foam | A white line at 55 % opacity, 4 px wide, along each island coast. Dashes are 10 px on and 9 px off. The dashes move at 20 px/s. The line distance from the coast changes by `2 * sin(2 t)` px. |
 | Wake | While the boat moves, a new ring starts in 60 % of the frames at 60 fps (about 36 rings each second). Each ring starts 30 px behind the boat centre, on the move line. The rings start alternately a little to the left and to the right of the move line, so they make a V shape. Each ring is a white 2 px ellipse that grows from 4 × 2 px to 30 × 16 px, turned to the boat direction, and fades out in 900 ms. |
@@ -549,7 +550,7 @@ Read the visible size from `get_viewport().get_visible_rect().size`. With the as
 - **Top band:** height `round(Hv * 150 / 760)`, 237 px at 1200. It holds the Item row and the gear.
 - **Bottom strip:** height `round(Hv * 70 / 760)`, 111 px at 1200, colour black at 25 % opacity (`Color(0, 0, 0, 0.25)`). It is the Collection.
 - **Labyrinth:** `tile_px = floor(min((Hv - top - bottom) / (2H + 1), Wv / (2W + 1)))`. The Labyrinth is in the middle of the space between the top band and the strip. A 4 × 3 Labyrinth has 121 px tiles, and a 10 × 7 Labyrinth has 56 px tiles at 1920 × 1200. The water fills the whole screen.
-- **Sizes in the Labyrinth** (multiply by `s`): boat 54 × 86 px, Item 60 px, Sea friend 110 px, chest 60 px (Open gap 3).
+- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px, Sea friend 110 px, chest 100 px (Open gap 3). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4). These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2.
 - **Item row:** the outlines sit in a row at the centre of the top band, at `y = 60 * h`. The distance between outline centres is `90 * h`, and each outline is `56 * h` px. The row is centred left to right.
 - **Gear:** 64 px, in the top-right corner. Its centre has the same height as the Item row and the same distance from the right edge.
 - **Collection strip:** the total Item count at the left end as a number, in the Godot default font at `64 * h / (1200 / 760)` px (64 px at 1200). The 20 slots fill the rest of the strip with the same distance between their centres. Each slot icon is `44 * h` px (69 px at 1200).
@@ -651,19 +652,23 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 - **Broken file:** rename it to `user://save.bak`. Replace an older `save.bak`. Then start at Labyrinth 1 with no message to the Child. A file is broken when:
   - the JSON does not parse, or it is not a dictionary,
   - a field is absent or has the wrong type,
-  - `version` is 0 or less (not a real version), or higher than 1,
+  - `version` is not a whole number, or it is 0 or less (not a real version),
   - `labyrinth` is below 1,
   - `labyrinth` is above 20 and `random_seed` is 0,
   - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
 - **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
-- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
+- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain and the target version as inputs, so a test can run a chain of one migration. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
+- **Newer version:** a file with a `version` above the current version is from a newer build. It is not broken. Do not rename it to `save.bak`: it stays in place with the same bytes. The game plays Labyrinth 1 in memory. The save store goes into a no-write state for the session: each save call returns without a write and logs one warning. A reset makes no copy (play-improvements spec, part 5).
 
 ### 12.4 Settings file
 
 - `user://settings.json` holds `{"version": 1, "music_step": 2, "effects_step": 3}`.
 - A Parent reset does not change this file.
-- An absent or broken settings file gives the default steps.
+- An absent or broken settings file gives the default steps. The settings file uses the version rules of section 12.3:
+  - A `version` of 0 or less is broken and gives the default steps.
+  - A `version` above the current version is from a newer build. It gives the default steps in memory, it stays in place with the same bytes, and the game does not write it in that session.
+  - An older version goes through its own migration chain, separate from the chain of `save.json`. That chain is empty now.
 
 ## 13. Asset acquisition steps
 
@@ -766,7 +771,10 @@ Tests:
    - A save and a load give the same state.
    - No file gives Labyrinth 1.
    - A broken file (each case of section 12.3) becomes `save.bak` and gives Labyrinth 1.
-   - `version` 0 and `version` 2 count as broken.
+   - `version` 0 counts as broken.
+   - A `version` 2 save stays in place with the same bytes, and no `save.bak` exists. The game is at Labyrinth 1. A collect and a Goal write nothing, and each save call logs one warning.
+   - A chain of one test migration from version 1 to version 2 gives the migrated fields.
+   - A `version` 2 settings file gives the default steps and stays in place with the same bytes.
    - The write goes to the `.tmp` file first.
    - After a reload, a collected Item does not count again.
    - An old Item ID of a square with no Item is removed. The other fields stay, and the file does not become `save.bak`.
@@ -876,7 +884,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 No source decides these facts. The build uses the stated value. The Parent can change each value later.
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
 2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
-3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (60 px × `s`, the Item size) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square.
+3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (100 px × `s`, [play-improvements spec](../play-improvements/spec.md) part 2) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square.
 4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. A random seed moves to seed + 1. A test checks that seeds 1 to 20 are valid. If one of them is not valid, the build uses the next free number above 20 for that Labyrinth and pins it in the test.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
 6. **Decoration and light-pattern values.** Ticket 19 Q3 names the decorations, but no source gives their counts, sizes, or speeds, and no source gives values for the light patterns on the water. The spec values, in prototype px (multiply by `s`):

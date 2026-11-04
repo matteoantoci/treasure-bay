@@ -1,8 +1,8 @@
 ## Draws the islands of a Labyrinth with the Kenney tiles (spec 7.1): a TileMapLayer for the coasts
 ## and the grass, the rocks and bushes of the wall islands, and the palm and the closed chest on
 ## the Goal island (spec 6.2). The water is the Water node below. The tile (0, 0) is at the node
-## position. IslandLook picks the tiles. The palm sways (spec 8.2), and the chest opens at the
-## start of the Goal celebration (spec 8.5).
+## position. IslandLook picks the tiles. The palm sways (spec 8.2). The closed chest sparkles like
+## an Item, and it opens at the start of the Goal celebration (spec 8.5).
 class_name LabyrinthView
 extends Node2D
 
@@ -11,8 +11,8 @@ const KENNEY_TILE_PX := 128
 const KENNEY_TILES_DIR := "res://assets/kenney/tiles/"
 const CHEST_CLOSED := preload("res://assets/sprites/goal/chest_closed.png")
 const CHEST_OPEN := preload("res://assets/sprites/goal/chest_open.png")
-## The chest has the Item size: 60 px of the prototype tile (spec 10, Open gap 3).
-const CHEST_PX := 60.0
+## The chest is 100 px of the prototype tile (spec 10, Open gap 3).
+const CHEST_PX := 100.0
 ## Sizes of a whole Kenney tile picture, in Labyrinth tiles: a rock or bush fills the grass top of
 ## its island, and the palm crown is larger than the chest.
 const DECORATION_TILES := 0.5
@@ -21,6 +21,8 @@ const PALM_TILES := 0.7
 ## far side, on the sand (Open gap 3). Centres in tiles from the top-left corner of the tile.
 const CHEST_PLACE := Vector2(0.3, 0.56)
 const PALM_PLACE := Vector2(0.78, 0.42)
+## The palm is darker than the grass, so the Child sees the Goal island.
+const PALM_COLOUR := Color(0.7, 0.85, 0.7)
 
 static var _tile_set: TileSet
 
@@ -37,8 +39,13 @@ var tile_px := 0.0:
 ## The palm and the chest of the Goal island.
 var palm := Sprite2D.new()
 var chest := Sprite2D.new()
-## Seconds of palm sway.
-var time := 0.0
+## The Item sparkle of the closed chest (spec 8.2), with the Item count as its Item index.
+var chest_sparkle := Polygon2D.new()
+## Seconds of palm sway and chest sparkle.
+var time := 0.0:
+	set(value):
+		time = value
+		_idle()
 
 var _islands := TileMapLayer.new()
 ## Labyrinth tile -> the Sprite2D of its rock or bush.
@@ -51,13 +58,16 @@ func _init() -> void:
 	_decoration_layer.name = "Decorations"
 	palm.name = "Palm"
 	chest.name = "Chest"
+	chest_sparkle.name = "ChestSparkle"
 	_islands.tile_set = kenney_tile_set()
 	palm.texture = load(kenney_tile_path(IslandLook.PALM))
+	palm.modulate = PALM_COLOUR
 	chest.texture = CHEST_CLOSED
 	add_child(_islands)
 	add_child(_decoration_layer)
 	add_child(palm)
 	add_child(chest)
+	add_child(chest_sparkle)
 
 
 static func kenney_tile_path(number: int) -> String:
@@ -98,14 +108,27 @@ func decorations() -> Dictionary:
 	return numbers
 
 
-## The chest shows chest_open.png in place of chest_closed.png.
+## The chest shows chest_open.png in place of chest_closed.png, and it stops its sparkle.
 func open_chest() -> void:
 	chest.texture = CHEST_OPEN
+	_idle()
 
 
 func _process(delta: float) -> void:
 	time += delta
+
+
+func _is_chest_closed() -> bool:
+	return chest.texture == CHEST_CLOSED
+
+
+func _idle() -> void:
 	palm.rotation = Motion.palm_sway(time)
+	var alpha := 0.0
+	if labyrinth != null and _is_chest_closed():
+		alpha = Motion.item_sparkle_alpha(time, labyrinth.items.size())
+	chest_sparkle.visible = alpha > 0.0
+	chest_sparkle.color = Color(ItemsView.SPARKLE_COLOUR, alpha)
 
 
 func _show_look() -> void:
@@ -126,6 +149,7 @@ func _show_look() -> void:
 		_decoration_layer.add_child(sprite)
 		_decorations[tile] = sprite
 	_place()
+	_idle()
 
 
 func _place() -> void:
@@ -135,8 +159,11 @@ func _place() -> void:
 	for tile: Vector2i in _decorations:
 		_fit(_decorations[tile], (Vector2(tile) + Vector2(0.5, 0.5)) * tile_px, DECORATION_TILES * tile_px)
 	var goal_island := Vector2(labyrinth.goal_island_tile())
-	_fit(chest, (goal_island + CHEST_PLACE) * tile_px, CHEST_PX * ScreenLayout.labyrinth_scale(tile_px))
+	var s := ScreenLayout.labyrinth_scale(tile_px)
+	_fit(chest, (goal_island + CHEST_PLACE) * tile_px, CHEST_PX * s)
 	_fit(palm, (goal_island + PALM_PLACE) * tile_px, PALM_TILES * tile_px)
+	chest_sparkle.position = chest.position + Motion.SPARKLE_OFFSET_PX * s
+	chest_sparkle.polygon = Burst.star_points(Vector2.ZERO, Motion.SPARKLE_RADIUS_PX * s)
 
 
 func _fit(sprite: Sprite2D, centre: Vector2, px: float) -> void:

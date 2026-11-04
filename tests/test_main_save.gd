@@ -4,6 +4,7 @@ extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
 const Fixtures := preload("res://tests/fixtures.gd")
+const WarningLog := preload("res://tests/warning_log.gd")
 
 
 func test_a_restart_continues_at_the_saved_labyrinth(t) -> bool:
@@ -109,6 +110,40 @@ func test_the_scene_saves_at_the_goal_before_the_celebration(t) -> bool:
 	t.assert_eq(saved[0]["collection"], ["crab"], "the save holds the crab")
 	t.assert_eq(saved[0]["collected_items"], [], "no collected Items in Labyrinth 2")
 	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 2 starts")
+	await Scene.remove(t, main)
+	return true
+
+
+## Test 10 of the play improvements: a save of a newer build stays in place with the same bytes, and
+## no save.bak exists. The game plays Labyrinth 1 in memory. A collect and a Goal write nothing,
+## and each save call logs one warning (spec 12.3).
+func test_a_newer_save_plays_labyrinth_1_and_writes_nothing(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var save_path := dir.path_join("save.json")
+	var text := JSON.stringify({"version": 2, "labyrinth": 9, "a_new_field": [1, 2]})
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	file.store_string(text)
+	file.close()
+	var main := await Scene.add_main(t, dir)
+	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(_ids(main.labyrinth), _ids(LabyrinthPlan.build(1)), "the Items of Labyrinth 1")
+	var save_calls := [0]
+	main.item_collected.connect(func(_item: Item) -> void: save_calls[0] += 1)
+	main.goal_reached.connect(func(_friend: String) -> void: save_calls[0] += 1)
+	var log := WarningLog.new()
+	log.start()
+	# Labyrinth 1: down, then right stops on the Item 1,2 (tests/test_main_rewards.gd).
+	await Scene.press(t, main, KEY_DOWN)
+	await Scene.press(t, main, KEY_RIGHT)
+	t.assert_eq(main.progress.collected_items, PackedStringArray(["1,2"]), "the Item is collected in memory")
+	t.assert_eq(FileAccess.get_file_as_string(save_path), text, "the collect writes nothing")
+	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
+	log.stop()
+	t.assert_eq(main.progress.labyrinth_number, 2, "Labyrinth 2 in memory")
+	t.assert_eq(FileAccess.get_file_as_string(save_path), text, "the Goal writes nothing")
+	t.assert_eq(DirAccess.get_files_at(dir), PackedStringArray(["save.json"]), "no save.bak and no other file")
+	t.assert_true(save_calls[0] >= 2, "a collect and a Goal")
+	t.assert_eq(log.warnings().size(), save_calls[0], "each save call logs one warning")
 	await Scene.remove(t, main)
 	return true
 
