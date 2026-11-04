@@ -102,10 +102,10 @@ func save_progress() -> void:
 		push_warning("The progress was not saved: %s" % error_string(error))
 
 
-## The Parent reset (spec 11.2): the game keeps a copy of the old save, the progress goes back to
-## Labyrinth 1 with an empty Collection and a total of 0, the game writes the save (spec 12.2), and
-## the screen fades in from dark (spec 8.8). If the copy fails, the reset still goes on: the Parent
-## held the button for the whole hold time.
+## The Parent reset (spec 11.2). The game keeps a copy of the old save. The progress goes back to
+## Labyrinth 1 with an empty Collection and a total of 0. The game writes the save (spec 12.2), and
+## the screen fades in from dark (spec 8.8). If the copy fails, the reset still goes on, because the
+## Parent held the button for the whole hold time.
 func _reset_progress() -> void:
 	var error := save_store.copy_before_reset(progress)
 	if error != OK:

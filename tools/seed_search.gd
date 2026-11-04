@@ -39,8 +39,8 @@ func _initialize() -> void:
 		for item in labyrinth.items:
 			ids.append(item.id)
 		print("| %d | %d×%d | %d | %d | %d | %s |" % [
-			number, labyrinth.width, labyrinth.height, seed_value, measure["presses"],
-			measure["decisions"], " ".join(ids),
+			number, labyrinth.width, labyrinth.height, seed_value, measure.presses,
+			measure.decisions, " ".join(ids),
 		])
 	print("FIXED_SEEDS = %s" % [seeds])
 	quit(0)
@@ -55,9 +55,9 @@ func meets_conditions(number: int, seed_value: int) -> bool:
 	var measure := LabyrinthMeasure.measure(LabyrinthPlan.build_from_seed(number, seed_value))
 	var d := 1 + (number - 1) / 5
 	return (
-		measure["presses"] == PRESSES[number - 1]
-		and measure["decisions"] >= d and measure["decisions"] <= d + 2
-		and (number < 2 or measure["turns"] >= 2)
-		and measure["items_on_path"] >= 1
-		and measure["largest_side_branch"] <= maxi(6, measure["length"])
+		measure.presses == PRESSES[number - 1]
+		and measure.decisions >= d and measure.decisions <= d + 2
+		and (number < 2 or measure.turns >= 2)
+		and measure.items_on_path >= 1
+		and measure.largest_side_branch <= maxi(6, measure.length)
 	)

@@ -20,14 +20,14 @@ static func has_free_dead_end(labyrinth: Labyrinth) -> bool:
 
 
 ## Places `count` Items. `prng` continues after the generator. Item i gets the kind
-## `kinds[i % kinds.size()]`. The Labyrinth must have a free dead end. The placement order is: Item 1
-## on the farthest free dead end, then the on-path squares from the start to the Goal, then the
-## shuffled other dead ends, then the shuffled other squares.
+## `kinds[i % kinds.size()]`. The Labyrinth must have a free dead end. The placement order is
+## Item 1 on the farthest free dead end, then the on-path squares from the start to the Goal. Then
+## come the shuffled other dead ends, then the shuffled other squares.
 static func place(labyrinth: Labyrinth, prng: Prng, count: int, kinds: PackedStringArray) -> Array[Item]:
 	var dead_ends := free_dead_ends(labyrinth)
 	var first := _farthest(labyrinth, dead_ends)
 	dead_ends.erase(first)
-	var path_squares := _on_path_squares(LabyrinthMeasure.main_path(labyrinth), count)
+	var path_squares := _on_path_squares(labyrinth.main_path(), count)
 	var others: Array[Vector2i] = []
 	for square in _free_squares(labyrinth):
 		if labyrinth.open_side_count(square) != 1 and not path_squares.has(square):

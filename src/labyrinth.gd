@@ -106,6 +106,22 @@ func all_squares_reachable() -> bool:
 	return not distances_from(start_square()).has(-1)
 
 
+## The main path P: the only chain of squares from the start P[0] to the Goal P[L]. L is
+## size() - 1, the length in moves. Each next square is the open neighbour one move nearer to the
+## Goal. The path does not read the Items, so the placement can use it before the Items exist.
+func main_path() -> Array[Vector2i]:
+	var distances := distances_from(goal_square())
+	var path: Array[Vector2i] = [start_square()]
+	while path[-1] != goal_square():
+		var square := path[-1]
+		for direction in DIRECTIONS:
+			var next := square + direction
+			if not has_wall(square, direction) and distances[next.y * width + next.x] == distances[square.y * width + square.x] - 1:
+				path.append(next)
+				break
+	return path
+
+
 ## The drawn grid has 2W + 1 by 2H + 1 tiles.
 func tile_count() -> Vector2i:
 	return Vector2i(2 * width + 1, 2 * height + 1)

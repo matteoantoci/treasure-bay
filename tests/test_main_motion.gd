@@ -98,8 +98,9 @@ func test_the_goal_celebration_runs_on_the_spec_times(t) -> bool:
 ## The Sea friend grows next to the Goal island at the far side, away from the chest and the boat,
 ## so the open chest and the boat stay in view (spec 6.2, 8.5, 8.6, Open gap 3). The check uses the
 ## box of the opaque pixels of each of the 20 Sea friend pictures at the end of the growth. A corner
-## is at most a quarter of the chest box: the 100 px chest of the play-improvements spec reaches up
-## to the lower-left corner of the Sea friend.
+## is at most a quarter of the chest box. The play-improvements spec (part 2) makes the chest 100 px,
+## so the chest reaches up to the lower-left corner of the Sea friend. For this reason, the limit
+## changed from 0.2 to 0.25.
 func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
 	var main := await Scene.add_main(t)
 	var view: LabyrinthView = main.get_node("LabyrinthView")

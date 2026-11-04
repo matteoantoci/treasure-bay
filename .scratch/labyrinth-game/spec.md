@@ -184,6 +184,7 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 - From Labyrinth 21, each Labyrinth is random at 10 × 7 ([ticket 05](issues/05-levels-and-difficulty.md)).
 - Call `randomize()` one time at startup. For each new random Labyrinth, the seed is `randi()`. A seed of 0 becomes 1. The game saves this seed in `random_seed` (section 12). Generation uses only the own PRNG (gap-audit default 16).
 - The Area changes every 5 Labyrinths in the order of Labyrinths 1 to 20: 21 to 25 is Area 1, 26 to 30 is Area 2, and so on ([ticket 15](issues/15-reward-after-labyrinth-20.md)).
+- The valid-seed check does not change, so a saved `random_seed` gives the same layout as before the [play-improvements spec](../play-improvements/spec.md). Only the Item squares change, because of the placement rule of section 4.6 (play-improvements spec part 3).
 
 ### 4.5 Squares and tiles
 
@@ -201,11 +202,11 @@ Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issu
 
 1. A dead end is a square with exactly one open side. The start square and the Goal square are not used.
 2. Item 1 goes in the dead end farthest from the start (breadth-first search distance). On a tie, take the lowest y, then the lowest x.
-3. The main path P is the only chain of squares from the start to the Goal. P[0] is the start, and P[L] is the Goal. L counts moves from square to square. The on-path count is `k = min(max(1, count div 3), L - 1)`, where count is the Item count of section 4.3. So 2 to 5 Items give 1 on-path Item, and 6 to 8 Items give 2 on-path Items. On-path Item j (1 to k) goes on `P[j * L div (k + 1)]`, with integer division. This index is from 1 to L − 1 and never repeats, so it is never the start or the Goal. A junction gets no special case. A main-path square is never a dead end. The PRNG continues after the generator. It shuffles the other dead ends, then the other squares without the k path squares (Fisher-Yates with `prng.next() % (i + 1)`). The placement order is: Item 1 on the farthest dead end, then the k on-path squares from the start to the Goal, then the shuffled other dead ends, then the shuffled other squares. With k = 0, this rule gives the placement from before play-improvements Part 1.
+3. The main path P is the only chain of squares from the start to the Goal. P[0] is the start, and P[L] is the Goal. L counts moves from square to square. The on-path count is `k = min(max(1, count div 3), L - 1)`, where count is the Item count of section 4.3. So 2 to 5 Items give 1 on-path Item, and 6 to 8 Items give 2 on-path Items. On-path Item j (1 to k) goes on `P[j * L div (k + 1)]`, with integer division. This index is from 1 to L − 1 and never repeats, so it is never the start or the Goal. A junction gets no special case. A main-path square is never a dead end. The PRNG continues after the generator. It shuffles the other dead ends, then the other squares without the k path squares (Fisher-Yates with `prng.next() % (i + 1)`). The PRNG calls come in the same order as before play-improvements Part 1. The second shuffle has k fewer entries, so it makes k fewer `prng.next()` calls. The placement order is: Item 1 on the farthest dead end, then the k on-path squares from the start to the Goal, then the shuffled other dead ends, then the shuffled other squares. With k = 0, this rule gives the placement from before play-improvements Part 1.
 4. Each Item has its own square. No Item is on the start square or the Goal square.
 5. Item i (0-based, in placement order) has kind `area_items[i % len(area_items)]` (section 7.2).
 6. The Item ID is `"x,y"` with the square coordinates.
-7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. For a random Labyrinth, add 1 to the seed and generate again. A test checks that seeds 1 to 20 are valid. See Open gap 4.
+7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. For a random Labyrinth, add 1 to the seed and generate again. A test checks that the seeds of the seed table of section 4.3 are valid. See Open gap 4.
 8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2). The Child gets at least one Item on the way to the Goal, also when she sails straight to the chest.
 
 ### 4.7 Sea friend for each Labyrinth
@@ -799,6 +800,7 @@ Tests:
    - an Item not yet collected,
    - the Goal.
    It passes a collected Item. A move toward a wall gives a bump and no move. The duration is 180 ms × tiles.
+   **Cross-check:** for Labyrinths 1 to 20 and for 200 random seeds, the presses of the measure of section 4.3 equal the count of moves that the move rule gives along the main path.
 5. **Input:**
    - Feed `InputEventKey` events with `Input.parse_input_event()` ([godot4-facts §7](research/godot4-facts.md)). That this also works in `--headless` is a source-trace fact.
    - An echo event does nothing.
@@ -824,10 +826,13 @@ Tests:
    - A save of Labyrinth 7 from before the seed table, with collected Items, loads. The Labyrinth number, the Collection, and `total_items` stay. Each collected ID with no Item now is dropped, and the Items that the save does not name show on the water. A collected ID that matches a new Item square hides that Item. No `save.bak` exists.
    - A Goal save holds the new Sea friend and `labyrinth` + 1.
    - A reset keeps `settings.json`.
-8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip.
-9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`. A crossfade during a crossfade fades out the louder copy and does not cut it.
+   - After a reset, `save.before-reset.json` holds the old progress. Two resets in a row keep the first copy. A reset after new play replaces the copy. With no save file, no copy exists.
+8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip. At 1920 × 1200, in Labyrinths 1 and 20, the Item, the boat, and the chest have the sizes of section 10.
+9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`. A crossfade during a crossfade fades out the louder copy and does not cut it. After `sea_friend_appeared`, the Goal player reaches its level − 12 dB in 0.2 s. At the next `goal_reached`, it plays at its level (section 9.3).
 10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. The length of each imported WAV file is the length of its source file, ±20 ms. `credits.txt` has a line for each sound file.
 11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`.
+12. **Chest sparkle:** the closed chest shows the Item sparkle of section 8.2 at its cycle times. The open chest does not show it.
+13. **Hold buttons:** a reset hold of 7.9 s does nothing, and a reset hold of 8 s resets. A quit hold of 3 s quits.
 
 ### 14.2 Screenshots
 
@@ -845,7 +850,7 @@ The build does these checks on the Parent's Mac and reports each result:
 7. Each Area shows its colours, Items, decoration, and music.
 8. The music loops with no audible jump, and the Area change crossfades.
 9. The volume buttons change music and effects separately. Step 0 is silent.
-10. Reset needs a hold of 3 s. A shorter hold does nothing. The same check for quit.
+10. Reset needs a hold of 8 s, and its ring fills in orange. A shorter hold does nothing. Quit needs a hold of 3 s, and its ring fills in yellow. A shorter hold does nothing.
 11. Cmd+Q does nothing.
 12. After a quit and `./play`, the game opens at the same Labyrinth, with the collected Items still collected.
 13. With Wi-Fi off, the game starts and plays.
@@ -869,7 +874,7 @@ The build is complete when each criterion is true:
 14. Every PNG `.import` file has `mipmaps/generate=true`, the top-level canvas items use `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`, and the stretch mode is `canvas_items` with aspect `expand` at 1920 × 1200.
 15. The Item row is at the top in the middle, the gear is in the top-right corner, and the Collection strip with the total count is at the bottom.
 16. A click on the gear opens the settings and pauses play. Music and effects each have 5 volume steps, and step 0 mutes the bus. The volume steps stay after a restart and after a reset.
-17. A hold of 3 s on the reset button starts Labyrinth 1 with an empty Collection and a total of 0. A shorter hold does nothing.
+17. A hold of 8 s on the reset button starts Labyrinth 1 with an empty Collection and a total of 0. The ring of the reset button fills in orange. A shorter hold does nothing.
 18. A hold of 3 s on the door button saves and quits. Cmd+Q and window close do not quit the game.
 19. After a quit, `./play` opens the same Labyrinth, with the same collected Items, Collection, and total count.
 20. If no save file exists, the game starts Labyrinth 1 with no message. A broken save becomes `save.bak` and the game starts Labyrinth 1 with no message.
@@ -928,7 +933,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 No source decides these facts. The build uses the stated value. The Parent can change each value later.
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
 2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
-3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (100 px × `s`, [play-improvements spec](../play-improvements/spec.md) part 2) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square.
+3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (100 px × `s`, [play-improvements spec](../play-improvements/spec.md) part 2) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square. At 100 px, the left edge of the chest is 0.085 tile (about 11 px of the prototype tile) past the left edge of the Goal island tile. So the chest covers a part of the foam line next to the Goal square. The chest stays at this place. This overlap is a known look item for the Parent check.
 4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. A random seed moves to seed + 1. The seed search of section 4.3 takes only seeds with a free dead end, so the 20 seeds of the seed table are valid. A test checks them.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
 6. **Decoration and light-pattern values.** Ticket 19 Q3 names the decorations, but no source gives their counts, sizes, or speeds, and no source gives values for the light patterns on the water. The spec values, in prototype px (multiply by `s`):

@@ -89,7 +89,7 @@ func test_a_newer_save_stays_and_the_store_writes_nothing(t) -> bool:
 	var log := WarningLog.new()
 	log.start()
 	store.save(_progress_7())
-	progress.collect_item("1,2")
+	progress.collect_item("0,2")
 	store.save(progress)
 	log.stop()
 	t.assert_eq(log.warnings().size(), 2, "each save call logs one warning")
@@ -268,9 +268,8 @@ func test_a_reset_after_new_play_replaces_the_copy(t) -> bool:
 	var panel: SettingsPanel = main.get_node("Settings")
 	_reset(panel)
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the first reset ends")
-	# Labyrinth 1: down, then right stops on the Item 1,2 (tests/test_main_rewards.gd).
+	# Labyrinth 1: down stops on the Item 0,2 (tests/test_main_rewards.gd).
 	await Scene.press(t, main, KEY_DOWN)
-	await Scene.press(t, main, KEY_RIGHT)
 	var new_text := FileAccess.get_file_as_string(dir.path_join("save.json"))
 	t.assert_eq(SaveStore.new(dir).load_progress().total_items, 1, "the save holds the new Item")
 	_reset(panel)
@@ -284,7 +283,7 @@ func test_a_reset_with_no_save_file_makes_no_copy(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var main := await Scene.add_main(t, dir)
 	# Progress that is not fresh, with no save file yet.
-	main.progress.collect_item("1,2")
+	main.progress.collect_item("0,2")
 	_reset(main.get_node("Settings"))
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json")), "no copy")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json.tmp")), "no .tmp copy")
@@ -302,9 +301,8 @@ func test_in_the_no_write_state_a_reset_makes_no_copy_and_writes_no_save(t) -> b
 	var newer_text := JSON.stringify(data)
 	_write(dir.path_join("save.json"), newer_text)
 	var main := await Scene.add_main(t, dir)
-	# Labyrinth 1: down, then right stops on the Item 1,2, so the progress is not fresh.
+	# Labyrinth 1: down stops on the Item 0,2, so the progress is not fresh.
 	await Scene.press(t, main, KEY_DOWN)
-	await Scene.press(t, main, KEY_RIGHT)
 	t.assert_eq(main.progress.total_items, 1, "the Child collects an Item")
 	_reset(main.get_node("Settings"))
 	t.assert_eq(main.progress.total_items, 0, "the reset goes on in memory")
@@ -313,7 +311,6 @@ func test_in_the_no_write_state_a_reset_makes_no_copy_and_writes_no_save(t) -> b
 	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.json")), newer_text, "save.json has the same bytes")
 	await Scene.remove(t, main)
 	return true
-
 
 
 ## A later save schema adds its first migration to the chain (spec 12.3). A chain of one test

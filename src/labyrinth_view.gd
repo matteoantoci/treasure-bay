@@ -13,8 +13,8 @@ const CHEST_CLOSED := preload("res://assets/sprites/goal/chest_closed.png")
 const CHEST_OPEN := preload("res://assets/sprites/goal/chest_open.png")
 ## The chest is 100 px of the prototype tile (spec 10, Open gap 3).
 const CHEST_PX := 100.0
-## Sizes of a whole Kenney tile picture, in Labyrinth tiles: a rock or bush fills the grass top of
-## its island, and the palm crown is larger than the chest.
+## Sizes of a whole Kenney tile picture, in Labyrinth tiles. A rock or bush fills the grass top of
+## its island. The palm (91 px of the prototype tile) is a little smaller than the chest.
 const DECORATION_TILES := 0.5
 const PALM_TILES := 0.7
 ## On the Goal island tile, the chest is at the side next to the Goal square and the palm at the
@@ -42,10 +42,7 @@ var chest := Sprite2D.new()
 ## The Item sparkle of the closed chest (spec 8.2), with the Item count as its Item index.
 var chest_sparkle := Polygon2D.new()
 ## Seconds of palm sway and chest sparkle.
-var time := 0.0:
-	set(value):
-		time = value
-		_idle()
+var time := 0.0
 
 var _islands := TileMapLayer.new()
 ## Labyrinth tile -> the Sprite2D of its rock or bush.
@@ -116,6 +113,7 @@ func open_chest() -> void:
 
 func _process(delta: float) -> void:
 	time += delta
+	_idle()
 
 
 func _is_chest_closed() -> bool:
@@ -128,7 +126,7 @@ func _idle() -> void:
 	if labyrinth != null and _is_chest_closed():
 		alpha = Motion.item_sparkle_alpha(time, labyrinth.items.size())
 	chest_sparkle.visible = alpha > 0.0
-	chest_sparkle.color = Color(ItemsView.SPARKLE_COLOUR, alpha)
+	chest_sparkle.color = Color(Motion.SPARKLE_COLOUR, alpha)
 
 
 func _show_look() -> void:

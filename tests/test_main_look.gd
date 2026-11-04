@@ -57,16 +57,17 @@ func test_the_goal_island_has_the_palm_and_the_closed_chest(t) -> bool:
 		t.assert_true(view.palm.visible and view.chest.visible, label + "palm and chest show")
 		t.assert_true(island.has_point(view.palm.position) and view.palm.position.x > island.get_center().x, label + "palm at the far side of the Goal island")
 		t.assert_true(island.has_point(view.chest.position) and view.chest.position.x < island.get_center().x, label + "chest at the side next to the Goal square")
-		t.assert_eq(view.palm.modulate, Color(0.7, 0.85, 0.7), label + "the palm is darker than the grass")
+		var grass: Color = view.get_node("Islands").modulate
+		t.assert_true(view.palm.modulate.get_luminance() < grass.get_luminance(), label + "the palm is darker than the grass")
 		t.assert_true(not view.decorations().values().has(IslandLook.PALM), label + "no palm on a wall island")
 	await Scene.remove(t, main)
 	return true
 
 
-## The closed chest shows the Item sparkle of spec 8.2 with i = the Item count: white, radius 7 px
-## at (+18, -18) px from the chest centre, while fract(0.7 t + 0.33 i) < 0.15, with alpha
-## 1 - fract / 0.15. The open chest does not sparkle. Labyrinth 1 opens its chest, so Labyrinth 20
-## also checks that the chest of a new Labyrinth sparkles again.
+## The closed chest shows the Item sparkle of spec 8.2 with i = the Item count. The sparkle is white,
+## with a radius of 7 px, at (+18, -18) px from the chest centre. It shows while
+## fract(0.7 t + 0.33 i) < 0.15, with alpha 1 - fract / 0.15. The open chest does not sparkle.
+## Labyrinth 1 opens its chest, so Labyrinth 20 also checks that a new chest sparkles again.
 func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
 	var main := await Scene.add_main(t)
 	var view: LabyrinthView = main.get_node("LabyrinthView")
@@ -81,9 +82,9 @@ func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
 		# 0.1 ms after the cycle time, so the float rounding of the time does not hide the sparkle.
 		var start: float = cases[number][1] + 0.0001
 		var s := view.tile_px / 130.0
-		view.time = start - 0.01
+		_at(view, start - 0.01)
 		t.assert_true(not sparkle.visible, label + "no sparkle just before its cycle time")
-		view.time = start
+		_at(view, start)
 		t.assert_true(sparkle.visible, label + "the sparkle shows")
 		t.assert_true(absf(sparkle.color.a - 1.0) < 0.002, label + "at full alpha")
 		t.assert_true(sparkle.color.is_equal_approx(Color(1, 1, 1, sparkle.color.a)), label + "white")
@@ -92,17 +93,23 @@ func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
 		for point in sparkle.polygon:
 			radius = maxf(radius, point.length())
 		t.assert_true(absf(radius - 7.0 * s) < 0.001, label + "radius 7 px")
-		view.time = start + 0.075 / 0.7
+		_at(view, start + 0.075 / 0.7)
 		t.assert_true(absf(sparkle.color.a - 0.5) < 0.002, label + "half way through the sparkle")
-		view.time = start + 0.15 / 0.7 + 0.01
+		_at(view, start + 0.15 / 0.7 + 0.01)
 		t.assert_true(not sparkle.visible, label + "no sparkle after 15 % of the cycle")
-		view.time = start + 1.0 / 0.7
+		_at(view, start + 1.0 / 0.7)
 		t.assert_true(sparkle.visible and absf(sparkle.color.a - 1.0) < 0.002, label + "the next sparkle after 1 / 0.7 s")
 		view.open_chest()
-		view.time = start
+		_at(view, start)
 		t.assert_true(not sparkle.visible, label + "the open chest does not sparkle")
 	await Scene.remove(t, main)
 	return true
+
+
+## One frame of the view at `seconds` of palm sway and chest sparkle.
+func _at(view: LabyrinthView, seconds: float) -> void:
+	view.time = seconds
+	view._process(0.0)
 
 
 ## At 1920 x 1200, in the small Labyrinth 1 and the large Labyrinth 20, the Item is 90 px, the

@@ -65,10 +65,11 @@ static func to_dictionary(settings: VolumeSettings) -> Dictionary:
 	}
 
 
-## The steps of a parsed settings.json, or null when the file is broken: not a dictionary, a version
-## of 0 or less, a step absent or not a whole number, or a step outside 0 to 4. A version above
-## VERSION also gives null: this build cannot read it. An older version goes through `migrations`
-## first. JSON reads each number as a float, so the numbers become int here.
+## The steps of a parsed settings.json, or null when the file is broken. A file is broken when it is
+## not a dictionary, or has a version of 0 or less. It is also broken when a step is absent, is not
+## a whole number, or is outside 0 to 4. A version above VERSION also gives null: this build cannot
+## read it. An older version goes through `migrations` first. JSON reads each number as a float, so
+## the numbers become int here.
 static func from_dictionary(data: Variant) -> VolumeSettings:
 	var version := JsonFile.version_of(data)
 	if version < 1 or version > VERSION:

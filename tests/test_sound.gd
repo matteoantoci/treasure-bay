@@ -183,7 +183,6 @@ func test_the_fanfare_duck_pauses_with_the_game(t) -> bool:
 	return true
 
 
-
 func test_13_sea_friends_play_their_own_sound_and_7_the_splash(t) -> bool:
 	var added := await _add_main(t, 1)
 	var main: Node = added[0]
