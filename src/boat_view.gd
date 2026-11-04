@@ -3,15 +3,14 @@
 class_name BoatView
 extends Node2D
 
-## The prototype tile size. The boat sizes are in px of this tile (spec 8.1).
-const PROTOTYPE_TILE_PX := 130.0
+## Size in px of the prototype tile (ScreenLayout.PROTOTYPE_TILE_PX).
 const SIZE := Vector2(54, 86)
 const HULL_COLOUR := Color("#8a5a2b")
 const SAIL_COLOUR := Color("#ffffff")
 
 
 func set_tile_px(tile_px: float) -> void:
-	scale = Vector2.ONE * (tile_px / PROTOTYPE_TILE_PX)
+	scale = Vector2.ONE * ScreenLayout.labyrinth_scale(tile_px)
 
 
 func _draw() -> void:

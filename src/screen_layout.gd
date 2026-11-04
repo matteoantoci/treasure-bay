@@ -2,6 +2,20 @@
 class_name ScreenLayout
 extends RefCounted
 
+## The prototype tile size. The sizes in the Labyrinth are px of this tile (spec 8.1).
+const PROTOTYPE_TILE_PX := 130.0
+
+
+## The factor s of spec 8.1 for a Labyrinth value in prototype px.
+static func labyrinth_scale(tile_px: float) -> float:
+	return tile_px / PROTOTYPE_TILE_PX
+
+
+## The rectangle of a sprite of `texture_size`, centred on `centre`, with its longer side `px` long.
+static func sprite_rect(centre: Vector2, texture_size: Vector2, px: float) -> Rect2:
+	var size := texture_size * (px / maxf(texture_size.x, texture_size.y))
+	return Rect2(centre - size / 2.0, size)
+
 
 ## The top band holds the Item row and the gear.
 static func top_band_height(visible: Vector2) -> int:
@@ -25,3 +39,47 @@ static func labyrinth_rect(visible: Vector2, tiles: Vector2i) -> Rect2:
 	var top := top_band_height(visible)
 	var free_height := visible.y - top - bottom_strip_height(visible)
 	return Rect2(Vector2((visible.x - size.x) / 2.0, top + (free_height - size.y) / 2.0), size)
+
+
+## The HUD values are prototype px at a height of 760 px. Multiply them by this (spec 8.1).
+static func hud_scale(visible: Vector2) -> float:
+	return visible.y / 760.0
+
+
+## The centres of `count` Item outlines: a row at y = 60 h, 90 h apart, centred left to right.
+static func item_outline_centres(visible: Vector2, count: int) -> PackedVector2Array:
+	var h := hud_scale(visible)
+	var centres := PackedVector2Array()
+	for i in count:
+		centres.append(Vector2(visible.x / 2.0 + (i - (count - 1) / 2.0) * 90.0 * h, 60.0 * h))
+	return centres
+
+
+static func item_outline_px(visible: Vector2) -> float:
+	return 56.0 * hud_scale(visible)
+
+
+## The total Item count sits at the left end of the strip, in an area 2 strip heights wide.
+static func collection_count_rect(visible: Vector2) -> Rect2:
+	var strip := bottom_strip_height(visible)
+	return Rect2(0, visible.y - strip, 2 * strip, strip)
+
+
+## The Godot default font at 64 px at a height of 1200 px.
+static func collection_count_font_size(visible: Vector2) -> int:
+	return roundi(64.0 * visible.y / 1200.0)
+
+
+## The centres of the 20 Collection slots. They share the strip right of the count area, with the
+## same distance between their centres.
+static func collection_slot_centres(visible: Vector2) -> PackedVector2Array:
+	var count_area := collection_count_rect(visible)
+	var distance := (visible.x - count_area.end.x) / SeaFriends.IDS.size()
+	var centres := PackedVector2Array()
+	for i in SeaFriends.IDS.size():
+		centres.append(Vector2(count_area.end.x + (i + 0.5) * distance, count_area.get_center().y))
+	return centres
+
+
+static func collection_icon_px(visible: Vector2) -> float:
+	return 44.0 * hud_scale(visible)
