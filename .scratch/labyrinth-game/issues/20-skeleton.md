@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] `./play` starts the game on the Parent's Mac and checks the Godot version (spec 3.3).
 - [x] The seeded PRNG and the generator give the same Labyrinth for the same seed.

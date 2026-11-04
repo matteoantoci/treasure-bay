@@ -4,7 +4,7 @@
 
 **Blocked by:** 20 (Skeleton: sail one Labyrinth to the Goal)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Labyrinths 1 to 20 have the sizes and seeds of spec 4.3, and later ones are 10 × 7 random Labyrinths.
 - [x] Items sit on the squares of spec 4.6. Each Item fills one outline and counts only one time.

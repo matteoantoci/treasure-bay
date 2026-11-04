@@ -4,7 +4,7 @@
 
 **Blocked by:** 25 (Motion), 27 (Settings and Parent controls)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] All headless tests pass.
 - [x] The screenshots of spec 14.2 exist.

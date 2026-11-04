@@ -4,7 +4,7 @@
 
 **Blocked by:** 23 (Saved progress), 26 (Sound)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] A click on the gear opens and closes the settings panel and pauses play (spec 11.2).
 - [x] The volume buttons change each bus in 5 steps, and the values persist in the settings file (spec 12.4).

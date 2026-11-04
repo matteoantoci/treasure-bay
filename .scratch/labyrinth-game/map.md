@@ -40,6 +40,7 @@ A build-ready spec at `.scratch/labyrinth-game/spec.md`. An agent can build the 
 - [Listen to the sounds](issues/12-listen-to-the-sounds.md): the Parent listened in 3 rounds. All 4 music tracks are joyful AndriiComposer tracks. 13 Sea friends have an own sound and 7 use the splash. The final list is at the end of [research/sounds.md](research/sounds.md).
 - [Gaps before the spec](issues/19-gaps-before-the-spec.md): Areas 2 to 4 Items, colours, and decoration; the Collection is a bottom strip; the Goal island has a palm and a treasure chest that opens; sounds use the Freesound previews, so no login; the keys that no app can block are accepted. 34 small defaults are in [research/gap-audit.md](research/gap-audit.md).
 - [Build spec](spec.md): the build-ready spec, written on 2026-11-04 from all decisions above. It overrides older text in the tickets and research files.
+- [Build](issues/28-final-check.md): tickets 20 to 29 are built on the branch `labyrinth-game` (2026-11-04). The fixes after the build: the Goal is always a dead end, so the boat can reach each Item; the WAV import does not trim; old saves keep their progress. Ticket 30 (the Parent manual check) is open.
 
 ## Facts for the build
 

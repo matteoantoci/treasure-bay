@@ -4,7 +4,7 @@
 
 **Blocked by:** 22 (Labyrinths, Items, and rewards)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The game saves after each Item and at each Goal (spec 12.2).
 - [x] A restart continues at the saved Labyrinth with its seed and collected Items.

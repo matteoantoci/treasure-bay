@@ -4,7 +4,7 @@
 
 **Blocked by:** 22 (Labyrinths, Items, and rewards), 24 (Sea look, Areas, and layout)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Idle rock and bob, water and foam, wake, Item fly, Goal hop and confetti, Sea friend arrival, and the fade between Labyrinths match spec 8 timings.
 - [x] The chest opens at the start of the Goal celebration.

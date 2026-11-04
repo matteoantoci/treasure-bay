@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The 22 sound files are downloaded with no login, cut at the spec times, faded, and set to the loudness targets (spec 9.5, 9.6).
 - [x] `credits.txt` matches spec 9.8.

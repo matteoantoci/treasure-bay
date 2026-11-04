@@ -4,7 +4,7 @@
 
 **Blocked by:** 29 (Sounds and credits), 24 (Sea look, Areas, and layout)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The `Music` and `Effects` buses exist (spec 9.1).
 - [x] Each Area plays its track, with the crossfade at the end of the track and at an Area change (spec 9.2).

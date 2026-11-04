@@ -4,7 +4,7 @@
 
 **Blocked by:** 21 (Sprites), 22 (Labyrinths, Items, and rewards)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Islands, coasts, and water use the Kenney tiles (spec 7.1).
 - [x] The Goal island has a palm and the closed chest. Wall islands have no palm.

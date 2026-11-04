@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The repo sprites and Kenney tiles are in the project (spec 13.1).
 - [x] The 7 new sprites (5 Items, closed chest, open chest) exist in the Kenney-like style of the Sea friends (spec 13.2). This step uses the Parent's xAI quota.
