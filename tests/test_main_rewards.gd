@@ -4,7 +4,6 @@
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
-const LOCK_CHECK_SECONDS := 0.1
 
 
 func test_labyrinth_1_shows_its_items_and_empty_outlines(t) -> bool:
@@ -50,8 +49,10 @@ func test_goal_of_labyrinth_1_brings_the_crab_to_the_strip(t) -> bool:
 	t.assert_eq(reached, [["crab", 2]], "goal_reached gives the crab, after the progress moved to Labyrinth 2")
 	t.assert_eq(main.progress.collection, PackedStringArray(["crab"]), "Collection")
 	# The input is locked during the celebration: a press does not move the boat.
+	var moves := Scene.record_moves(main)
 	Scene.send_key(KEY_LEFT)
-	t.assert_true(not await t.wait_for(main.move_finished, LOCK_CHECK_SECONDS), "no move during the celebration")
+	await t.create_timer(Scene.NO_MOVE_SECONDS).timeout
+	t.assert_eq(moves, [], "no move and no bump during the celebration")
 	t.assert_eq(main.boat_square, main.labyrinth.goal_square(), "the boat stays on the Goal")
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 2 starts, and its fade-in ends")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(["crab"]), "the crab is in its slot")

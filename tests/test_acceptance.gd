@@ -4,8 +4,6 @@
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
-## Long enough for a move of Labyrinth 1 (at most 4 tiles, 0.72 s) at the test time scale.
-const NO_MOVE_SECONDS := 0.25
 ## Keys that are not arrow keys, also with the Cmd and Ctrl modifiers.
 const OTHER_KEYS := [KEY_ESCAPE, KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_TAB, KEY_BACKSPACE, KEY_W,
 	KEY_A, KEY_S, KEY_D, KEY_Q, KEY_F, KEY_1, KEY_F11, KEY_HOME, KEY_PAGEDOWN, KEY_KP_2, KEY_KP_8]
@@ -58,7 +56,7 @@ func test_keys_other_than_the_arrow_keys_do_nothing(t) -> bool:
 	for key in OTHER_KEYS:
 		for modifiers in [[], ["meta_pressed"], ["ctrl_pressed"], ["ctrl_pressed", "meta_pressed"]]:
 			_send_key(key, modifiers)
-	t.assert_true(not await t.wait_for(main.move_finished, NO_MOVE_SECONDS), "no move")
+	t.assert_true(not await t.wait_for(main.move_finished, Scene.NO_MOVE_SECONDS), "no move")
 	t.assert_eq(events, [], "no move, no bump")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat stays on the start square")
 	t.assert_eq(boat.rotation, rotation, "the boat does not turn")

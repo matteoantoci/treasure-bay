@@ -6,6 +6,11 @@ extends RefCounted
 const Scene := preload("res://tests/scene_helpers.gd")
 const Fixtures := preload("res://tests/fixtures.gd")
 const QUIT_PROBE := "res://tests/quit_probe.gd"
+## Godot ends the probe after this count of frames, also when a script error stops the probe before
+## its quit, so the test run never hangs. A headless frame lasts about 7 ms (the low processor sleep
+## of Godot), so the limit is about 10 s. The probe needs fewer than 50 frames, and 2.3 s when the
+## quit hold does not quit.
+const PROBE_FRAME_LIMIT := 1500
 
 
 func test_a_gear_click_opens_and_closes_the_settings_and_pauses_play(t) -> bool:
@@ -175,7 +180,7 @@ func test_the_frames_fill_the_ring_while_play_is_paused(t) -> bool:
 func test_window_close_does_nothing_and_a_quit_hold_saves_and_quits(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var output := []
-	var arguments := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", QUIT_PROBE, "--", dir]
+	var arguments := ["--headless", "--quit-after", str(PROBE_FRAME_LIMIT), "--path", ProjectSettings.globalize_path("res://"), "--script", QUIT_PROBE, "--", dir]
 	var exit_code := OS.execute(OS.get_executable_path(), arguments, output, true)
 	var text := "\n".join(output)
 	t.assert_eq(exit_code, 0, "the probe quits with code 0")

@@ -95,7 +95,6 @@ func test_the_scene_saves_after_each_item(t) -> bool:
 	var loaded := SaveStore.new(dir).load_progress()
 	t.assert_eq(loaded.labyrinth_number, 1, "saved Labyrinth")
 	t.assert_eq(loaded.total_items, 1, "saved total Items")
-	await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT)
 	await Scene.remove(t, main)
 	return true
 

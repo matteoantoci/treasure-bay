@@ -177,7 +177,8 @@ func test_the_boat_rocks_only_when_it_does_not_move_and_leaves_a_wake(t) -> bool
 	t.assert_true(not boat.idle, "no rock while the boat moves")
 	var finished := [false]
 	main.move_finished.connect(func() -> void: finished[0] = true, CONNECT_ONE_SHOT)
-	while wake.rings.is_empty() and not finished[0]:
+	var timer: SceneTreeTimer = t.create_timer(Scene.MOVE_TIMEOUT)
+	while wake.rings.is_empty() and not finished[0] and timer.time_left > 0.0:
 		await t.process_frame
 	t.assert_true(wake.rings.size() > 0, "the moving boat leaves wake rings")
 	if not finished[0]:
@@ -191,7 +192,7 @@ func test_a_new_labyrinth_stops_a_running_move(t) -> bool:
 	var main := await Scene.add_main(t)
 	Scene.send_key(KEY_DOWN)
 	main.show_labyrinth()
-	t.assert_true(not await t.wait_for(main.move_finished, 0.25), "the old move never ends")
+	t.assert_true(not await t.wait_for(main.move_finished, Scene.NO_MOVE_SECONDS), "the old move never ends")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the boat is free for a new move")
 	t.assert_eq(main.boat_square, Vector2i(0, 2), "the new move runs")
