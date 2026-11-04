@@ -576,8 +576,15 @@ Sources: [ticket 09](issues/09-saved-progress.md), [ticket 16](issues/16-parent-
   - A reset button with a circular-arrow picture.
   - A quit button with a door picture.
 - **Volume:** each bus has 5 steps, 0 to 4. The value is `step / 4`. Set the bus with `AudioServer.set_bus_volume_linear(bus, value * value)` ([sounds.md](research/sounds.md)). At step 0, call `AudioServer.set_bus_mute(bus, true)` in place of a volume of 0, because `linear_to_db(0)` is `-inf` ([godot-audio skill](../../.claude/skills/godot-audio/SKILL.md)). The default steps are music 2 (0.5) and effects 3 (0.75). The game saves the steps in `user://settings.json` (section 12.4).
-- **Hold buttons (reset and quit):** use `Button.button_down` and `Button.button_up`. A ring around the button fills in 3 s. If the Parent lets go before 3 s, the ring goes back to empty and nothing happens.
-- **Reset after 3 s:** the panel closes and the game unpauses. The progress goes back to Labyrinth 1 with an empty Collection and a total of 0. The game writes the save. The screen fades in from dark (section 8.8). The volume steps stay.
+- **Hold buttons (reset and quit):** use `Button.button_down` and `Button.button_up`. The hold time and the full ring colour are values of each hold button. A ring around the button fills in the hold time of the button. If the Parent lets go before the hold time, the ring goes back to empty and nothing happens (play-improvements spec, part 5).
+  - Reset: a hold of 8 s, so the Child cannot reset the game by accident. The ring fills in `#ff7a59`.
+  - Quit: a hold of 3 s. The ring fills in `#ffd447`.
+- **Reset after 8 s:** the panel closes and the game unpauses. Before the reset writes the new save, the save store copies the current `user://save.json` to `user://save.before-reset.json`. The copy uses the write rule of section 12.3: `user://save.before-reset.json.tmp`, then a rename.
+  - The game makes the copy only when the progress in memory is not fresh. Progress is fresh when the Labyrinth is 1, the Collection is empty, and `total_items` is 0. So a reset of fresh progress keeps the older copy, and a second reset after a reset by mistake does not replace the real Collection. A reset of progress that is not fresh replaces the older copy.
+  - With no save file, or in the no-write state of section 12.3, the game makes no copy.
+  - If the copy fails, the game logs a warning and the reset goes on.
+  - Then the progress goes back to Labyrinth 1 with an empty Collection and a total of 0. The game writes the save. The screen fades in from dark (section 8.8). The volume steps stay.
+- **Restore after a reset by mistake:** the Parent quits the game with the door button, then renames `save.before-reset.json` to `save.json` in the save folder (`user://`, on macOS `~/Library/Application Support/Godot/app_userdata/Labyrinth/`). The rename replaces the save of the reset. At the next start, the game continues with the old progress. The game has no restore button.
 - **Quit after 3 s:** the game writes the save, then calls `get_tree().quit()`.
 
 ### 11.3 Facts about keys that can end play
