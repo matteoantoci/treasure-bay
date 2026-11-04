@@ -62,12 +62,90 @@ func test_fixed_labyrinths_are_perfect(t) -> bool:
 
 
 func test_random_labyrinths_are_perfect(t) -> bool:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20261104
-	for i in RANDOM_SEED_COUNT:
-		var seed_value := rng.randi()
+	for seed_value in _random_seeds():
 		_check_perfect(t, LabyrinthPlan.build(21, seed_value), RANDOM_SIZE, "random seed %d" % seed_value)
 	return true
+
+
+# Spec 4.2: the boat stops at the Goal (spec 5.2), so the Child cannot reach a square behind the
+# Goal, or an Item on it. The Goal square is a dead end, and no path goes through it.
+func test_fixed_labyrinths_have_no_square_behind_the_goal(t) -> bool:
+	var behind := []
+	for n in SIZES:
+		if not _check_goal_is_a_dead_end(t, LabyrinthPlan.build(n), "Labyrinth %d" % n):
+			behind.append(n)
+	t.assert_eq(behind, [], "fixed Labyrinths with a square behind the Goal")
+	return true
+
+
+func test_random_labyrinths_have_no_square_behind_the_goal(t) -> bool:
+	var behind := []
+	for seed_value in _random_seeds():
+		if not _check_goal_is_a_dead_end(t, LabyrinthPlan.build(21, seed_value), "random seed %d" % seed_value):
+			behind.append(seed_value)
+	t.assert_eq(behind.size(), 0, "random Labyrinths (of %d) with a square behind the Goal" % RANDOM_SEED_COUNT)
+	return true
+
+
+func test_goal_check_finds_a_square_behind_the_goal(t) -> bool:
+	# 3 x 2 squares in one line through the Goal (2, 1): (0, 0) - (0, 1) - (1, 1) - (2, 1) - (2, 0),
+	# and (1, 0) off (1, 1). Square (2, 0) is behind the Goal.
+	var labyrinth := Labyrinth.new(3, 2)
+	labyrinth.open_wall(Vector2i(0, 0), Vector2i.DOWN)
+	labyrinth.open_wall(Vector2i(0, 1), Vector2i.RIGHT)
+	labyrinth.open_wall(Vector2i(1, 1), Vector2i.UP)
+	labyrinth.open_wall(Vector2i(1, 1), Vector2i.RIGHT)
+	labyrinth.open_wall(Vector2i(2, 1), Vector2i.UP)
+	t.assert_eq(_squares_reached_without_the_goal(labyrinth), 5, "squares reached before the Goal")
+	labyrinth = Labyrinth.new(3, 2)
+	labyrinth.open_wall(Vector2i(0, 0), Vector2i.DOWN)
+	labyrinth.open_wall(Vector2i(0, 1), Vector2i.RIGHT)
+	labyrinth.open_wall(Vector2i(1, 1), Vector2i.UP)
+	labyrinth.open_wall(Vector2i(1, 0), Vector2i.RIGHT)
+	labyrinth.open_wall(Vector2i(2, 0), Vector2i.DOWN)
+	t.assert_eq(_squares_reached_without_the_goal(labyrinth), 6, "the Goal at the end of the line")
+	return true
+
+
+## The 200 random seeds of spec 14.1 test 2.
+func _random_seeds() -> Array[int]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20261104
+	var seeds: Array[int] = []
+	for i in RANDOM_SEED_COUNT:
+		seeds.append(rng.randi())
+	return seeds
+
+
+## The Goal square has exactly 1 open side, and a breadth-first search from the start that never
+## goes on from the Goal square reaches every square. Returns true if both are true.
+func _check_goal_is_a_dead_end(t, labyrinth: Labyrinth, label: String) -> bool:
+	var open_sides := labyrinth.open_side_count(labyrinth.goal_square())
+	var reached := _squares_reached_without_the_goal(labyrinth)
+	var square_count := labyrinth.width * labyrinth.height
+	t.assert_eq(open_sides, 1, label + ": open sides of the Goal square")
+	t.assert_eq(reached, square_count, label + ": squares reached with no pass through the Goal")
+	return open_sides == 1 and reached == square_count
+
+
+## The count of squares that a breadth-first search from the start reaches when it does not go on
+## from the Goal square. The Goal square itself counts.
+func _squares_reached_without_the_goal(labyrinth: Labyrinth) -> int:
+	var goal := Vector2i(labyrinth.width - 1, labyrinth.height - 1)
+	var reached := {Vector2i.ZERO: true}
+	var queue: Array[Vector2i] = [Vector2i.ZERO]
+	var head := 0
+	while head < queue.size():
+		var square := queue[head]
+		head += 1
+		if square == goal:
+			continue
+		for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+			var next: Vector2i = square + direction
+			if not labyrinth.has_wall(square, direction) and not reached.has(next):
+				reached[next] = true
+				queue.append(next)
+	return reached.size()
 
 
 func test_start_is_top_left_and_goal_is_bottom_right(t) -> bool:
