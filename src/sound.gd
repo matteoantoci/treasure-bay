@@ -138,12 +138,17 @@ func _on_labyrinth_started(number: int) -> void:
 
 
 ## The new copy goes from -40 dB to its level, the old copy goes to -40 dB and stops (spec 9.2).
-## A new crossfade during a crossfade restarts the copy that fades out.
+## During a crossfade both players play. A new crossfade then fades out the louder copy from its
+## level now, and the quieter player takes the new track.
 func _crossfade_to(path: String) -> void:
 	if _crossfade != null:
 		_crossfade.kill()
-	var old := music_players[_active]
-	_active = 1 - _active
+	var old_index := _active
+	var other := music_players[1 - _active]
+	if other.playing and other.volume_db > music_players[_active].volume_db:
+		old_index = 1 - _active
+	var old := music_players[old_index]
+	_active = 1 - old_index
 	var new := music_players[_active]
 	_start(new, path, SILENT_DB)
 	_crossfade = create_tween().set_parallel().set_ignore_time_scale()

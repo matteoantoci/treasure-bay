@@ -14,6 +14,8 @@ const FRIENDS := "res://assets/audio/friends/"
 const SPLASH_FRIENDS := ["spouting_whale", "blowfish", "shark", "lobster", "shrimp", "oyster", "turtle"]
 # The crossfade takes 1.5 s of real time (spec 9.2); Engine.time_scale does not change it.
 const CROSSFADE_WAIT := 2.0
+## Real seconds from the start of a crossfade: the old copy is still the louder copy.
+const EARLY_IN_A_CROSSFADE := 0.2
 
 
 ## Adds the main scene at saved Labyrinth `number`, with a recorder connected before the launch, and
@@ -183,6 +185,38 @@ func test_an_area_change_crossfades_to_the_new_track_at_the_fade(t) -> bool:
 	_assert_db(t, old.volume_db, -40.0, "the old track went down to -40 dB")
 	_assert_db(t, new.volume_db, SoundLevels.volume_db(MUSIC + "coral_reef.mp3"), "the new track is at its level")
 	t.assert_eq(sound.music_path(), MUSIC + "coral_reef.mp3", "Area 2 music")
+	await Scene.remove(t, main)
+	return true
+
+
+## Spec 9.2: the old copy goes down to -40 dB, then stops. A second crossfade during a crossfade (a
+## reset or an Area change) fades out the louder copy from its level now. The quieter player takes
+## the new track.
+func test_a_crossfade_during_a_crossfade_fades_out_the_louder_copy(t) -> bool:
+	var added := await _add_main(t, 1)
+	var main: Node = added[0]
+	var calls: Array = added[1]
+	var sound: Sound = main.get_node("Sound")
+	var lagoon := sound.active_music_player()
+	calls.clear()
+	sound.play_area(2)
+	var coral := sound.active_music_player()
+	await _real_seconds(t, EARLY_IN_A_CROSSFADE)
+	var lagoon_db := lagoon.volume_db
+	t.assert_true(lagoon_db > coral.volume_db, "early in the crossfade, the old copy is the louder copy")
+	sound.play_area(3)
+	t.assert_eq(calls, [[MUSIC + "coral_reef.mp3", &"Music"], [MUSIC + "open_sea.mp3", &"Music"]], "two crossfades")
+	t.assert_true(lagoon.playing, "the louder copy plays on")
+	t.assert_eq(lagoon.stream.resource_path, MUSIC + "lagoon.mp3", "the louder copy keeps its track")
+	_assert_db(t, lagoon.volume_db, lagoon_db, "the louder copy keeps its level when its fade-out starts")
+	t.assert_eq(sound.active_music_player(), coral, "the quieter player takes the new track")
+	t.assert_eq(coral.stream.resource_path, MUSIC + "open_sea.mp3", "the new track")
+	_assert_db(t, coral.volume_db, -40.0, "the new track starts at -40 dB")
+	await _real_seconds(t, CROSSFADE_WAIT)
+	t.assert_true(not lagoon.playing, "the louder copy stopped")
+	_assert_db(t, lagoon.volume_db, -40.0, "the louder copy went down to -40 dB")
+	_assert_db(t, coral.volume_db, SoundLevels.volume_db(MUSIC + "open_sea.mp3"), "the new track is at its level")
+	t.assert_eq(sound.music_path(), MUSIC + "open_sea.mp3", "Area 3 music")
 	await Scene.remove(t, main)
 	return true
 
