@@ -3,6 +3,7 @@
 extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
+const Scene := preload("res://tests/scene_helpers.gd")
 
 
 func test_a_save_and_a_load_give_the_same_state(t) -> bool:
@@ -149,6 +150,26 @@ func test_a_goal_save_holds_the_new_sea_friend_and_the_next_labyrinth(t) -> bool
 	t.assert_eq(loaded.last_returning_friend, friend, "the Sea friend that came back")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "each Goal save loads as a good file")
 	Fixtures.remove_save_dir(dir)
+	return true
+
+
+## A Parent reset writes a save of Labyrinth 1 and does not change settings.json (spec 12.4).
+func test_a_reset_keeps_settings_json(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	SaveStore.new(dir).save(_progress_7())
+	var settings_text := "{\"version\": 1, \"music_step\": 4, \"effects_step\": 0}"
+	_write(dir.path_join("settings.json"), settings_text)
+	var main := await Scene.add_main(t, dir)
+	var panel: SettingsPanel = main.get_node("Settings")
+	panel.open()
+	panel.reset_button.button_down.emit()
+	panel.reset_button.advance(HoldButton.HOLD_SECONDS)
+	panel.reset_button.button_up.emit()
+	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(Progress.new()), "the save holds Labyrinth 1 after the reset")
+	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("settings.json")), settings_text, "settings.json is the same")
+	t.assert_eq([panel.settings.music_step, panel.settings.effects_step], [4, 0], "the volume steps stay")
+	t.assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index(Sound.EFFECTS_BUS)), "the effects stay muted")
+	await Scene.remove(t, main)
 	return true
 
 

@@ -58,6 +58,8 @@ var _celebration: Tween
 
 
 func _ready() -> void:
+	# Cmd+Q and window close do nothing. The quit button is the only quit path (spec 11.1).
+	get_tree().set_auto_accept_quit(false)
 	randomize()
 	progress = save_store.load_progress()
 	# The game saves after each Item and at each Goal, before the celebration (spec 12.2).

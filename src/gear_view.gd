@@ -1,7 +1,10 @@
 ## The gear in the top-right corner (spec 10): a white gear with a dark outline, drawn in code
-## (Open gap 2), 64 px. The settings of spec 11 open from it.
+## (Open gap 2), 64 px. A click on it opens or closes the settings of spec 11.2.
 class_name GearView
 extends Control
+
+## Emitted on a left click. The settings panel opens or closes.
+signal pressed
 
 const FILL_COLOUR := Color.WHITE
 const OUTLINE_COLOUR := Color("#0a1428")
@@ -11,6 +14,18 @@ const TOOTH_RADIUS := 0.92
 const BODY_RADIUS := 0.68
 const HOLE_RADIUS := 0.26
 const OUTLINE_WIDTH := 4.0
+
+
+func _ready() -> void:
+	# The second click closes the settings while play is paused (spec 11.2).
+	process_mode = PROCESS_MODE_ALWAYS
+
+
+func _gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
+		accept_event()
+		pressed.emit()
 
 
 func layout(visible_size: Vector2) -> void:
