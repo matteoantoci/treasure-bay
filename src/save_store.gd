@@ -73,7 +73,7 @@ func copy_before_reset(progress: Progress) -> Error:
 
 ## Loads the progress. With no save.json, the game starts at Labyrinth 1. A broken file becomes
 ## save.bak (it replaces an older save.bak), and the game starts at Labyrinth 1. A file with a
-## version above VERSION is from a newer build and is not broken: it stays in place, the game
+## version above VERSION is from a newer build and is not broken. That file stays in place, the game
 ## starts at Labyrinth 1, and the store goes into the no-write state. The Child gets no message.
 func load_progress() -> Progress:
 	if not FileAccess.file_exists(save_path()):
@@ -103,13 +103,14 @@ static func to_dictionary(progress: Progress) -> Dictionary:
 	}
 
 
-## The progress of a parsed save.json, or null when the file is broken (spec 12.3): not a
-## dictionary, a version of 0 or less, a field absent or of the wrong type, a Labyrinth below 1, a
-## random Labyrinth with seed 0, an Item ID that is not a square where an Item can be, or a Sea
-## friend ID that is not in spec 4.7. A version above VERSION also gives null: this build cannot
-## read it, and load_progress() keeps that file. An older version goes through `migrations` first.
-## An Item ID of a square with no Item now is dropped: a save from before the Goal rule of spec 4.2
-## can have one. JSON reads each number as a float, so the numbers become int here.
+## The progress of a parsed save.json, or null when the file is broken (spec 12.3). A file is broken
+## when it is not a dictionary, or has a version of 0 or less, or a field that is absent or of the
+## wrong type. It is also broken with a Labyrinth below 1, or a random Labyrinth with seed 0. An Item
+## ID that is not a square where an Item can be also breaks it, as does a Sea friend ID that is not
+## in spec 4.7. A version above VERSION also gives null: this build cannot read it, and
+## load_progress() keeps that file. An older version goes through `migrations` first. An Item ID of
+## a square with no Item now is dropped, because a save from before the Goal rule of spec 4.2 can
+## have one. JSON reads each number as a float, so the numbers become int here.
 static func from_dictionary(data: Variant) -> Progress:
 	var version := JsonFile.version_of(data)
 	if version < 1 or version > VERSION:
