@@ -27,7 +27,7 @@ static func place(labyrinth: Labyrinth, prng: Prng, count: int, kinds: PackedStr
 	var dead_ends := free_dead_ends(labyrinth)
 	var first := _farthest(labyrinth, dead_ends)
 	dead_ends.erase(first)
-	var path_squares := _on_path_squares(LabyrinthMeasure.main_path(labyrinth), count)
+	var path_squares := _on_path_squares(labyrinth.main_path(), count)
 	var others: Array[Vector2i] = []
 	for square in _free_squares(labyrinth):
 		if labyrinth.open_side_count(square) != 1 and not path_squares.has(square):

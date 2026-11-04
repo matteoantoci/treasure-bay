@@ -12,13 +12,13 @@ func test_each_labyrinth_meets_the_conditions_of_its_slot(t) -> bool:
 		var measure := LabyrinthMeasure.measure(labyrinth)
 		var label := "Labyrinth %d" % n
 		var d := 1 + (n - 1) / 5
-		t.assert_eq(measure["presses"], PRESSES[n - 1], label + ": presses")
-		t.assert_true(measure["decisions"] >= d and measure["decisions"] <= d + 2, label + ": decisions %d from %d to %d" % [measure["decisions"], d, d + 2])
+		t.assert_eq(measure.presses, PRESSES[n - 1], label + ": presses")
+		t.assert_true(measure.decisions >= d and measure.decisions <= d + 2, label + ": decisions %d from %d to %d" % [measure.decisions, d, d + 2])
 		if n >= 2:
-			t.assert_true(measure["turns"] >= 2, label + ": turns %d at least 2" % measure["turns"])
-		t.assert_true(measure["items_on_path"] >= 1, label + ": at least 1 Item on the main path")
-		var branch_limit := maxi(6, measure["length"])
-		t.assert_true(measure["largest_side_branch"] <= branch_limit, label + ": largest side branch %d at most %d" % [measure["largest_side_branch"], branch_limit])
+			t.assert_true(measure.turns >= 2, label + ": turns %d at least 2" % measure.turns)
+		t.assert_true(measure.items_on_path >= 1, label + ": at least 1 Item on the main path")
+		var branch_limit := maxi(6, measure.length)
+		t.assert_true(measure.largest_side_branch <= branch_limit, label + ": largest side branch %d at most %d" % [measure.largest_side_branch, branch_limit])
 		t.assert_true(ItemPlacement.has_free_dead_end(labyrinth), label + ": a free dead end")
 	return true
 

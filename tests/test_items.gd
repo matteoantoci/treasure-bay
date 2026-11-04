@@ -160,7 +160,7 @@ func _check_items(t, labyrinth: Labyrinth, number: int, label: String) -> void:
 	var first: Vector2i = items[0].square
 	for dead_end in ItemPlacement.free_dead_ends(labyrinth):
 		t.assert_true(distances[dead_end.y * labyrinth.width + dead_end.x] <= distances[first.y * labyrinth.width + first.x], label + ": Item 1 is in the farthest dead end")
-	var path := LabyrinthMeasure.main_path(labyrinth)
+	var path := labyrinth.main_path()
 	var length := path.size() - 1
 	var on_path_count := mini(maxi(1, items.size() / 3), length - 1)
 	var on_path := 0

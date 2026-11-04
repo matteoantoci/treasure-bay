@@ -61,15 +61,15 @@ func test_measure_of_labyrinths_1_to_20_is_pinned(t) -> bool:
 
 func test_main_path_goes_from_the_start_to_the_goal(t) -> bool:
 	for n in PINNED_PATHS:
-		var path := LabyrinthMeasure.main_path(LabyrinthPlan.build(n))
+		var path := LabyrinthPlan.build(n).main_path()
 		t.assert_eq(_ids(path), PINNED_PATHS[n], "main path of Labyrinth %d" % n)
-		t.assert_eq(LabyrinthMeasure.measure(LabyrinthPlan.build(n))["path"], path, "measured path of Labyrinth %d" % n)
+		t.assert_eq(LabyrinthMeasure.measure(LabyrinthPlan.build(n)).path, path, "measured path of Labyrinth %d" % n)
 	return true
 
 
 func test_labyrinth_without_items(t) -> bool:
 	var measure := LabyrinthMeasure.measure(Fixtures.labyrinth_from_tiles(BEND))
-	t.assert_eq(measure["path"], [Vector2i(0, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)] as Array[Vector2i], "path")
+	t.assert_eq(measure.path, [Vector2i(0, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)] as Array[Vector2i], "path")
 	t.assert_eq(_values(measure), [3, 2, 0, 1, 2, 0], "length, presses, decisions, turns, side branch, Items on the path")
 	return true
 
@@ -78,8 +78,8 @@ func test_item_on_the_main_path_is_a_stop(t) -> bool:
 	var labyrinth := Fixtures.labyrinth_from_tiles(BEND)
 	labyrinth.items = [Item.new(Vector2i(1, 1), "pearl"), Item.new(Vector2i(2, 0), "coral")] as Array[Item]
 	var measure := LabyrinthMeasure.measure(labyrinth)
-	t.assert_eq(measure["presses"], 3, "presses with an Item on (1, 1)")
-	t.assert_eq(measure["items_on_path"], 1, "Items on the path")
+	t.assert_eq(measure.presses, 3, "presses with an Item on (1, 1)")
+	t.assert_eq(measure.items_on_path, 1, "Items on the path")
 	return true
 
 
@@ -104,7 +104,7 @@ func test_presses_equal_the_moves_of_the_move_rule_along_the_main_path(t) -> boo
 ## main-path square, and the boat collects the Item where it stops.
 func _check_presses(t, labyrinth: Labyrinth, label: String) -> void:
 	var measure := LabyrinthMeasure.measure(labyrinth)
-	var path: Array[Vector2i] = measure["path"]
+	var path := measure.path
 	var collected := {}
 	for item in labyrinth.items:
 		collected[item.square] = false
@@ -121,13 +121,13 @@ func _check_presses(t, labyrinth: Labyrinth, label: String) -> void:
 		moves += 1
 	t.assert_true(on_path, label + ": each move stops on the main path")
 	t.assert_eq(square, labyrinth.goal_square(), label + ": the moves reach the Goal")
-	t.assert_eq(measure["presses"], moves, label + ": presses")
+	t.assert_eq(measure.presses, moves, label + ": presses")
 
 
-func _values(measure: Dictionary) -> Array:
+func _values(measure: LabyrinthMeasure.Measure) -> Array:
 	return [
-		measure["length"], measure["presses"], measure["decisions"], measure["turns"],
-		measure["largest_side_branch"], measure["items_on_path"],
+		measure.length, measure.presses, measure.decisions, measure.turns,
+		measure.largest_side_branch, measure.items_on_path,
 	]
 
 
