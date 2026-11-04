@@ -17,8 +17,8 @@ func _initialize() -> void:
 	main.save_store = SaveStore.new(OS.get_cmdline_user_args()[0])
 	root.add_child(main)
 	await process_frame
-	# Labyrinth 1 has an Item on 1,2. The save gets it only from the quit.
-	main.progress.collect_item("1,2")
+	# Labyrinth 1 has an Item on 0,2. The save gets it only from the quit.
+	main.progress.collect_item("0,2")
 	root.close_requested.emit()
 	await _frames()
 	print("RUNNING AFTER CLOSE REQUEST")

@@ -62,13 +62,13 @@ func test_a_broken_file_starts_at_labyrinth_1(t) -> bool:
 	return true
 
 
-## A save from before the Goal rule of spec 4.2: Labyrinth 14 with the old Items 3,3 and 4,1 and
-## the Item 1,1 collected. Now 1,1 is Item 5 of 6, and 3,3 and 4,1 hold no Item.
+## A save from before the Goal rule of spec 4.2: Labyrinth 14 with the old Items 3,3, 4,1, and 4,3
+## collected. Now 4,3 is Item 1 of 6, and 3,3 and 4,1 hold no Item.
 func test_an_old_save_starts_at_its_labyrinth_with_its_count(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({
-		"version": 1, "labyrinth": 14, "random_seed": 0, "collected_items": ["3,3", "4,1", "1,1"],
+		"version": 1, "labyrinth": 14, "random_seed": 0, "collected_items": ["3,3", "4,1", "4,3"],
 		"collection": SeaFriends.IDS.slice(0, 13), "total_items": 40, "last_returning_friend": "",
 	}))
 	file.close()
@@ -76,8 +76,8 @@ func test_an_old_save_starts_at_its_labyrinth_with_its_count(t) -> bool:
 	t.assert_eq(main.progress.labyrinth_number, 14, "Labyrinth 14")
 	t.assert_eq(main.get_node("CollectionStrip").count_text(), "40", "the total count stays")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), SeaFriends.IDS.slice(0, 13), "13 Sea friends in the strip")
-	t.assert_eq(main.get_node("ItemRow").filled, [false, false, false, false, true, false] as Array[bool], "only Item 1,1 fills its outline")
-	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["4,3", "6,1", "0,4", "6,4", "0,2"]), "the other 5 Items are on the water")
+	t.assert_eq(main.get_node("ItemRow").filled, [true, false, false, false, false, false] as Array[bool], "only Item 4,3 fills its outline")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["3,1", "6,0", "6,1", "0,4", "6,4"]), "the other 5 Items are on the water")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "the old save is not broken")
 	await Scene.remove(t, main)
 	return true
@@ -89,10 +89,9 @@ func test_the_scene_saves_after_each_item(t) -> bool:
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.json")), "no save before an Item")
 	var saved := []
 	main.item_collected.connect(func(_item: Item) -> void: saved.append(SaveStore.new(dir).load_progress().collected_items))
-	# Labyrinth 1: down, then right stops on the Item 1,2 (tests/test_main_rewards.gd).
+	# Labyrinth 1: down stops on the Item 0,2 (tests/test_main_rewards.gd).
 	await Scene.press(t, main, KEY_DOWN)
-	await Scene.press(t, main, KEY_RIGHT)
-	t.assert_eq(saved, [PackedStringArray(["1,2"])], "the save holds the Item when item_collected fires")
+	t.assert_eq(saved, [PackedStringArray(["0,2"])], "the save holds the Item when item_collected fires")
 	var loaded := SaveStore.new(dir).load_progress()
 	t.assert_eq(loaded.labyrinth_number, 1, "saved Labyrinth")
 	t.assert_eq(loaded.total_items, 1, "saved total Items")
@@ -133,10 +132,9 @@ func test_a_newer_save_plays_labyrinth_1_and_writes_nothing(t) -> bool:
 	main.goal_reached.connect(func(_friend: String) -> void: save_calls[0] += 1)
 	var log := WarningLog.new()
 	log.start()
-	# Labyrinth 1: down, then right stops on the Item 1,2 (tests/test_main_rewards.gd).
+	# Labyrinth 1: down stops on the Item 0,2 (tests/test_main_rewards.gd).
 	await Scene.press(t, main, KEY_DOWN)
-	await Scene.press(t, main, KEY_RIGHT)
-	t.assert_eq(main.progress.collected_items, PackedStringArray(["1,2"]), "the Item is collected in memory")
+	t.assert_eq(main.progress.collected_items, PackedStringArray(["0,2"]), "the Item is collected in memory")
 	t.assert_eq(FileAccess.get_file_as_string(save_path), text, "the collect writes nothing")
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
 	log.stop()
