@@ -1,8 +1,8 @@
 ## Takes the screenshots of spec 14.2 in a window: one Labyrinth of each Area at 1920 x 1200 (a
 ## 16:10 screen), Area 1 at 1920 x 1247 (the 1512 x 982 screen of spec 10), and the open settings
-## panel with the reset button held for 1.5 s (spec 11.2). Each Labyrinth has its first Item
-## collected and the Sea friends of the Labyrinths before it. A headless run has no pixels. The game
-## draws into a SubViewport of the exact size, so the window size does not matter.
+## panel with the reset button held for half of its hold time (spec 11.2). Each Labyrinth has its
+## first Item collected and the Sea friends of the Labyrinths before it. A headless run has no
+## pixels. The game draws into a SubViewport of the exact size, so the window size does not matter.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/take_shots.gd

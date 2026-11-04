@@ -91,3 +91,12 @@ NOTE: Do these steps after the Goal fix. The Goal fix changes the shape of each 
     - In the build report, write the result of each item of spec 14.3.
 
 **Parent decision (2026-11-04):** the Parent accepted the Sea friend position. It shows on the right side of the Goal island, and it hides the palm for approximately 2 seconds. Cmd+Q stays blocked: the door button is the only quit path. The Parent also checked that Cmd+Q does nothing and that the 3-second door hold quits the game.
+
+**From play-improvements ticket 08 (agent final check, 2026-11-04).** Do the full manual check of this ticket again. The play improvements changed the layout of each Labyrinth except Labyrinth 1, the sizes of the Items, the boat and the chest, and the reset hold. Use these changes in the steps above:
+
+- Step 7 (criterion 17): the reset hold is now 8 seconds, not 3 seconds. Hold the reset button for less than 8 seconds and make sure that nothing occurs. Then hold it for 8 seconds. The ring becomes orange. After the reset, a copy of the old save is in `save.before-reset.json` in the save folder.
+- Step 8 (criterion 18): the door hold stays 3 seconds.
+- Step 2 (criterion 8): the Items are larger, and some Items are on the main path to the Goal. Make sure that the boat can get to each Item.
+- Step 3 (criterion 9): the chest is larger and sparkles before it opens. Its left edge goes onto the foam line of the Goal square. Make sure that this looks correct. Listen at a Goal: the Sea friend sound must be clear over the fanfare.
+- When the boat turns, make sure that it stays inside the channel, in a small Labyrinth and in a large Labyrinth (for example Labyrinth 18).
+- Make sure that the difficulty goes up slowly from Labyrinth 1 to Labyrinth 20.
