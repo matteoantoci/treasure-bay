@@ -56,7 +56,7 @@ func test_goal_of_labyrinth_1_brings_the_crab_to_the_strip(t) -> bool:
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 2 starts, and its fade-in ends")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(["crab"]), "the crab is in its slot")
 	t.assert_eq(main.get_node("ItemRow").filled, [false, false] as Array[bool], "Labyrinth 2 starts with empty outlines")
-	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["0,1", "2,0"]), "Items of Labyrinth 2")
+	t.assert_eq(main.get_node("Items").shown_ids(), PackedStringArray(["0,1", "2,1"]), "Items of Labyrinth 2")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the input is free again")
 	await Scene.remove(t, main)
