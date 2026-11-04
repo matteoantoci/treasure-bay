@@ -1,9 +1,10 @@
 """Independent Python port of spec 4.1, 4.2, 4.6, 5.2, the wall island decoration of spec 7.1, the
-main-path Items of play-improvements spec Part 1, and the Labyrinth measure of its Part 3.
+main-path Items of play-improvements spec Part 1, and the Labyrinth measure, the seed search, and
+the fixed seed table of its Part 3.
 
 It gives the pinned values of the GDScript tests (tests/test_generator.gd, tests/test_items.gd,
 tests/test_island_look.gd, tests/test_labyrinth_measure.gd, and the scene tests that sail
-Labyrinth 1). It does not read the
+Labyrinths 1, 2, 7, and 14). It does not read the
 GDScript code, so a pin from this port checks the GDScript code against the spec.
 
 Run: python3 tests/spec_port.py
@@ -128,6 +129,9 @@ def place(walls, w, h, prng, count, k=None):
 
 
 SIZES = [(4, 3), (5, 3), (5, 4), (6, 4), (7, 4), (7, 5), (8, 5), (8, 6), (9, 6), (9, 7)]
+# Play-improvements Part 3: Labyrinth n (1 to 20) uses seed FIXED_SEEDS[n - 1]. check_seeds() checks
+# that seed_search() gives this table.
+FIXED_SEEDS = [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30]
 
 
 def size(n):
@@ -149,7 +153,13 @@ def valid_seed(w, h, seed):
 def build(n, random_seed=0, k=None):
     """Labyrinth n: (w, h, walls, Item squares). k as in place()."""
     w, h = size(n)
-    seed = n if n <= 20 else valid_seed(w, h, random_seed)
+    return build_from_seed(n, FIXED_SEEDS[n - 1] if n <= 20 else valid_seed(w, h, random_seed), k)
+
+
+def build_from_seed(n, seed, k=None):
+    """Labyrinth n with the seed `seed`: (w, h, walls, Item squares). The seed must have a free dead
+    end. k as in place()."""
+    w, h = size(n)
     prng = Prng(seed)
     walls = generate(w, h, prng)
     return w, h, walls, place(walls, w, h, prng, count(w, h), k)
@@ -273,7 +283,7 @@ def measure(walls, w, h, items):
     }
 
 
-# Item IDs of Labyrinths 1 to 20 and of the random seeds 4242 and 123456789 before
+# Item IDs of Labyrinths 1 to 20 with seed n, and of the random seeds 4242 and 123456789, before
 # play-improvements Part 1. The rule with k = 0 must give them (Part 1: "this rule with k = 0
 # gives the placement of today").
 PLACEMENT_BEFORE_PART_1 = {
@@ -296,7 +306,7 @@ PLACEMENT_BEFORE_PART_1 = {
 def check_placement():
     """Self-checks of play-improvements Part 1. Raises AssertionError on a failure."""
     for key, expected in PLACEMENT_BEFORE_PART_1.items():
-        got = ids(build(key, k=0)[3]) if key <= 20 else ids(build(21, key, k=0)[3])
+        got = ids(build_from_seed(key, key, k=0)[3]) if key <= 20 else ids(build(21, key, k=0)[3])
         assert got == expected, ("k = 0 placement", key, got, expected)
     seeds = list(range(1, 21)) + [(21, s) for s in range(1, 201)]
     for key in seeds:
@@ -310,9 +320,85 @@ def check_placement():
         assert dist[items[0]] == max(dist[s] for s in dead_ends(walls, w, h)), ("farthest dead end", key)
 
 
+# Play-improvements Part 3: the arrow presses T(n) along the main path of Labyrinth n.
+PRESSES = [3, 5, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+
+
+def meets_conditions(n, seed):
+    """Play-improvements Part 3: the seed has a free dead end, and Labyrinth n with this seed and
+    its Items has presses = T(n), decisions from d to d + 2 with d = 1 + (n - 1) div 5, turns >= 2
+    for n >= 2, at least 1 Item on the main path, and a largest side branch of at most
+    max(6, main path length)."""
+    w, h = size(n)
+    if not dead_ends(generate(w, h, Prng(seed)), w, h):
+        return False
+    _, _, walls, items = build_from_seed(n, seed)
+    m = measure(walls, w, h, items)
+    d = 1 + (n - 1) // 5
+    return (m["presses"] == PRESSES[n - 1] and d <= m["decisions"] <= d + 2
+            and (n < 2 or m["turns"] >= 2) and m["items_on_path"] >= 1
+            and m["largest_side_branch"] <= max(6, m["length"]))
+
+
+def seed_search():
+    """Play-improvements Part 3: for each Labyrinth n from 1 to 20 in order, the first seed from 1
+    upward that meets the conditions and is not the seed of an earlier Labyrinth with the same
+    size."""
+    table = []
+    for n in range(1, 21):
+        taken = [table[i] for i in range(n - 1) if size(i + 1) == size(n)]
+        seed = 1
+        while seed in taken or not meets_conditions(n, seed):
+            seed += 1
+        table.append(seed)
+    return table
+
+
+# The review table of play-improvements Part 3: n -> (seed, presses, decisions, Item IDs in
+# placement order). The seed search wins over this table; review_differences() lists each value
+# that differs.
+REVIEW_TABLE = {
+    1: (1, 3, 1, "1,1 0,2"), 2: (17, 5, 2, "0,1 2,1"), 3: (2, 5, 1, "1,1 4,1"),
+    4: (9, 5, 1, "2,1 3,2"), 5: (85, 5, 2, "4,0 2,1 1,1"), 6: (10, 6, 2, "0,3 2,1 4,0"),
+    7: (12, 7, 2, "5,2 2,2 0,3 1,0"), 8: (9, 8, 2, "0,3 3,1 4,3 1,1"),
+    9: (8, 9, 2, "0,1 3,1 6,0 5,3"), 10: (23, 10, 2, "6,0 1,3 0,1 6,2"),
+    11: (1, 11, 3, "3,2 3,1 6,0 1,0 2,4"), 12: (69, 12, 4, "4,3 2,1 6,0 0,4 1,2"),
+    13: (29, 13, 3, "0,2 3,3 6,0 4,1 6,1 2,3"), 14: (73, 14, 4, "1,0 4,1 2,4 7,0 6,2 1,3"),
+    15: (9, 15, 3, "4,1 4,0 6,2 3,2 1,5 1,1 7,4 0,5"),
+    16: (28, 16, 4, "3,4 3,2 6,0 1,2 1,0 4,1 5,3 6,1"),
+    17: (73, 17, 4, "1,0 5,2 5,4 8,0 3,4 7,2 2,2 1,4"),
+    18: (127, 18, 5, "6,3 4,2 2,2 0,1 7,5 2,4 8,0 4,4"),
+    19: (167, 19, 5, "4,5 4,6 2,1 5,1 7,6 3,2 6,4 0,6"),
+    20: (30, 20, 4, "8,2 3,1 3,6 1,4 3,5 2,1 7,6 0,6"),
+}
+
+
+def review_differences():
+    """Each value of the review table that differs from the port, as (n, field, review, port)."""
+    out = []
+    for n, review in REVIEW_TABLE.items():
+        w, h, walls, items = build(n)
+        m = measure(walls, w, h, items)
+        port = (FIXED_SEEDS[n - 1], m["presses"], m["decisions"], " ".join(ids(items)))
+        for field, a, b in zip(["seed", "presses", "decisions", "Item IDs"], review, port):
+            if a != b:
+                out.append((n, field, a, b))
+    return out
+
+
+def check_seeds():
+    """Self-checks of play-improvements Part 3. Raises AssertionError on a failure."""
+    found = seed_search()
+    assert found == FIXED_SEEDS, ("seed search", found, FIXED_SEEDS)
+
+
 if __name__ == "__main__":
     check_placement()
     print("placement self-checks pass")
+    check_seeds()
+    print("seed search gives the seed table", FIXED_SEEDS)
+    print("review table differences", review_differences() or "none")
+    print("Labyrinth 7 before Part 3 (seed 7)", ids(build_from_seed(7, 7)[3]), "now", ids(build(7)[3]))
     for n in range(1, 21):
         w, h, walls, items = build(n)
         path = main_path(walls, w, h)
@@ -322,7 +408,7 @@ if __name__ == "__main__":
     print("Labyrinth 1 walls", [b for row in walls for b in row])
     grid = tiles(walls, w, h)
     print("\n".join(grid))
-    print("Labyrinth 1 decorations", decorations(grid, 1))
+    print("Labyrinth 1 decorations", decorations(grid, FIXED_SEEDS[0]))
     for n in range(1, 21):
         w, h, walls, items = build(n)
         print(n, (w, h), "dead_ends", len(dead_ends(walls, w, h)), "behind_goal", behind_goal(walls, w, h),
