@@ -18,3 +18,15 @@
 - [ ] The Python port gets the same measure, written from the text of the spec. A test pins the measure values of Labyrinths 1 to 20 of today from the port.
 - [ ] The Item squares and the layouts of all Labyrinths do not change.
 - [ ] The full test suite passes.
+
+## Comments
+
+Build note (Impl05Measure):
+
+- New module `src/labyrinth_measure.gd` (`LabyrinthMeasure`), pure and static:
+  - `main_path(labyrinth) -> Array[Vector2i]`: P[0] is the start, P[L] is the Goal. It does not read the Items, so ticket 06 can call it before the Items exist.
+  - `measure(labyrinth) -> Dictionary` with the keys `path`, `length`, `presses`, `decisions`, `turns`, `largest_side_branch`, `items_on_path`. It reads `labyrinth.items`, all not collected.
+- The move rule stop test is now public: `MoveRule.stops_at()`. `MoveRule.plan()` and the measure both use it, so the measure does not copy the move rule. The presses are the main-path squares where the boat stops.
+- `largest_side_branch` is 0 when all squares are on the main path.
+- `tests/spec_port.py` has `main_path()` and `measure()`, written from the spec text (with its own slide of spec 5.2). `tests/test_labyrinth_measure.gd` pins the values of Labyrinths 1 to 20 of today from the port, and sails the boat with `MoveRule.plan()` along the main path for Labyrinths 1 to 20 and 200 random seeds.
+- No Item square, layout or seed changes. The ticket lists no build-spec errata, so I did not edit `.scratch/labyrinth-game/spec.md`.

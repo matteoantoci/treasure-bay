@@ -135,13 +135,50 @@ func test_the_goal_plays_the_fanfare_then_the_crab(t) -> bool:
 	t.assert_true(await t.wait_for(main.sea_friend_appeared, Scene.NEXT_LABYRINTH_TIMEOUT), "the crab appears")
 	t.assert_eq(calls.back(), [FRIENDS + "crab.wav", &"Effects"], "the crab sound when it appears")
 	_assert_db(t, sound.sea_friend_player.volume_db, SoundLevels.volume_db(FRIENDS + "crab.wav"), "crab level")
-	_assert_db(t, sound.goal_player.volume_db, SoundLevels.volume_db(EFFECTS + "goal.wav"), "fanfare level")
 	# Labyrinth 2 is in Area 1 too: the music does not change.
 	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 2 starts")
 	var music_calls := calls.filter(func(call: Array) -> bool: return call[1] == &"Music")
 	t.assert_eq(music_calls, [[MUSIC + "lagoon.mp3", &"Music"]], "no new music in the same Area")
 	await Scene.remove(t, main)
 	return true
+
+
+func test_the_sea_friend_ducks_the_fanfare_and_the_next_goal_restores_it(t) -> bool:
+	var added := await _add_main(t, 1)
+	var main: Node = added[0]
+	var calls: Array = added[1]
+	var sound: Sound = main.get_node("Sound")
+	var level := SoundLevels.volume_db(EFFECTS + "goal.wav")
+	main.sea_friend_appeared.emit("crab")
+	await t.create_timer(0.1, false).timeout
+	t.assert_true(sound.goal_player.volume_db < level - 0.5, "the fanfare goes down")
+	t.assert_true(sound.goal_player.volume_db > level - 11.5, "the fanfare is still going down")
+	await t.create_timer(0.2, false).timeout
+	_assert_db(t, sound.goal_player.volume_db, level - 12.0, "the fanfare is 12 dB down after 0.2 s")
+	# A reset during the celebration: the next Goal plays the fanfare at its level.
+	calls.clear()
+	main.goal_reached.emit("crab")
+	_assert_db(t, sound.goal_player.volume_db, level, "the next Goal plays at the fanfare level")
+	t.assert_eq(calls, [[EFFECTS + "goal.wav", &"Effects"]], "the next Goal plays the fanfare")
+	await Scene.remove(t, main)
+	return true
+
+
+func test_the_fanfare_duck_pauses_with_the_game(t) -> bool:
+	var added := await _add_main(t, 1)
+	var main: Node = added[0]
+	var sound: Sound = main.get_node("Sound")
+	var level := SoundLevels.volume_db(EFFECTS + "goal.wav")
+	t.paused = true
+	main.sea_friend_appeared.emit("crab")
+	await t.create_timer(0.4, true).timeout
+	_assert_db(t, sound.goal_player.volume_db, level, "no duck while the game pauses")
+	t.paused = false
+	await t.create_timer(0.4, false).timeout
+	_assert_db(t, sound.goal_player.volume_db, level - 12.0, "the duck goes on after the pause")
+	await Scene.remove(t, main)
+	return true
+
 
 
 func test_13_sea_friends_play_their_own_sound_and_7_the_splash(t) -> bool:
