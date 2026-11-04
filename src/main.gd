@@ -1,49 +1,78 @@
-## The main scene: one Labyrinth on the screen, the boat, and the arrow keys (spec 5).
-## At the Goal, the next Labyrinth starts.
+## The main scene: one Labyrinth on the screen, the boat, the Items, the Item row, and the
+## Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects each Item that it
+## stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth starts.
 extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.
 signal labyrinth_started(number: int)
 ## Emitted when the boat is free again after a slide or a bump.
 signal move_finished
+## Emitted when the boat collects a new Item. The progress already counts it.
+signal item_collected(item: Item)
+## Emitted when the boat arrives on the Goal square, before the celebration. The progress already
+## holds the Sea friend and the next Labyrinth (spec 12.2).
+signal goal_reached(sea_friend: String)
+## Emitted when the Sea friend of the Goal appears next to the Goal island.
+signal sea_friend_appeared(sea_friend: String)
 
 ## The deep water colour of Area 1 (spec 7.2).
 const WATER_COLOUR := Color("#3fb4d8")
+## Goal celebration times in seconds from the arrival on the Goal square (spec 6.3).
+const SEA_FRIEND_APPEARS_SECONDS := 1.4
+const SEA_FRIEND_IN_SLOT_SECONDS := 3.7
+const NEXT_LABYRINTH_SECONDS := 4.2
+## Next to the Goal island, the Sea friend is 1.3 times 110 px, 30 px above the island centre, in
+## px of the prototype tile (spec 8.6, 10).
+const SEA_FRIEND_PX := 110.0 * 1.3
+const SEA_FRIEND_RISE_PX := 30.0
 
-## The current Labyrinth number, from 1.
-var labyrinth_number := 0
-## The seed of the current random Labyrinth (number above 20), else 0.
-var random_seed := 0
+## The progress of the Child. The save code can replace it, then call show_labyrinth().
+var progress := Progress.new()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
 var _busy := false
+## True from the arrival on the Goal to the start of the next Labyrinth. Presses are dropped
+## (spec 5.4).
+var _locked := false
 ## One early press, kept while the boat is busy (spec 5.4). ZERO means none.
 var _kept_direction := Vector2i.ZERO
 var _tile_px := 0.0
+var _celebration: Tween
 
 @onready var _water: ColorRect = $Water
 @onready var _labyrinth_view: LabyrinthView = $LabyrinthView
+@onready var _items: ItemsView = $Items
 @onready var _boat: BoatView = $Boat
+@onready var _item_row: ItemRow = $ItemRow
+@onready var _collection_strip: CollectionStrip = $CollectionStrip
+@onready var _sea_friend: Sprite2D = $SeaFriend
 
 
 func _ready() -> void:
 	randomize()
 	_water.color = WATER_COLOUR
 	get_viewport().size_changed.connect(_layout)
-	start_labyrinth(1)
+	show_labyrinth()
 
 
-func start_labyrinth(number: int) -> void:
-	labyrinth_number = number
-	random_seed = LabyrinthPlan.new_random_seed() if LabyrinthPlan.is_random(number) else 0
-	labyrinth = LabyrinthPlan.build(number, random_seed)
+## Shows the current Labyrinth of `progress`, with the boat on its start square.
+func show_labyrinth() -> void:
+	if _celebration != null:
+		_celebration.kill()
+		_celebration = null
+	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
 	_kept_direction = Vector2i.ZERO
+	_locked = false
+	_sea_friend.visible = false
 	_labyrinth_view.labyrinth = labyrinth
+	_items.show_items(labyrinth, progress)
+	_item_row.show_items(labyrinth, progress)
+	_collection_strip.show_progress(progress)
 	_layout()
-	labyrinth_started.emit(number)
+	labyrinth_started.emit(progress.labyrinth_number)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -53,6 +82,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if direction == Vector2i.ZERO:
 		return
 	get_viewport().set_input_as_handled()
+	if _locked:
+		return
 	if _busy:
 		_kept_direction = direction
 	else:
@@ -72,7 +103,7 @@ func _direction_of(event: InputEvent) -> Vector2i:
 
 
 func _move(direction: Vector2i) -> void:
-	var move := MoveRule.plan(labyrinth, boat_square, direction)
+	var move := MoveRule.plan(labyrinth, boat_square, direction, progress.item_states(labyrinth))
 	_busy = true
 	_boat.rotation = move.rotation
 	var start := _square_centre(boat_square)
@@ -87,9 +118,7 @@ func _move(direction: Vector2i) -> void:
 	boat_square = move.target
 	_boat.position = _square_centre(boat_square)
 	_busy = false
-	if boat_square == labyrinth.goal_square():
-		# The press kept during the last slide is dropped: the Goal locks the input (spec 5.4).
-		start_labyrinth(labyrinth_number + 1)
+	_arrive()
 	move_finished.emit()
 	if _kept_direction != Vector2i.ZERO:
 		var kept := _kept_direction
@@ -97,20 +126,75 @@ func _move(direction: Vector2i) -> void:
 		_move(kept)
 
 
+## Collects the Item on the boat square, and starts the celebration on the Goal square (spec 5.2).
+func _arrive() -> void:
+	for i in labyrinth.items.size():
+		var item := labyrinth.items[i]
+		if item.square == boat_square and progress.collect_item(item.id):
+			_items.remove_item(item.id)
+			_item_row.fill(i)
+			_collection_strip.set_count(progress.total_items)
+			item_collected.emit(item)
+	if boat_square == labyrinth.goal_square():
+		_reach_goal()
+
+
+## Locks the input, moves the progress on, and plays the celebration of spec 6.3: the Sea friend
+## appears at 1.4 s, is in its slot at 3.7 s, and the next Labyrinth starts at 4.2 s.
+func _reach_goal() -> void:
+	_locked = true
+	_kept_direction = Vector2i.ZERO
+	var friend := progress.reach_goal()
+	goal_reached.emit(friend)
+	_celebration = create_tween()
+	_celebration.tween_interval(SEA_FRIEND_APPEARS_SECONDS)
+	_celebration.tween_callback(_show_sea_friend.bind(friend))
+	_celebration.tween_interval(SEA_FRIEND_IN_SLOT_SECONDS - SEA_FRIEND_APPEARS_SECONDS)
+	_celebration.tween_callback(_put_sea_friend_in_slot.bind(friend))
+	_celebration.tween_interval(NEXT_LABYRINTH_SECONDS - SEA_FRIEND_IN_SLOT_SECONDS)
+	_celebration.tween_callback(show_labyrinth)
+
+
+func _show_sea_friend(friend: String) -> void:
+	if friend.is_empty():
+		return
+	_sea_friend.texture = load(SeaFriends.texture_path(friend))
+	var s := ScreenLayout.labyrinth_scale(_tile_px)
+	var centre := _tile_centre(labyrinth.goal_island_tile()) + Vector2(0, -SEA_FRIEND_RISE_PX * s)
+	var rect := ScreenLayout.sprite_rect(centre, _sea_friend.texture.get_size(), SEA_FRIEND_PX * s)
+	_sea_friend.position = rect.get_center()
+	_sea_friend.scale = rect.size / _sea_friend.texture.get_size()
+	_sea_friend.visible = true
+	sea_friend_appeared.emit(friend)
+
+
+func _put_sea_friend_in_slot(friend: String) -> void:
+	_sea_friend.visible = false
+	if not friend.is_empty():
+		_collection_strip.show_friend(friend)
+
+
 func _layout() -> void:
 	var visible := get_viewport().get_visible_rect()
 	_water.position = visible.position
 	_water.size = visible.size
+	_item_row.layout(visible.size)
+	_collection_strip.layout(visible.size)
 	if labyrinth == null:
 		return
 	var rect := ScreenLayout.labyrinth_rect(visible.size, labyrinth.tile_count())
 	_tile_px = rect.size.x / labyrinth.tile_count().x
 	_labyrinth_view.position = rect.position
 	_labyrinth_view.tile_px = _tile_px
+	_items.position = rect.position
+	_items.set_tile_px(_tile_px)
 	_boat.set_tile_px(_tile_px)
 	_boat.position = _square_centre(boat_square)
 
 
 func _square_centre(square: Vector2i) -> Vector2:
-	var tile := Labyrinth.square_to_tile(square)
+	return _tile_centre(Labyrinth.square_to_tile(square))
+
+
+func _tile_centre(tile: Vector2i) -> Vector2:
 	return _labyrinth_view.position + (Vector2(tile) + Vector2(0.5, 0.5)) * _tile_px

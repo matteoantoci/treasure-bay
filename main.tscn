@@ -1,8 +1,11 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
 [ext_resource type="Script" path="res://src/boat_view.gd" id="3_boat_view"]
+[ext_resource type="Script" path="res://src/items_view.gd" id="4_items_view"]
+[ext_resource type="Script" path="res://src/item_row.gd" id="5_item_row"]
+[ext_resource type="Script" path="res://src/collection_strip.gd" id="6_collection_strip"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -14,5 +17,17 @@ mouse_filter = 2
 [node name="LabyrinthView" type="Node2D" parent="."]
 script = ExtResource("2_labyrinth_view")
 
+[node name="Items" type="Node2D" parent="."]
+script = ExtResource("4_items_view")
+
 [node name="Boat" type="Node2D" parent="."]
 script = ExtResource("3_boat_view")
+
+[node name="ItemRow" type="Node2D" parent="."]
+script = ExtResource("5_item_row")
+
+[node name="CollectionStrip" type="Node2D" parent="."]
+script = ExtResource("6_collection_strip")
+
+[node name="SeaFriend" type="Sprite2D" parent="."]
+visible = false
