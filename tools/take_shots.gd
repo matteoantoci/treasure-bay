@@ -1,8 +1,9 @@
-## Takes the screenshots of spec 14.2 in a window: one Labyrinth of each Area at 1920 x 1200 (a
-## 16:10 screen), Area 1 at 1920 x 1247 (the 1512 x 982 screen of spec 10), and the open settings
-## panel with the reset button held for half of its hold time (spec 11.2). Each Labyrinth has its
-## first Item collected and the Sea friends of the Labyrinths before it. A headless run has no
-## pixels. The game draws into a SubViewport of the exact size, so the window size does not matter.
+## Takes the screenshots of spec 14.2 in a window: the opening screen at launch (game-flow spec
+## part 3), one Labyrinth of each Area at 1920 x 1200 (a 16:10 screen), Area 1 at 1920 x 1247 (the
+## 1512 x 982 screen of spec 10), and the open settings panel with the reset button held for half of
+## its hold time (spec 11.2). Each Labyrinth has its first Item collected and the Sea friends of the
+## Labyrinths before it. A headless run has no pixels. The game draws into a SubViewport of the
+## exact size, so the window size does not matter.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/take_shots.gd
@@ -11,8 +12,9 @@
 extends SceneTree
 
 ## [file name, Labyrinth number, visible size, settings open with the reset ring half full] of each
-## screenshot.
+## screenshot. Labyrinth number 0 is the opening screen.
 const SHOTS := [
+	["opening.png", 0, Vector2i(1920, 1200), false],
 	["area1.png", 3, Vector2i(1920, 1200), false],
 	["area2.png", 8, Vector2i(1920, 1200), false],
 	["area3.png", 13, Vector2i(1920, 1200), false],
@@ -38,8 +40,9 @@ func _initialize() -> void:
 		# real save or the real settings.
 		main.save_store = SaveStore.new(OS.get_temp_dir().path_join("labyrinth-shots-no-save"))
 		viewport.add_child(main)
-		main.progress = _progress(shot[1])
-		main.show_labyrinth()
+		if shot[1] > 0:
+			main.progress = _progress(shot[1])
+			main.show_labyrinth()
 		if shot[3]:
 			var panel: SettingsPanel = main.get_node("Settings")
 			panel.open()

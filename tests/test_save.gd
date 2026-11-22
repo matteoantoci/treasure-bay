@@ -245,7 +245,7 @@ func test_two_resets_in_a_row_keep_the_first_copy(t) -> bool:
 	var main := await Scene.add_main(t, dir)
 	var panel: SettingsPanel = main.get_node("Settings")
 	_reset(panel)
-	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the first reset ends")
+	t.assert_true(await Scene.start_from_opening(t, main), "the fade-in after the first reset and the start press ends")
 	_reset(panel)
 	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.before-reset.json")), old_text, "the copy still holds the progress from before the first reset")
 	await Scene.remove(t, main)
@@ -259,7 +259,7 @@ func test_a_reset_after_new_play_replaces_the_copy(t) -> bool:
 	var main := await Scene.add_main(t, dir)
 	var panel: SettingsPanel = main.get_node("Settings")
 	_reset(panel)
-	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the first reset ends")
+	t.assert_true(await Scene.start_from_opening(t, main), "the fade-in after the first reset and the start press ends")
 	# Labyrinth 1 of the new Voyage: the boat sails the main path to its first Item.
 	t.assert_true(await _sail_to_an_item(t, main), "the Child collects an Item")
 	var new_text := FileAccess.get_file_as_string(dir.path_join("save.json"))

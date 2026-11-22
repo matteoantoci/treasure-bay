@@ -18,16 +18,32 @@ const AUDIO_FREE_SECONDS := 0.1
 const NO_MOVE_SECONDS := 3.5
 
 
-## Adds the main scene and waits for the end of its launch fade-in, so the Child can sail. It loads
-## and saves in `save_dir`, or in a new empty folder in the OS temp folder, never in user://.
+## Adds the main scene, goes through the opening screen, and waits for the end of the fade-in of the
+## current Labyrinth, so the Child can sail. It loads and saves in `save_dir`, or in a new empty
+## folder in the OS temp folder, never in user://.
 static func add_main(t, save_dir: String = "") -> Node:
+	var main := await add_main_at_opening(t, save_dir)
+	t.assert_true(await start_from_opening(t, main), "the fade-in after the start press ends")
+	return main
+
+
+## Adds the main scene with the opening screen on it, and sets the test time scale. It loads and
+## saves like add_main().
+static func add_main_at_opening(t, save_dir: String = "") -> Node:
 	var main: Node = load("res://main.tscn").instantiate()
 	main.save_store = SaveStore.new(save_dir if not save_dir.is_empty() else Fixtures.new_save_dir())
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = TIME_SCALE
-	t.assert_true(await t.wait_for(main.labyrinth_ready, MOVE_TIMEOUT), "the launch fade-in ends")
 	return main
+
+
+## Goes through the opening screen (game-flow spec part 3): presses Space, and waits for the end of
+## the fade-in of the current Labyrinth. Returns true when the fade-in ends in time.
+static func start_from_opening(t, main: Node) -> bool:
+	t.assert_true(main.is_opening_shown(), "the opening screen shows")
+	send_key(KEY_SPACE)
+	return await t.wait_for(main.labyrinth_ready, MOVE_TIMEOUT)
 
 
 ## Removes the main scene and its save folder, and ends a pause of the settings. Then it waits a
@@ -42,7 +58,7 @@ static func remove(t, main: Node) -> void:
 	await t.create_timer(AUDIO_FREE_SECONDS, true, false, true).timeout
 
 
-## Presses and releases an arrow key.
+## Presses and releases a key.
 static func send_key(key: Key) -> void:
 	for pressed in [true, false]:
 		var event := InputEventKey.new()

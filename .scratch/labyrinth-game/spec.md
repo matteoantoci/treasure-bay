@@ -13,12 +13,12 @@ Sources: [map.md](map.md), [ticket 16](issues/16-parent-controls.md), [ticket 17
 The game is a keyboard Labyrinth game for one Child, the Parent's 5-year-old daughter. It is a Godot 4.7 app in a fullscreen window on the Parent's Mac laptop. The Child sails a boat through water channels between islands. She collects Items on the way. At the Goal she gets a Sea friend for her Collection.
 
 Fixed rules. The build must obey each rule:
-1. The game shows no words to the Child. Numbers are allowed.
+1. The game shows no words to the Child. Numbers are allowed. The one exception is the game name "Treasure Bay" in the logo of the opening screen ([game-flow spec](../game-flow/spec.md) part 3).
 2. The Child cannot lose. The game has no timer, no enemies, no lives, and no score that goes down.
-3. The keyboard is the only input for play. The mouse is allowed only for the settings.
+3. The keyboard is the only input for play. The mouse is allowed only for the settings and for the start button of the opening screen ([game-flow spec](../game-flow/spec.md) part 3).
 4. The game has no recorded voice.
 5. The game has no accounts and no ads, and it sends no data over the network.
-6. The game has no start screen, no skip, and no session limit ([ticket 16](issues/16-parent-controls.md), [ticket 17](issues/17-session-limit.md)).
+6. The game has no skip and no session limit ([ticket 16](issues/16-parent-controls.md), [ticket 17](issues/17-session-limit.md)). It has an opening screen at each launch and after each Parent reset. This replaces the rule "no start screen" ([game-flow spec](../game-flow/spec.md) part 3).
 
 ## 2. Glossary
 
@@ -27,6 +27,7 @@ Use the terms in [GLOSSARY.md](../../GLOSSARY.md) exactly: **Labyrinth**, **Goal
 This spec also uses these words:
 - **Square**: one cell of the Labyrinth grid. Sizes such as 4 × 3 count squares.
 - **Tile**: one cell of the drawn grid. Section 4.4 gives the relation between squares and tiles.
+- The [game-flow spec](../game-flow/spec.md) adds **Voyage**, **Opening screen**, and **Party** to GLOSSARY.md.
 
 ## 3. Platform and project setup
 
@@ -55,6 +56,7 @@ assets/kenney/License.txt
 assets/sprites/friends/     20 Sea friend PNG files
 assets/sprites/items/       8 Item PNG files
 assets/sprites/goal/        chest_closed.png, chest_open.png
+assets/fonts/fredoka/       Fredoka-Variable.ttf, OFL.txt (section 7.3)
 assets/audio/music/         4 MP3 files
 assets/audio/effects/       5 WAV files
 assets/audio/friends/       13 WAV files
@@ -82,13 +84,13 @@ exec godot --path .
 - The import step is necessary. Without it, PNG, WAV, and MP3 files do not load, and `class_name` types are unknown ([godot4-facts §2](research/godot4-facts.md)).
 - A version other than 4.7 prints the message and the game still starts (gap-audit default 11).
 - Make the file executable (`chmod +x play`).
-- Double-click start: `tools/make_app.sh` builds `~/Applications/Labyrinth.app`. The app runs `./play` from the repo with the brew Godot, and it opens no Terminal window. The app holds no copy of the game. If you move the repo, run the script again. The Godot output goes to `~/Library/Logs/Labyrinth.log`. This is not a Godot export (section 3.1).
+- Double-click start: `tools/make_app.sh` builds `~/Applications/Treasure Bay.app`. The app runs `./play` from the repo with the brew Godot, and it opens no Terminal window. The app holds no copy of the game. If you move the repo, run the script again. The Godot output goes to `~/Library/Logs/Treasure Bay.log`. This is not a Godot export (section 3.1). The app name and the app folder name are the game name ([game-flow spec](../game-flow/spec.md) part 3). An old `Labyrinth.app` stays until the Parent deletes it.
 
 ### 3.4 `project.godot` settings
 
 | Key | Value | Source |
 |---|---|---|
-| `application/config/name` | `"Labyrinth"` | gap-audit default 9. It sets the save folder `~/Library/Application Support/Godot/app_userdata/Labyrinth/`. |
+| `application/config/name` | `"Treasure Bay"` | The game name ([game-flow spec](../game-flow/spec.md) part 3). It is also the window title. It sets the save folder `~/Library/Application Support/Godot/app_userdata/Treasure Bay/`. The rename from "Labyrinth" moves the save folder, so the first launch after the rename starts with fresh progress. The old save stays in `app_userdata/Labyrinth/`. The game-flow spec asked for a custom user folder with the old name, but the Parent dropped it on 2026-11-22: the rename may start a fresh save. |
 | `application/run/main_scene` | `"res://main.tscn"` | A `uid://` main scene fails on a fresh folder ([godot4-facts §2](research/godot4-facts.md)). |
 | `display/window/size/viewport_width` | `1920` | [ticket 18](issues/18-screen-layout.md) |
 | `display/window/size/viewport_height` | `1200` | [ticket 18](issues/18-screen-layout.md) |
@@ -235,6 +237,7 @@ Sources: [ticket 03](issues/03-arrow-key-movement.md), [ticket 11](issues/11-mot
 - Make 4 InputMap actions: `move_up`, `move_down`, `move_left`, `move_right`. Bind them to the arrow keys with `physical_keycode`. Bind no other key.
 - Read the actions in `_unhandled_input(event)`. Ignore an event where `event.is_echo()` is true. Those events are the repeats of a held key.
 - Do not bind any game action to `ui_cancel`, the action that Esc fires.
+- Make one more InputMap action, `confirm`. Bind it to Space and Enter with `physical_keycode`. It acts only on the opening screen and on the Party. In play, Space and Enter do nothing. On the opening screen, each arrow key also presses the start button ([game-flow spec](../game-flow/spec.md) part 3).
 
 ### 5.2 The move rule
 
@@ -259,7 +262,7 @@ When the Child presses an arrow key and the boat is free:
 
 - While the boat moves or bumps, it is busy. The game keeps one early key press. A newer press replaces it. When the boat is free again, the game runs the kept press.
 - An Item that flies to the top does not make the boat busy (motion prototype lines 60 to 64).
-- The input is locked from the arrival at the Goal to the end of the fade-in of the next Labyrinth (section 8.8). The input is also locked during the fade-in at launch and after a Parent reset (section 8.8), and while the settings are open. The game drops presses while the input is locked. It does not keep them. When the settings open, the game also drops the press that it kept while the boat was busy.
+- The input is locked from the arrival at the Goal to the end of the fade-in of the next Labyrinth (section 8.8). The input is also locked while the opening screen shows, from the start press to the end of the fade-in of the Labyrinth (section 8.8, [game-flow spec](../game-flow/spec.md) part 3), and while the settings are open. The game drops presses while the input is locked. It does not keep them. When the settings open, the game also drops the press that it kept while the boat was busy.
 
 ## 6. Items, Goal, rewards, Collection
 
@@ -348,6 +351,7 @@ The look changes at the start of each Area, every 5 Labyrinths. The music also c
 | New Items | `assets/sprites/items/{coral,sand_dollar,gem_stone,glowing_star,star}.png` | Generate (section 13.2) |
 | Chest | `assets/sprites/goal/{chest_closed,chest_open}.png` | Generate (section 13.2) |
 | Padlock | `assets/sprites/goal/padlock.png` (421 × 512 px) | `prototypes/art-PROTOTYPE/sprites/goal/padlock.png` ([game-flow spec](../game-flow/spec.md) part 6) |
+| Font | `assets/fonts/fredoka/Fredoka-Variable.ttf` and its licence `assets/fonts/fredoka/OFL.txt` (SIL Open Font License 1.1) | `ofl/fredoka/Fredoka[wdth,wght].ttf` and `ofl/fredoka/OFL.txt` of https://github.com/google/fonts. `src/game_font.gd` (`GameFont.bold()`, weight 600) is the one place that gives the font to the game ([game-flow spec](../game-flow/spec.md) part 3). |
 
 The crab is `prototypes/art-PROTOTYPE/sprites/friends/crab_front.png` (512 × 378 px): front view, symmetric, both claws at the same height ([game-flow spec](../game-flow/spec.md) part 6). It replaces the first crab, and the app icon uses it.
 
@@ -422,7 +426,7 @@ An empty outline is the Item sprite at 35 % opacity, drawn grey and light (greys
 - 4.2 s: the screen fades to dark (`#0a1428`) in 500 ms (`inout`). The new Labyrinth shows. The screen fades in in 500 ms (`inout`).
 - The input is locked from the Goal to the end of the fade-in.
 - At the start of a new Area, the first Item kind of that Area pops up big in the centre of the screen. It scales from 0 to 2× of the Labyrinth Item size in 400 ms (`back`). It stays for 600 ms, then it fades out in 400 ms. It starts with the fade-in. It does not fly and does not fill an outline. The input unlocks at the end of the fade-in, before the Item fades out (gap-audit default 25).
-- At launch and after a Parent reset, the screen fades in from dark in 500 ms. No Area Item shows (gap-audit default 26). The input is locked until the end of this fade-in, so a press while the screen is dark does not move the boat.
+- At launch and after a Parent reset, the opening screen shows ([game-flow spec](../game-flow/spec.md) part 3). An arrow key, Space, Enter, or a click on the start button starts the game: the button scales to 0.86 and back in 140 ms, `item.wav` plays, and the screen fades to dark in 0.8 s (`inout`). Then the current Labyrinth shows, and the screen fades in from dark in 500 ms. No Area Item shows (gap-audit default 26). The input is locked from the start press until the end of this fade-in, so a press while the screen is dark does not move the boat. While the settings are open, the start button does nothing.
 
 ## 9. Sound
 
@@ -514,7 +518,9 @@ Source: [sounds.md](research/sounds.md) Download and preparation, [audio-design 
 
 | Event | Sound |
 |---|---|
-| Launch | Music of the current Area |
+| Opening screen (launch, Parent reset) | Music of Area 1 ([game-flow spec](../game-flow/spec.md) part 3) |
+| Start press on the opening screen | `item.wav` |
+| The Labyrinth shows after the start press | Music of the current Area: a crossfade if the Area is not Area 1 |
 | Move starts | `move.wav` |
 | Bump | `wall.wav` |
 | Item collected | `item.wav` |
@@ -527,9 +533,10 @@ Source: [sounds.md](research/sounds.md) Download and preparation, [audio-design 
 Write this file at the repository root (gap-audit default 41):
 
 ```text
-Sounds, music, and art in this game
+Sounds, music, art, and the font in this game
 
 Only one file below needs a credit by its licence (CC BY 4.0).
+The font needs its licence file next to it (SIL Open Font License 1.1).
 The other files are CC0 or Pixabay Content License and need no credit.
 We list them all to thank the authors.
 
@@ -573,6 +580,12 @@ Sea friends
 The Sea friends, the Items, and the treasure chest were generated for this family game
 with xai-oauth/grok-imagine-image (the Parent's xAI subscription), in the style of the
 Kenney Pirate Pack. Their rights follow the xAI terms of that subscription.
+
+== Font: SIL Open Font License 1.1 (the licence file goes with the font) ==
+"Fredoka" by Milena Brandão and Hafontia (The Fredoka Project Authors)
+  https://github.com/google/fonts/tree/main/ofl/fredoka
+  Licence: SIL Open Font License 1.1, in assets/fonts/fredoka/OFL.txt
+  Change: none. We renamed the file "Fredoka[wdth,wght].ttf" to "Fredoka-Variable.ttf".
 ```
 
 ## 10. Screen layout and HUD
@@ -589,7 +602,15 @@ Read the visible size from `get_viewport().get_visible_rect().size`. With the as
 - **Item row:** the outlines sit in a row at the centre of the top band, at `y = 60 * h`. The distance between outline centres is `90 * h`, and each outline is `56 * h` px. The row is centred left to right.
 - **Gear:** 64 px, in the top-right corner. Its centre has the same height as the Item row and the same distance from the right edge.
 - **Collection strip:** the total Item count at the left end as a number, in the Godot default font at `64 * h / (1200 / 760)` px (64 px at 1200). The 20 slots fill the rest of the strip with the same distance between their centres. Each slot icon is `44 * h` px (69 px at 1200).
-- The game shows no other text and no other numbers.
+- The game shows no other text and no other numbers in play.
+- **Opening screen** ([game-flow spec](../game-flow/spec.md) part 3, prototype round 2, variant B). `src/opening_screen.gd` and `src/start_button.gd`. The values are px at a visible height of 1200 px. The logo scales with `Hv / 1200` and stays in the centre of the visible width. y is from the top of the screen:
+  - The still water of Area 1 covers the screen.
+  - The title "Treasure Bay" in `GameFont.bold()` at 126 px: fill `#ffe07a`, outline `#7a4a24` of 16 px, and a shadow of black at 25 % 9 px below. Each letter sits on a circle arc with radius 600 px and centre y 775 px, one advance width of the font after the other, so the gaps are even. The top of the arc is at y 175 px.
+  - The island: `IslandLook.block()`, an all-land block of 4 × 3 Labyrinth tiles of 165 px with the island cell rules of section 7.1, so it has a sand coast and a grass top. Its centre is at y 590 px. It has no rock and no bush.
+  - The closed chest, 22 % of the visible height tall (264 px), centre y 570 px, with the chest sparkle of section 6.2 at the scale of this chest.
+  - Four Items on the island, 84 px: spiral shell and starfish at (∓235, +84) px, pearl and coral at (∓195, −110) px from the island centre. Each Item bobs `2 sin(2 t + i)` px.
+  - The start button: a pill of 560 × 160 px with its centre at y 1010 px, fill `#5ccf6a`, a white border of 8 px, a bottom edge of `#2f8f3c` 7 % of its height below the face, a soft shadow, and a white play triangle. It pulses: scale `1 + 0.03 (1 − cos(2π t / 1.6))`, from 1.0 to 1.06 and back in 1.6 s.
+  - The gear of the main scene stays above the opening screen. The Collection strip draws above the reveal layer (section 8.6), so it hides while the opening screen shows.
 
 ## 11. Settings and Parent controls
 
@@ -597,7 +618,7 @@ Sources: [ticket 09](issues/09-saved-progress.md), [ticket 16](issues/16-parent-
 
 ### 11.1 Start and quit
 
-- `./play` opens the game at the saved Labyrinth. The game has no start screen.
+- `./play` opens the game on the opening screen ([game-flow spec](../game-flow/spec.md) part 3). The start press shows the saved Labyrinth.
 - In `_ready()` of the main scene, call `get_tree().set_auto_accept_quit(false)`. Then Cmd+Q and window close do nothing [trace]. The quit button is the only quit path.
 - The game ignores `NOTIFICATION_WM_CLOSE_REQUEST`.
 - While the game runs, it also blocks a macOS logout or shutdown [trace]. The Parent quits with the door button before a logout.
@@ -619,8 +640,8 @@ Sources: [ticket 09](issues/09-saved-progress.md), [ticket 16](issues/16-parent-
   - The game makes the copy only when the progress in memory is not fresh. Progress is fresh when the Labyrinth is 1, the Collection is empty, and `total_items` is 0. So a reset of fresh progress keeps the older copy, and a second reset after a reset by mistake does not replace the real Collection. A reset of progress that is not fresh replaces the older copy.
   - With no save file, or in the no-write state of section 12.3, the game makes no copy.
   - If the copy fails, the game logs a warning and the reset goes on.
-  - Then the progress goes back to Labyrinth 1 with an empty Collection and a total of 0. The game writes the save. The screen fades in from dark (section 8.8). The volume steps stay.
-- **Restore after a reset by mistake:** the Parent quits the game with the door button, then renames `save.before-reset.json` to `save.json` in the save folder (`user://`, on macOS `~/Library/Application Support/Godot/app_userdata/Labyrinth/`). The rename replaces the save of the reset. At the next start, the game continues with the old progress. The game has no restore button.
+  - Then the progress goes back to Labyrinth 1 with an empty Collection and a total of 0. The game writes the save. The opening screen shows ([game-flow spec](../game-flow/spec.md) part 3). The volume steps stay.
+- **Restore after a reset by mistake:** the Parent quits the game with the door button, then renames `save.before-reset.json` to `save.json` in the save folder (`user://`, on macOS `~/Library/Application Support/Godot/app_userdata/Treasure Bay/`, section 3.4). The rename replaces the save of the reset. At the next start, the game continues with the old progress. The game has no restore button.
 - **Quit after 3 s:** the game writes the save, then calls `get_tree().quit()`.
 
 ### 11.3 Facts about keys that can end play
@@ -653,7 +674,7 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 
 ### 12.1 File and fields
 
-- File: `user://save.json` (on macOS: `~/Library/Application Support/Godot/app_userdata/Labyrinth/save.json`).
+- File: `user://save.json` (on macOS: `~/Library/Application Support/Godot/app_userdata/Treasure Bay/save.json`, section 3.4).
 - Fields:
 
 ```json
@@ -836,13 +857,16 @@ Tests:
 8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip. At 1920 × 1200, in Labyrinths 1 and 20, the Item, the boat, and the chest have the sizes of section 10.
 9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`. A crossfade during a crossfade fades out the louder copy and does not cut it. After `sea_friend_appeared`, the Goal player reaches its level − 12 dB in 0.2 s. At the next `goal_reached`, it plays at its level (section 9.3).
 10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. The length of each imported WAV file is the length of its source file, ±20 ms. `credits.txt` has a line for each sound file.
-11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`.
+11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`. The `confirm` action holds Space and Enter (section 5.1).
 12. **Chest sparkle:** the closed chest shows the Item sparkle of section 8.2 at its cycle times. The open chest does not show it.
 13. **Hold buttons:** a reset hold of 7.9 s does nothing, and a reset hold of 8 s resets. A quit hold of 3 s quits.
+14. **Opening screen** ([game-flow spec](../game-flow/spec.md) part 3): at launch the opening screen shows, and an arrow press does not move the boat. Each arrow key, Space, Enter, or a click on the button starts the current Labyrinth. While the settings are open, the button does nothing. A Parent reset shows the opening screen with a new Voyage. A launch from a version 1 save past Labyrinth 20 shows the opening screen, then Labyrinth 1 with an empty strip. The title letters have even gaps on the arc. The test helper `start_from_opening()` of `tests/scene_helpers.gd` goes through the opening screen, and `add_main()` uses it.
 
 ### 14.2 Screenshots
 
 A headless run has no pixels [trace]. For a screenshot, run the game in a window: `godot --path . --write-movie shots/frame.png --quit-after <N>`, or save `get_viewport().get_texture().get_image()` after `await RenderingServer.frame_post_draw` ([godot4-facts §7](research/godot4-facts.md)).
+
+`tools/take_shots.gd` takes `shots/opening.png`, the opening screen at launch, at 1920 × 1200 ([game-flow spec](../game-flow/spec.md) part 3).
 
 ### 14.3 Manual test checklist
 
@@ -864,9 +888,9 @@ The build does these checks on the Parent's Mac and reports each result:
 ## 15. Acceptance criteria
 
 The build is complete when each criterion is true:
-1. `./play` on the Parent's Mac starts the game in exclusive fullscreen at the saved Labyrinth, with no start screen.
-2. The game shows no words. The only text is the total Item count number in the Collection strip.
-3. The arrow keys are the only keys that act in play. A held arrow key moves the boat one time.
+1. `./play` on the Parent's Mac starts the game in exclusive fullscreen on the opening screen. The start press shows the saved Labyrinth ([game-flow spec](../game-flow/spec.md) part 3).
+2. The game shows no words. In play, the only text is the total Item count number in the Collection strip. On the opening screen, the only text is the game name.
+3. The arrow keys are the only keys that act in play. A held arrow key moves the boat one time. On the opening screen, the arrow keys, Space, and Enter press the start button.
 4. One arrow press moves the boat in a straight line to the next junction, bend, dead end, Item, or Goal, at 180 ms for each tile, with the `out` curve.
 5. A press toward a wall makes a bump of 0.12 tile (70 ms, then 110 ms), plays the wall sound, and does not move the boat.
 6. Labyrinth 1 is 4 × 3 squares with 2 Items and is the same at each new start. Labyrinths 1 to 20 match the table of section 4.3. Each later Voyage has new Labyrinths with the same sizes and Item counts ([game-flow spec](../game-flow/spec.md) part 1).

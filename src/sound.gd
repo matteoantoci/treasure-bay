@@ -84,6 +84,10 @@ func _ready() -> void:
 	main.item_collected.connect(_play.bind(item_player, ITEM_PATH).unbind(1))
 	main.goal_reached.connect(play_goal.unbind(1))
 	main.sea_friend_appeared.connect(play_sea_friend)
+	# The opening screen plays the music of Area 1, and its start press plays the Item sound
+	# (game-flow spec part 3).
+	main.opening_shown.connect(play_area.bind(Area.for_labyrinth(1)))
+	main.start_pressed.connect(_play.bind(item_player, ITEM_PATH))
 
 
 ## Stops the music, so the audio server holds no playback of a freed scene.
