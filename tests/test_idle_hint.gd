@@ -5,6 +5,7 @@
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
+const Fixtures := preload("res://tests/fixtures.gd")
 
 
 ## The press path of the move rule: the boat stops on each uncollected Item, so (0, 2) is one press
@@ -132,5 +133,83 @@ func test_the_nearest_item_hops_after_6_seconds_with_no_key_press(t) -> bool:
 	t.assert_eq(main.progress.collected_items, PackedStringArray(["0,2"]), "the boat collects the Item on (0, 2)")
 	t.assert_true(await _wait_for_hop_of(t, main, items.sprite_of("1,1")), "the Item on (1, 1) hops up")
 	t.assert_eq(hops, [Vector2i(0, 2), Vector2i(1, 1)], "the next hop target is the Item on (1, 1)")
+	await Scene.remove(t, main)
+	return true
+
+
+## With all Items collected, the open chest is the hop target.
+func test_the_open_chest_hops_when_all_items_are_collected(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var progress := Progress.new()
+	for item in progress.build_labyrinth().items:
+		progress.collect_item(item.id)
+	SaveStore.new(dir).save(progress)
+	var main := await Scene.add_main(t, dir)
+	var hops := _record_hops(main)
+	t.assert_true(await _wait_for_hop_of(t, main, main.get_node("LabyrinthView").chest), "the chest hops up")
+	t.assert_eq(hops, [Vector2i(3, 2)], "the hop target is the chest on the Goal square")
+	await Scene.remove(t, main)
+	return true
+
+
+## The hop repeats after each further 6 s, at most 3 times.
+func test_the_hop_repeats_every_6_seconds_at_most_3_times(t) -> bool:
+	var main := await Scene.add_main(t)
+	var hops := _record_hops(main)
+	for i in 3:
+		await _wait(t, NO_HOP_SECONDS)
+		t.assert_eq(hops.size(), i, "no hop %d before 6 s after the last" % (i + 1))
+		t.assert_true(await t.wait_for(main.hint_hopped, HOP_TIMEOUT - NO_HOP_SECONDS), "hop %d comes 6 s after the last" % (i + 1))
+	await _wait(t, HOP_TIMEOUT)
+	t.assert_eq(hops, [Vector2i(0, 2), Vector2i(0, 2), Vector2i(0, 2)], "3 hops, then no more")
+	await Scene.remove(t, main)
+	return true
+
+
+## A key press starts the count again: the next hop comes 6 s after the press, and 3 more hops can
+## come. The press is up at the top edge, so the boat bumps and stays on the start square.
+func test_a_key_press_starts_the_count_again(t) -> bool:
+	var main := await Scene.add_main(t)
+	var hops := _record_hops(main)
+	t.assert_true(await t.wait_for(main.hint_hopped, HOP_TIMEOUT), "the first hop comes")
+	await _wait(t, 3.0)
+	t.assert_true(await Scene.press(t, main, KEY_UP), "the boat bumps")
+	await _wait(t, NO_HOP_SECONDS)
+	t.assert_eq(hops.size(), 1, "no hop 6 s after the first hop: the count starts again at the press")
+	for i in 3:
+		t.assert_true(await t.wait_for(main.hint_hopped, HOP_TIMEOUT), "hop %d after the press comes" % (i + 1))
+	await _wait(t, HOP_TIMEOUT)
+	t.assert_eq(hops.size(), 4, "1 hop before the press and 3 hops after it")
+	await Scene.remove(t, main)
+	return true
+
+
+## No hop on the opening screen. The count starts when the Child can sail.
+func test_no_hop_on_the_opening_screen(t) -> bool:
+	var main := await Scene.add_main_at_opening(t)
+	var hops := _record_hops(main)
+	await _wait(t, HOP_TIMEOUT)
+	t.assert_eq(hops, [], "no hop on the opening screen")
+	t.assert_true(await Scene.start_from_opening(t, main), "the start press fades in Labyrinth 1")
+	await _wait(t, NO_HOP_SECONDS)
+	t.assert_eq(hops, [], "no hop before 6 s of play")
+	t.assert_true(await t.wait_for(main.hint_hopped, HOP_TIMEOUT - NO_HOP_SECONDS), "the hop comes after 6 s of play")
+	await Scene.remove(t, main)
+	return true
+
+
+## No hop while the settings are open. The count starts again when they close.
+func test_no_hop_while_the_settings_are_open(t) -> bool:
+	var main := await Scene.add_main(t)
+	var panel: SettingsPanel = main.get_node("Settings")
+	var hops := _record_hops(main)
+	await _wait(t, 3.0)
+	panel.open()
+	await _wait(t, HOP_TIMEOUT)
+	t.assert_eq(hops, [], "no hop while the settings are open")
+	panel.close()
+	await _wait(t, NO_HOP_SECONDS)
+	t.assert_eq(hops, [], "no hop before 6 s after the settings close")
+	t.assert_true(await t.wait_for(main.hint_hopped, HOP_TIMEOUT - NO_HOP_SECONDS), "the hop comes 6 s after the settings close")
 	await Scene.remove(t, main)
 	return true
