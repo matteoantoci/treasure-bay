@@ -1,0 +1,276 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway. Still mockup of the UI polish fixes 1 to 10, with a "Now" view of the current game screenshots for each screen. Open this file in a browser. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE UI polish mockup</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; overflow: hidden; font-family: system-ui, sans-serif; }
+  #wrap { position: absolute; inset: 44px 0 70px 0; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; width: 1920px; height: 1200px; overflow: hidden; flex: none; border-radius: 12px; }
+  #stage > img.now { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #stage img { position: absolute; user-select: none; pointer-events: none; }
+  canvas { position: absolute; left: 0; top: 0; }
+  #bar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: #fff;
+    padding: 8px 14px; border-radius: 999px; box-shadow: 0 4px 18px #000a; font-size: 14px; white-space: nowrap; z-index: 99; }
+  #bar button { border: 0; background: #eee; border-radius: 999px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  #bar button.on { background: #111; color: #fff; }
+  #bar .sep { width: 1px; height: 22px; background: #ccc; }
+  #note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); color: #ddd; font-size: 14px; background: #000a; padding: 6px 12px;
+    border-radius: 8px; max-width: 94vw; text-align: center; z-index: 99; }
+  .c { transform: translate(-50%, -50%); }
+  .count { position: absolute; transform: translate(0, -50%); font-family: "Arial Rounded MT Bold", ui-rounded, system-ui; color: #fff;
+    -webkit-text-stroke: 8px #1f4f7a; paint-order: stroke fill; text-shadow: 0 4px 0 #0004; }
+  @keyframes hop { 0%, 100% { transform: translate(-50%, -50%); } 35% { transform: translate(-50%, -78%) scale(1.06, .96); } 60% { transform: translate(-50%, -50%) scale(1.06, .92); } }
+  .hop { animation: hop .7s ease-out; }
+  @keyframes flipin { 0% { transform: translate(-50%, -50%) perspective(900px) rotateY(90deg) scale(.5); } 50% { transform: translate(-50%, -50%) perspective(900px) rotateY(0) scale(1.08); } 100% { transform: translate(-50%, -50%) perspective(900px) rotateY(0) scale(1); } }
+  .flip { animation: flipin .55s cubic-bezier(0, 0, .2, 1) both; }
+  .panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff3d6; border: 10px solid #7a4a24; border-radius: 40px;
+    box-shadow: 0 12px 0 #0005; padding: 40px 56px; display: grid; grid-template-columns: 72px 72px 220px 72px; gap: 28px 24px; align-items: center; justify-items: center; }
+  .pbtn { width: 72px; height: 72px; border-radius: 50%; background: #e9c98f; box-shadow: 0 6px 0 #b58a4a; display: flex; align-items: center; justify-content: center;
+    font: 900 44px "Arial Rounded MT Bold", ui-rounded; color: #5a3416; }
+  .bars { display: flex; gap: 10px; align-items: flex-end; height: 64px; }
+  .bars i { width: 34px; border-radius: 8px; background: #d8b98a; display: block; }
+  .bars i.on { background: #5a3416; }
+  .ring { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#ff7a59 0 50%, #e9c98f 50% 100%); display: flex; align-items: center; justify-content: center; }
+  .ring > div { width: 92px; height: 92px; border-radius: 50%; background: #fff3d6; display: flex; align-items: center; justify-content: center; }
+  .sheet { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); background: #3fb4d8; }
+  .sheet div { position: relative; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff; font: 600 22px system-ui; }
+  .sheet div img { position: static; width: 190px; height: 190px; object-fit: contain; }
+  .sheet div.flag { outline: 6px dashed #ffd54a; outline-offset: -14px; }
+</style>
+</head>
+<body>
+<div id="note"></div>
+<div id="wrap"><div id="stage"></div></div>
+<div id="bar"></div>
+<script>
+const A = '../../../../assets/';
+const SHOTS = '../../../../shots/';
+const FR = ['crab', 'octopus', 'spouting_whale', 'whale', 'dolphin', 'fish', 'blowfish', 'shark', 'squid', 'lobster',
+  'shrimp', 'oyster', 'seal', 'turtle', 'jellyfish', 'otter', 'penguin', 'duck', 'swan', 'flamingo'];
+const stage = document.getElementById('stage');
+const W = 1920, H = 1200;
+
+// Each screen: the Labyrinth size (squares), its Item kinds, the water colours, how many Sea friends she has, and the screenshot of the game now.
+const SCREENS = {
+  night: { label: 'Play: Area 4', w: 9, h: 6, deep: '#14284f', light: '#3a5a92', items: ['glowing_star', 'star'], count: 8, got: 1, friends: 17, total: 52, now: 'area4.png', stars: true,
+    note: 'Fixes 1, 2, 3, 4, 6, 7, 8, 9: Item column at the left, larger maze and boat, still water, soft foam, Item slots, chest on its own island with a padlock, 20 slots, a quiet gear.' },
+  lagoon: { label: 'Play: Area 1', w: 5, h: 3, deep: '#3fb4d8', light: '#7fd8ef', items: ['spiral_shell', 'starfish'], count: 2, got: 1, friends: 2, total: 7, now: 'area1.png',
+    note: 'The same fixes on a small Labyrinth. Space: the idle hint (fix 10), the chest hops one time.' },
+  reveal: { label: 'Sea friend', w: 5, h: 3, deep: '#3fb4d8', light: '#7fd8ef', items: ['spiral_shell', 'starfish'], count: 2, got: 2, friends: 1, total: 8, now: 'motion-sea-friend.png', reveal: true,
+    note: 'Fix 5: the maze dims and the Sea friend flips in at the centre, large. Then it flies to its slot. Space plays it again.' },
+  settings: { label: 'Settings', w: 5, h: 3, deep: '#3fb4d8', light: '#7fd8ef', items: ['spiral_shell', 'starfish'], count: 2, got: 1, friends: 2, total: 7, now: 'settings.png', settings: true,
+    note: 'Fix 7: the panel in the cream-and-wood style of the logo, with the screen dimmed behind it. The reset ring stays orange.' },
+  sheet: { label: 'All Sea friends', sheet: true, now: null,
+    note: 'All 20 Sea friend sprites side by side. The crab (yellow frame) leans to one side, its claws are at different heights, and it is narrower than it is tall.' },
+};
+const params = new URLSearchParams(location.search);
+const state = { screen: params.get('screen') || 'night', view: params.get('view') || 'new' };
+
+// A small PRNG, so that each screen always shows the same Labyrinth.
+function prng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+
+// Recursive backtracker with the Goal rule of the build spec: the search never continues from the Goal.
+// It records each opening as "x,y|a,b".
+function mazeLinks(w, h, seed) {
+  const rnd = prng(seed), links = new Set(), seen = new Set(['0,0']), stack = [[0, 0]];
+  const key = (x, y) => x + ',' + y, goal = key(w - 1, h - 1);
+  while (stack.length) {
+    const [x, y] = stack[stack.length - 1];
+    const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => a >= 0 && b >= 0 && a < w && b < h && !seen.has(key(a, b)));
+    if (!nb.length) { stack.pop(); continue; }
+    const [a, b] = nb[Math.floor(rnd() * nb.length)];
+    links.add(key(x, y) + '|' + key(a, b));
+    seen.add(key(a, b));
+    if (key(a, b) !== goal) stack.push([a, b]);
+  }
+  return links;
+}
+let links;
+function passage(x1, y1, x2, y2) { return links.has(`${x1},${y1}|${x2},${y2}`) || links.has(`${x2},${y2}|${x1},${y1}`); }
+// Wall tiles on the (2w + 1) x (2h + 1) tile grid. Square (x, y) is tile (2x + 1, 2y + 1).
+function buildMaze(w, h, seed) {
+  links = mazeLinks(w, h, seed);
+  const tw = 2 * w + 1, th = 2 * h + 1, wall = [];
+  for (let ty = 0; ty < th; ty++) for (let tx = 0; tx < tw; tx++) {
+    let isWall = tx % 2 === 0 || ty % 2 === 0;
+    if (isWall && tx > 0 && ty > 0 && tx < tw - 1 && ty < th - 1) {
+      if (tx % 2 === 0 && ty % 2 === 1) isWall = !passage(tx / 2 - 1, (ty - 1) / 2, tx / 2, (ty - 1) / 2);
+      else if (tx % 2 === 1 && ty % 2 === 0) isWall = !passage((tx - 1) / 2, ty / 2 - 1, (tx - 1) / 2, ty / 2);
+    }
+    if (isWall) wall.push([tx, ty]);
+  }
+  return { w, h, tw, th, wall };
+}
+function degree(m, x, y) {
+  let n = 0;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const a = x + dx, b = y + dy;
+    if (links.has(`${x},${y}|${a},${b}`) || links.has(`${a},${b}|${x},${y}`)) n++;
+  }
+  return n;
+}
+
+function el(tag, style, parent = stage) { const e = document.createElement(tag); Object.assign(e.style, style || {}); parent.appendChild(e); return e; }
+function img(src, x, y, w, extra = {}) { const e = el('img', { left: x + 'px', top: y + 'px', width: w + 'px', ...extra }); e.className = 'c'; e.src = src; return e; }
+function canvas() { const c = el('canvas'); c.width = W; c.height = H; c.style.width = W + 'px'; c.style.height = H + 'px'; return c.getContext('2d'); }
+function shadow(x, y, w) { el('div', { position: 'absolute', left: x - w * 0.4 + 'px', top: y + w * 0.28 + 'px', width: w * 0.8 + 'px', height: w * 0.22 + 'px', borderRadius: '50%', background: '#00000033' }); }
+
+function drawPlay(s) {
+  const ctx = canvas();
+  // Still water: one colour and fixed wave marks. Nothing in the background moves (fix 2).
+  ctx.fillStyle = s.deep; ctx.fillRect(0, 0, W, H);
+  const r = prng(7);
+  ctx.strokeStyle = s.light; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.globalAlpha = 0.35;
+  for (let i = 0; i < 70; i++) { const x = r() * W, y = r() * H; ctx.beginPath(); ctx.arc(x, y, 16, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  if (s.stars) { ctx.fillStyle = '#ffffff'; for (let i = 0; i < 80; i++) { ctx.globalAlpha = 0.25 + r() * 0.4; ctx.beginPath(); ctx.arc(r() * W, r() * H, 1 + r() * 2, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; }
+
+  // Layout (fix 1): Item column at the left, Collection strip at the bottom, the maze fills the rest.
+  const STRIP = 124, COL = 200, PAD = 28;
+  const m = buildMaze(s.w, s.h, s.w * 31 + s.h);
+  const areaW = W - COL - 2 * PAD - 40, areaH = H - STRIP - 2 * PAD;
+  const t = Math.floor(Math.min(areaW / m.tw, areaH / m.th));
+  const ox = COL + PAD + (areaW - t * m.tw) / 2, oy = PAD + (areaH - t * m.th) / 2;
+  const cx = (tx) => ox + tx * t + t / 2, cy = (ty) => oy + ty * t + t / 2;
+  const isWall = new Set(m.wall.map(([x, y]) => x + ',' + y));
+  const goalTx = 2 * s.w, goalTy = 2 * s.h - 1;
+  function islands(width, colour, extra) {
+    ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = width; ctx.lineCap = 'round';
+    for (const [x, y] of m.wall) {
+      ctx.beginPath(); ctx.arc(cx(x), cy(y), width / 2, 0, 7); ctx.fill();
+      for (const [dx, dy] of [[1, 0], [0, 1]]) if (isWall.has((x + dx) + ',' + (y + dy))) { ctx.beginPath(); ctx.moveTo(cx(x), cy(y)); ctx.lineTo(cx(x + dx), cy(y + dy)); ctx.stroke(); }
+    }
+    // The Goal island: a round bump on the border, so that the chest sits fully on land (fix 4).
+    ctx.beginPath(); ctx.arc(cx(goalTx) + t * 0.45, cy(goalTy), width / 2 + t * extra, 0, 7); ctx.fill();
+  }
+  islands(t * 1.16, 'rgba(255,255,255,0.28)', 0.42);   // soft foam edge that does not move (fix 2)
+  islands(t * 1.0, '#f3dca0', 0.42);                    // sand
+  islands(t * 0.6, '#5cc96a', 0.38);                    // grass
+
+  // Items on dead ends (not the start, not the Goal).
+  const ends = [];
+  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (degree(m, x, y) === 1 && !(x === 0 && y === 0) && !(x === s.w - 1 && y === s.h - 1)) ends.push([x, y]);
+  const rr = prng(3); ends.sort(() => rr() - 0.5);
+  const itemPx = t * 0.69;
+  const placed = [];
+  for (let i = 0; i < s.count; i++) {
+    const [x, y] = ends[i % ends.length] || [Math.floor(s.w / 2), i % s.h];
+    placed.push(s.items[i % s.items.length]);
+    if (i >= s.got) { shadow(cx(2 * x + 1), cy(2 * y + 1), itemPx); img(A + 'sprites/items/' + s.items[i % s.items.length] + '.png', cx(2 * x + 1), cy(2 * y + 1), itemPx); }
+  }
+
+  // Boat: larger than an Item (fix 1), with a static shadow (fix 8) and a soft wake (fix 9).
+  const bx = cx(3) - t * 0.2, by = cy(1), boatPx = t * 0.85;
+  const wake = canvas();
+  for (let i = 0; i < 9; i++) { wake.globalAlpha = 0.42 - i * 0.04; wake.fillStyle = '#ffffff'; wake.beginPath(); wake.arc(bx - boatPx * 0.45 - i * t * 0.12, by + Math.sin(i * 1.7) * t * 0.06, t * (0.09 - i * 0.006), 0, 7); wake.fill(); }
+  shadow(bx, by, boatPx);
+  img(A + 'kenney/ships/boat_white_sail.png', bx, by, boatPx, { transform: 'translate(-50%, -50%) rotate(-90deg)' });
+
+  // Chest with a padlock, on the Goal island, with the palm inside the coast (fix 4).
+  const gx = cx(goalTx) + t * 0.45, gy = cy(goalTy);
+  img(A + 'kenney/tiles/tile_71.png', gx + t * 0.32, gy - t * 0.42, t * 0.7, { filter: 'brightness(.8)' });
+  const chest = img(A + 'sprites/goal/' + (s.reveal ? 'chest_open' : 'chest_closed') + '.png', gx, gy, t * 1.15);
+  if (!s.reveal) {
+    const lock = el('div', { position: 'absolute', left: gx + t * 0.18 + 'px', top: gy + t * 0.02 + 'px', width: t * 0.34 + 'px', height: t * 0.28 + 'px', background: '#ffd54a',
+      border: '4px solid #7a4a24', borderRadius: '8px', boxSizing: 'border-box' });
+    el('div', { position: 'absolute', left: '50%', top: -t * 0.2 + 'px', width: t * 0.22 + 'px', height: t * 0.24 + 'px', transform: 'translateX(-50%)', border: '5px solid #7a4a24',
+      borderBottom: 'none', borderRadius: '40px 40px 0 0', boxSizing: 'border-box' }, lock);
+  }
+
+  // Item column (fixes 1 and 3): one slot for each Item, a light disc with a 3 px outline. A collected Item fills its slot.
+  const slot = 112, gap = 14, colH = s.count * slot + (s.count - 1) * gap, sy = (H - STRIP - colH) / 2 + slot / 2;
+  placed.forEach((kind, i) => {
+    const x = PAD + COL / 2 - 10, y = sy + i * (slot + gap);
+    el('div', { position: 'absolute', left: x + 'px', top: y + 'px', width: slot + 'px', height: slot + 'px', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+      background: 'rgba(255,255,255,0.22)', border: '3px solid rgba(255,255,255,0.85)', boxSizing: 'border-box' });
+    const got = i < s.got;
+    img(A + 'sprites/items/' + kind + '.png', x, y, slot * 0.7, got ? {} : { opacity: 0.38, filter: 'grayscale(1) brightness(1.6)' });
+  });
+
+  // Collection strip (fix 6): 20 slots, the total Item count in the rounded font with a shell icon.
+  el('div', { position: 'absolute', left: 0, right: 0, bottom: 0, height: STRIP + 'px', background: 'rgba(8,24,48,0.35)' });
+  img(A + 'sprites/items/spiral_shell.png', 70, H - STRIP / 2, 58);
+  const count = el('div', { left: '110px', top: H - STRIP / 2 + 'px', fontSize: '64px' }); count.className = 'count'; count.textContent = s.total;
+  FR.forEach((id, k) => {
+    const x = 330 + k * 78, y = H - STRIP / 2;
+    el('div', { position: 'absolute', left: x + 'px', top: y + 'px', width: '68px', height: '68px', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+      background: 'rgba(255,255,255,0.14)', border: '2px solid rgba(255,255,255,0.45)', boxSizing: 'border-box' });
+    if (k < s.friends) img(A + 'sprites/friends/' + id + '.png', x, y, 62);
+  });
+
+  // Quiet gear (fix 7): small and low contrast, so that she does not aim at it.
+  const gear = el('div', { position: 'absolute', right: '28px', top: '24px', width: '40px', height: '40px', opacity: 0.4, fontSize: '40px', lineHeight: '40px', color: '#fff', textAlign: 'center' });
+  gear.textContent = '⚙';
+
+  return { chest, gx, gy, t };
+}
+
+function reveal() {
+  el('div', { position: 'absolute', inset: 0, background: 'rgba(0,20,40,0.55)' });
+  el('div', { position: 'absolute', left: '960px', top: '520px', width: '560px', height: '560px', transform: 'translate(-50%, -50%)', borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(255,240,180,0.55), rgba(255,240,180,0) 70%)' });
+  const f = img(A + 'sprites/friends/octopus.png', 960, 520, 420);
+  f.classList.add('flip');
+}
+
+function settings() {
+  el('div', { position: 'absolute', inset: 0, background: 'rgba(0,20,40,0.5)' });
+  const p = el('div'); p.className = 'panel';
+  const note = '<svg width="56" height="56" viewBox="0 0 24 24"><path fill="#5a3416" d="M9 18a3 3 0 1 1-2-2.83V5l12-2v11a3 3 0 1 1-2-2.83V6.4L9 7.7z"/></svg>';
+  const speaker = '<svg width="56" height="56" viewBox="0 0 24 24"><path fill="#5a3416" d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8a5 5 0 0 1 0 8M18.5 5.5a8.5 8.5 0 0 1 0 13" stroke="#5a3416" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+  const bars = (on) => '<div class="bars">' + [24, 36, 50, 64].map((h, i) => `<i class="${i < on ? 'on' : ''}" style="height:${h}px"></i>`).join('') + '</div>';
+  p.innerHTML = `${note}<div class="pbtn">−</div>${bars(2)}<div class="pbtn">+</div>${speaker}<div class="pbtn">−</div>${bars(3)}<div class="pbtn">+</div>
+    <div></div><div class="ring" style="grid-column: span 2"><div><svg width="56" height="56" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" stroke="#5a3416" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg></div></div>
+    <div class="ring" style="background:#e9c98f"><div><svg width="50" height="56" viewBox="0 0 20 24"><rect x="3" y="2" width="14" height="20" rx="2" fill="#5a3416"/><circle cx="13.5" cy="12" r="1.4" fill="#fff3d6"/></svg></div></div>`;
+}
+
+function sheet() {
+  const g = el('div'); g.className = 'sheet';
+  FR.forEach((id) => { const d = el('div', {}, g); if (id === 'crab') d.className = 'flag'; const i = el('img', {}, d); i.src = A + 'sprites/friends/' + id + '.png'; });
+}
+
+let current = {};
+function render() {
+  stage.innerHTML = '';
+  const s = SCREENS[state.screen];
+  if (state.view === 'now' && s.now) {
+    const i = el('img'); i.className = 'now'; i.src = SHOTS + s.now;
+  } else if (s.sheet) {
+    sheet();
+  } else {
+    current = drawPlay(s);
+    if (s.reveal) reveal();
+    if (s.settings) settings();
+  }
+  document.getElementById('note').textContent = state.view === 'now' && s.now ? `Now: the current game (shots/${s.now}).` : s.note + (s.sheet ? '' : ' Placeholder islands: the game keeps the Kenney tiles.');
+  history.replaceState(null, '', '?' + new URLSearchParams(state));
+  drawBar();
+}
+function drawBar() {
+  const bar = document.getElementById('bar'); bar.innerHTML = '';
+  const btn = (label, on, fn) => { const b = document.createElement('button'); b.textContent = label; if (on) b.className = 'on'; b.onclick = fn; bar.appendChild(b); };
+  Object.entries(SCREENS).forEach(([k, s]) => btn(s.label, state.screen === k, () => { state.screen = k; render(); }));
+  const sep = document.createElement('span'); sep.className = 'sep'; bar.appendChild(sep);
+  btn('Now', state.view === 'now', () => { state.view = 'now'; render(); });
+  btn('New', state.view === 'new', () => { state.view = 'new'; render(); });
+}
+addEventListener('keydown', (e) => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    if (SCREENS[state.screen].reveal) { render(); return; }
+    if (current.chest) { current.chest.classList.remove('hop'); void current.chest.offsetWidth; current.chest.classList.add('hop'); }
+  }
+  if (e.key === 'n' || e.key === 'N') { state.view = state.view === 'now' ? 'new' : 'now'; render(); }
+});
+function fit() {
+  const s = Math.min(innerWidth / W, (innerHeight - 120) / H);
+  stage.style.transform = `scale(${s})`;
+  stage.style.margin = `${-H / 2 * (1 - s)}px ${-W / 2 * (1 - s)}px`;
+}
+addEventListener('resize', fit);
+fit(); render();
+</script>
+</body>
+</html>
