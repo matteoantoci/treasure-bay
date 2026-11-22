@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
@@ -17,6 +17,7 @@
 [ext_resource type="Script" path="res://src/sound.gd" id="10_sound"]
 [ext_resource type="Script" path="res://src/settings_panel.gd" id="15_settings_panel"]
 [ext_resource type="Script" path="res://src/fullscreen_guard.gd" id="16_fullscreen_guard"]
+[ext_resource type="Script" path="res://src/reveal_view.gd" id="17_reveal_view"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -47,13 +48,17 @@ script = ExtResource("3_boat_view")
 [node name="ItemRow" type="Node2D" parent="."]
 script = ExtResource("5_item_row")
 
-[node name="CollectionStrip" type="Node2D" parent="."]
-script = ExtResource("6_collection_strip")
-
 [node name="Gear" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("9_gear_view")
+
+[node name="Reveal" type="Node2D" parent="."]
+visible = false
+script = ExtResource("17_reveal_view")
+
+[node name="CollectionStrip" type="Node2D" parent="."]
+script = ExtResource("6_collection_strip")
 
 [node name="SeaFriend" type="Sprite2D" parent="."]
 visible = false
