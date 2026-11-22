@@ -44,6 +44,23 @@ func test_the_slot_outline_has_a_contrast_of_3_to_1_in_each_area(t) -> bool:
 	return true
 
 
+## Code review fix of ticket 12: the ghost of each empty slot shows on its disc in all 4 Areas. The
+## ghost is the Item sprite drawn grey and light at EMPTY_OPACITY (spec 8.7), with a thin dark edge
+## around its shape. Its rim has a contrast of 3:1 or more: the edge against the disc, or the body
+## against the edge. The body is the mean ghost grey of the sprite. With no edge, the rim is the body
+## against the disc: 1.3:1 for the pearl of Area 1 and 1.4:1 for the sand dollar of Area 2.
+func test_the_ghost_of_an_empty_slot_shows_on_its_disc_in_each_area(t) -> bool:
+	for area in range(1, Area.COUNT + 1):
+		var disc := _over(ItemRow.DISC_FILL_COLOUR, Area.deep_colour(area))
+		var edge := _over(ItemRow.GHOST_EDGE_COLOUR, disc)
+		for kind in Area.item_kinds(area):
+			var grey := _ghost_grey(kind)
+			var body := _over(Color(grey, grey, grey, ItemRow.EMPTY_OPACITY), disc)
+			var rim := maxf(_contrast(edge, disc), _contrast(body, edge))
+			t.assert_true(rim >= 3.0, "Area %d, %s: the ghost against its disc (%.2f:1)" % [area, kind, rim])
+	return true
+
+
 ## The strip shows 20 slot discs (fill white at 14 %, outline 2 px in white at 45 %), the total
 ## count in the rounded font with an outline, and the spiral shell icon left of the count.
 func test_the_collection_strip_shows_the_count_with_a_shell(t) -> bool:
@@ -103,6 +120,21 @@ func test_the_settings_panel_has_the_cream_and_wood_style(t) -> bool:
 ## `colour` with its alpha over the opaque `below`, in sRGB.
 func _over(colour: Color, below: Color) -> Color:
 	return Color(below.lerp(Color(colour, 1.0), colour.a), 1.0)
+
+
+## The mean grey of the ghost of the Item `kind` over the sprite, weighted by alpha. Each pixel has
+## the grey of spec 8.7: min(2 x luminance, 1), as the CSS filter grayscale(1) brightness(2).
+func _ghost_grey(kind: String) -> float:
+	var image := Image.load_from_file(ProjectSettings.globalize_path(Area.item_texture_path(kind)))
+	image.resize(64, 64)
+	var sum := 0.0
+	var weight := 0.0
+	for y in image.get_height():
+		for x in image.get_width():
+			var pixel := image.get_pixel(x, y)
+			sum += minf(2.0 * (0.2126 * pixel.r + 0.7152 * pixel.g + 0.0722 * pixel.b), 1.0) * pixel.a
+			weight += pixel.a
+	return sum / weight
 
 
 ## The WCAG contrast ratio of two opaque colours.

@@ -1,14 +1,23 @@
 ## The Item column at the left (spec 6.1, game-flow spec part 5, fix 3): one slot for each Item of
 ## this Labyrinth, in placement order. A slot is a light disc with a white outline, and the Item
-## sprite in its middle. An empty slot shows the Item sprite at 35 % opacity, drawn grey and light
-## (spec 8.7). A collected Item fills its slot: the normal sprite shows on top. The column never
-## gets shorter. When the Item arrives at its slot, the slot fills in 150 ms and the Item bounces
-## (spec 8.4). At a visit to the locked chest, each empty slot pulses (game-flow spec Part 2).
+## sprite in its middle. An empty slot shows the ghost of its Item: the sprite at 35 % opacity, drawn
+## grey and light (spec 8.7), with a thin dark edge around its shape. A collected Item fills its
+## slot: the normal sprite shows on top, and the ghost goes. The column never gets shorter. When the
+## Item arrives at its slot, the slot fills in 150 ms and the Item bounces (spec 8.4). At a visit to
+## the locked chest, each empty slot pulses (game-flow spec Part 2).
 class_name ItemRow
 extends Node2D
 
 const OUTLINE_SHADER := preload("res://src/item_outline.gdshader")
+## The opacity of the grey sprite of the ghost (spec 8.7).
 const EMPTY_OPACITY := 0.35
+## The edge of the ghost (code review fix of ticket 12). A light ghost on the light disc of Areas 1
+## and 2 has a contrast of 1.3:1 to 1.4:1, so the sand dollar and the pearl do not show. The edge
+## gives the rim of the ghost 3:1 or more in each Area: against the disc in Areas 1 to 3, and against
+## the grey sprite on the dark disc of Area 4.
+const GHOST_EDGE_COLOUR := Color("#0a1428", 0.8)
+## The width of the ghost edge in pixels of the 512 px Item sprites: about 2 px on a disc of 120 px.
+const GHOST_EDGE_TEXELS := 12.0
 ## The Item sprite, as a part of the disc diameter.
 const ITEM_SHARE := 0.7
 const DISC_FILL_COLOUR := Color(1, 1, 1, 0.22)
@@ -39,6 +48,9 @@ var _pulses := {}
 
 func _init() -> void:
 	_outline_material.shader = OUTLINE_SHADER
+	_outline_material.set_shader_parameter("body_opacity", EMPTY_OPACITY)
+	_outline_material.set_shader_parameter("edge_colour", GHOST_EDGE_COLOUR)
+	_outline_material.set_shader_parameter("edge_texels", GHOST_EDGE_TEXELS)
 
 
 ## Shows one slot for each Item of `labyrinth`. The slots of collected Items are filled.
@@ -60,7 +72,6 @@ func show_items(labyrinth: Labyrinth, progress: Progress) -> void:
 		var outline := Sprite2D.new()
 		outline.texture = texture
 		outline.material = _outline_material
-		outline.modulate.a = EMPTY_OPACITY
 		var fill := Sprite2D.new()
 		fill.texture = texture
 		add_child(disc)
@@ -101,8 +112,9 @@ func pulse_empty() -> Array[Tween]:
 	return pulses
 
 
-## The Item arrives at slot `index`: the normal sprite fades in on top in 150 ms, and the Item
-## bounces from 1.5 times its size to its size in 350 ms. The disc does not bounce.
+## The Item arrives at slot `index`: the normal sprite fades in on top in 150 ms, the ghost fades out
+## in the same time, and the Item bounces from 1.5 times its size to its size in 350 ms. The disc does
+## not bounce.
 func show_fill(index: int) -> Tween:
 	_stop_pulse(index)
 	_tweens = _tweens.filter(func(tween: Tween) -> bool: return tween.is_valid())
@@ -110,6 +122,7 @@ func show_fill(index: int) -> Tween:
 	_tweens.append(tween)
 	fills[index].modulate.a = 0.0
 	Motion.shape(tween.tween_property(fills[index], "modulate:a", 1.0, Motion.OUTLINE_FILL_SECONDS), Motion.OUTLINE_FILL_CURVE)
+	Motion.shape(tween.tween_property(outlines[index], "modulate:a", 0.0, Motion.OUTLINE_FILL_SECONDS), Motion.OUTLINE_FILL_CURVE)
 	for sprite: Sprite2D in [outlines[index], fills[index]]:
 		sprite.scale = _scales[index] * Motion.OUTLINE_BOUNCE_SCALE
 		Motion.shape(tween.tween_property(sprite, "scale", _scales[index], Motion.OUTLINE_BOUNCE_SECONDS), Motion.OUTLINE_BOUNCE_CURVE)
@@ -140,6 +153,7 @@ func layout(visible_size: Vector2) -> void:
 func _show_fill(index: int, is_filled: bool) -> void:
 	filled[index] = is_filled
 	fills[index].modulate.a = 1.0 if is_filled else 0.0
+	outlines[index].modulate.a = 0.0 if is_filled else 1.0
 
 
 func _place() -> void:

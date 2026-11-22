@@ -430,7 +430,7 @@ Source of the reveal: [game-flow spec](../game-flow/spec.md) part 6, fix 5. It r
 
 ### 8.7 Item slots
 
-An empty slot shows the Item sprite at 35 % opacity, drawn grey and light (greyscale, then brightness 2×), in its disc (section 10). A filled slot draws the normal sprite on top with alpha from 0 to 1 (motion prototype line 114). The Item sprite bounces into its slot. The disc does not bounce. At a visit to the locked chest, the disc and the Item sprite of each empty slot pulse together ([game-flow spec](../game-flow/spec.md) part 2).
+An empty slot shows the Item sprite at 35 % opacity, drawn grey and light (greyscale, then brightness 2×), in its disc (section 10). A thin dark edge goes around the shape of this ghost: `#0a1428` at 80 %, 12 pixels of the 512 px sprite wide (about 2 px on a disc of 120 px). Without it, a light Item such as the sand dollar or the pearl has a contrast of 1.3:1 to 1.4:1 on the light disc of Areas 1 and 2, and does not show. With it, the rim of each ghost has 3:1 or more in each Area: the edge against the disc, or the grey sprite against the edge on the dark disc of Area 4 (code review fix of the game-flow build, ticket 12 shot check). A filled slot draws the normal sprite on top with alpha from 0 to 1 (motion prototype line 114), and the ghost with its edge fades out in the same time. The Item sprite bounces into its slot. The disc does not bounce. At a visit to the locked chest, the disc and the Item sprite of each empty slot pulse together ([game-flow spec](../game-flow/spec.md) part 2).
 
 ### 8.8 Next Labyrinth and new Area
 
