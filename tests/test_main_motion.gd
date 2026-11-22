@@ -6,8 +6,6 @@ extends RefCounted
 const Scene := preload("res://tests/scene_helpers.gd")
 ## Game seconds of slack for a time measured in frames.
 const TIME_SLACK := 0.2
-## Game seconds after the Sea friend appears, when it stands still at its end place.
-const FRIEND_STILL_SECONDS := 0.8
 
 
 ## Game seconds since `start_usec`, at the test time scale.
@@ -82,7 +80,7 @@ func test_the_goal_celebration_runs_on_the_spec_times(t) -> bool:
 	t.assert_true(not boat.idle, "the boat does not rock during the celebration")
 	t.assert_eq(_confetti_count(main), 1, "the confetti falls")
 	t.assert_true(await t.wait_for(main.sea_friend_appeared, Scene.NEXT_LABYRINTH_TIMEOUT), "the Sea friend appears")
-	t.assert_true(friend.visible, "the Sea friend shows next to the Goal island")
+	t.assert_true(friend.visible, "the Sea friend shows")
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.NEXT_LABYRINTH_TIMEOUT), "the next Labyrinth is ready")
 	_near(t, times.get("sea_friend_appeared", -1.0), 1.4, "the Sea friend appears at 1.4 s")
 	_near(t, times.get("next_labyrinth_coming", -1.0), 4.2, "the fade to dark starts at 4.2 s")
@@ -95,33 +93,76 @@ func test_the_goal_celebration_runs_on_the_spec_times(t) -> bool:
 	return true
 
 
-## The Sea friend grows right of the chest, over the outer Goal island tile, away from the chest
-## and the boat, so the open chest and the boat stay in view (spec 6.2, 8.5, 8.6, game-flow spec
-## part 5, fix 4). The check uses the box of the opaque pixels of each of the 20 Sea friend pictures
-## at the end of the growth. A corner is at most a quarter of the chest box.
-func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
+## At the reveal the Sea friend flips in at the middle of the Labyrinth area, the space between the
+## top band and the strip. Its horizontal scale starts at 0 and its size at 50 %. It grows to 108 %
+## and settles at 100 %: 35 % of the visible height (game-flow spec part 6, fix 5). The flip runs
+## at the real time scale, so the frames show the peak.
+func test_the_sea_friend_flips_in_large_in_the_middle_of_the_labyrinth_area(t) -> bool:
 	var main := await Scene.add_main(t)
-	var view: LabyrinthView = main.get_node("LabyrinthView")
-	var boat: BoatView = main.get_node("Boat")
 	var friend: SeaFriendView = main.get_node("SeaFriend")
+	var visible: Vector2 = main.get_viewport().get_visible_rect().size
+	var full_px := 0.35 * visible.y
+	var at_start := []
+	main.sea_friend_appeared.connect(func(_f: String) -> void:
+		Engine.time_scale = 1.0
+		at_start.append(_shown_size(friend) / full_px), CONNECT_ONE_SHOT)
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
 	t.assert_true(await t.wait_for(main.sea_friend_appeared, Scene.NEXT_LABYRINTH_TIMEOUT), "the Sea friend appears")
-	# Game seconds: after the growth (0.45 s) and before the flight to the strip (1.6 s).
-	await t.create_timer(FRIEND_STILL_SECONDS).timeout
-	var s := boat.scale.x
-	var tile_px := ScreenLayout.PROTOTYPE_TILE_PX * s
-	var island := view.global_position + (Vector2(main.labyrinth.goal_island_tile()) + Vector2(0.5, 0.5)) * tile_px
-	t.assert_true(friend.position.is_equal_approx(island + Vector2(175, -30) * s), "the Sea friend is at (+175, -30) px from the Goal island tile centre")
-	var chest_px := maxf(view.chest.texture.get_width(), view.chest.texture.get_height()) * view.chest.global_scale.x
-	var chest := _opaque_rect(view.chest.texture, view.chest.global_position, chest_px)
-	var boat_local := _opaque_rect(BoatView.TEXTURE, Vector2.ZERO, BoatView.LENGTH_PX * s)
-	var boat_rect := Transform2D(boat.global_rotation, boat.global_position) * boat_local
-	for id in SeaFriends.IDS:
-		var texture: Texture2D = load(SeaFriends.texture_path(id))
-		var shape := _opaque_rect(texture, friend.position, Motion.FRIEND_PX * Motion.FRIEND_SCALE * s)
-		var on_chest := shape.intersection(chest).get_area() / chest.get_area()
-		t.assert_true(on_chest <= 0.25, "%s covers at most a corner of the open chest (%.2f of its box)" % [id, on_chest])
-		t.assert_true(not shape.intersects(boat_rect), "%s does not cover the boat" % id)
+	var start := Time.get_ticks_usec()
+	var biggest := 0.0
+	while _seconds_since(start) < 0.4:
+		biggest = maxf(biggest, _shown_size(friend).y / full_px)
+		await t.process_frame
+	var end := _shown_size(friend) / full_px
+	Engine.time_scale = Scene.TIME_SCALE
+	# Godot keeps a scale of 0 at a very small value, so the check uses 1 % of the full size.
+	t.assert_true(at_start.size() == 1 and at_start[0].x < 0.01, "the flip starts edge-on")
+	t.assert_true(at_start.size() == 1 and is_equal_approx(at_start[0].y, 0.5), "the flip starts at 50 % of the full size")
+	t.assert_true(biggest > 1.06 and biggest < 1.081, "it grows to 108 %% (%.3f)" % biggest)
+	t.assert_true(end.is_equal_approx(Vector2.ONE), "it settles at 35 %% of the visible height (%s)" % end)
+	var top := ScreenLayout.top_band_height(visible)
+	var bottom := visible.y - ScreenLayout.bottom_strip_height(visible)
+	t.assert_true(friend.position.is_equal_approx(Vector2(visible.x / 2.0, (top + bottom) / 2.0)), "in the middle of the Labyrinth area (%s)" % friend.position)
+	await Scene.remove(t, main)
+	return true
+
+
+## At the reveal the screen gets darker, black at 55 %, with a soft light disc in the middle of the
+## Labyrinth area. The Labyrinth is under the dark layer. The Collection strip and the Sea friend
+## are above it, so the slot stays clear. The dark layer fades out while the Sea friend flies, and
+## then the slot shows the Sea friend (game-flow spec part 6, fix 5).
+func test_the_screen_gets_darker_behind_the_sea_friend_until_it_flies_to_its_slot(t) -> bool:
+	var main := await Scene.add_main(t)
+	var reveal: RevealView = main.get_node("Reveal")
+	var strip: CollectionStrip = main.get_node("CollectionStrip")
+	var friend: SeaFriendView = main.get_node("SeaFriend")
+	var visible: Vector2 = main.get_viewport().get_visible_rect().size
+	var new_friend := [""]
+	main.goal_reached.connect(func(id: String) -> void: new_friend[0] = id, CONNECT_ONE_SHOT)
+	t.assert_eq(reveal.dark_colour().a, 0.0, "no dark layer while the Child sails")
+	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
+	t.assert_true(await t.wait_for(main.sea_friend_appeared, Scene.NEXT_LABYRINTH_TIMEOUT), "the Sea friend appears")
+	# Game seconds: after the 250 ms of the dark layer, before the flight at 3.0 s.
+	await t.create_timer(0.5).timeout
+	t.assert_true(reveal.dark_colour().is_equal_approx(Color(0, 0, 0, 0.55)), "the screen is black at 55 %% (%s)" % reveal.dark_colour())
+	t.assert_true(reveal.dark_rect.encloses(Rect2(Vector2.ZERO, visible)), "the dark layer covers the screen")
+	t.assert_true(reveal.light_colour().a > 0.5, "the light disc shows")
+	var top := ScreenLayout.top_band_height(visible)
+	var bottom := visible.y - ScreenLayout.bottom_strip_height(visible)
+	t.assert_true(reveal.light_centre.is_equal_approx(Vector2(visible.x / 2.0, (top + bottom) / 2.0)), "the light disc is in the middle of the Labyrinth area")
+	for under in ["LabyrinthView", "Boat", "Items", "ItemRow"]:
+		t.assert_true(main.get_node(under).get_index() < reveal.get_index(), "%s is under the dark layer" % under)
+	t.assert_true(strip.get_index() > reveal.get_index(), "the Collection strip is above the dark layer")
+	t.assert_true(friend.get_index() > reveal.get_index(), "the Sea friend is above the dark layer")
+	var faded_in_flight := false
+	var timer: SceneTreeTimer = t.create_timer(Scene.NEXT_LABYRINTH_TIMEOUT)
+	while friend.visible and timer.time_left > 0.0:
+		var alpha := reveal.dark_colour().a
+		faded_in_flight = faded_in_flight or (alpha > 0.05 and alpha < 0.5)
+		await t.process_frame
+	t.assert_true(faded_in_flight, "the dark layer fades out during the flight")
+	t.assert_eq(reveal.dark_colour().a, 0.0, "the screen is clear when the Sea friend is in its slot")
+	t.assert_true(strip.shown_friends().has(new_friend[0]), "the slot of %s shows it" % new_friend[0])
 	await Scene.remove(t, main)
 	return true
 
@@ -234,13 +275,10 @@ func _refs_to_new_tweens(t, action: Callable) -> Array:
 	return refs
 
 
-## The box on the screen of the opaque pixels of `texture`, drawn centred on `centre` with its
-## longer side `px` long and no rotation.
-func _opaque_rect(texture: Texture2D, centre: Vector2, px: float) -> Rect2:
-	var size := texture.get_size()
-	var k := px / maxf(size.x, size.y)
-	var used := Rect2(texture.get_image().get_used_rect())
-	return Rect2(centre + (used.position - size / 2.0) * k, used.size * k)
+## The size on the screen of the Sea friend: the long side of its picture, times its scale on each
+## axis.
+func _shown_size(friend: SeaFriendView) -> Vector2:
+	return maxf(friend.texture.get_width(), friend.texture.get_height()) * friend.scale
 
 
 func _confetti_count(main: Node) -> int:
