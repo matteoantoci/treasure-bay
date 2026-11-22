@@ -137,8 +137,9 @@ func test_an_8_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	panel.reset_button.advance(8.0)
 	t.assert_true(not panel.is_open(), "the reset closes the settings")
 	t.assert_true(not t.paused, "the reset unpauses play")
-	t.assert_eq(SaveStore.to_dictionary(main.progress), SaveStore.to_dictionary(Progress.new()), "Labyrinth 1, empty Collection, total 0")
-	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(Progress.new()), "the save holds the reset")
+	t.assert_true(main.progress.is_fresh(), "Labyrinth 1, empty Collection, total 0")
+	t.assert_true(main.progress.seeds != LabyrinthPlan.FIXED_SEEDS, "a new Voyage with new seeds")
+	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(main.progress), "the save holds the reset")
 	t.assert_eq(started, [1], "Labyrinth 1 starts")
 	t.assert_eq([main.labyrinth.width, main.labyrinth.height], [4, 3], "the 4 x 3 Labyrinth 1")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
@@ -148,7 +149,7 @@ func test_an_8_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	t.assert_true(await t.wait_for(main.labyrinth_ready, 5.0), "the screen fades in from dark")
 	t.assert_eq(main.get_node("Fade").dark.color.a, 0.0, "the screen is clear after the fade-in")
 	_mouse(t, panel.reset_button, false)
-	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the Child can sail Labyrinth 1")
+	t.assert_true(await Scene.press(t, main, Scene.key_for(Scene.next_step(main.labyrinth, main.boat_square))), "the Child can sail Labyrinth 1")
 	await Scene.remove(t, main)
 	return true
 
@@ -178,13 +179,14 @@ func test_a_reset_during_a_slide_starts_labyrinth_1_on_its_start_square(t) -> bo
 	panel.reset_button.button_down.emit()
 	panel.reset_button.advance(panel.reset_button.hold_seconds)
 	panel.reset_button.button_up.emit()
+	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the reset ends")
 	await t.create_timer(1.0).timeout
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the old slide does not move the boat")
 	t.assert_eq(main.progress.total_items, 0, "the old slide collects nothing")
-	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the boat sails in Labyrinth 1")
-	t.assert_eq(main.boat_square.x, 0, "down from the start square")
-	t.assert_true(main.boat_square.y > 0, "the boat moved down")
+	# Labyrinth 1 of the new Voyage: the first step of its main path.
+	t.assert_true(await Scene.press(t, main, Scene.key_for(Scene.next_step(main.labyrinth, main.boat_square))), "the boat sails in Labyrinth 1")
+	t.assert_true(main.boat_square != Vector2i(0, 0), "the boat moved from the start square")
 	await Scene.remove(t, main)
 	return true
 

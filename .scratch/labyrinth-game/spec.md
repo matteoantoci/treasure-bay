@@ -130,7 +130,9 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 
 ### 4.3 The 20 fixed Labyrinths, sizes, Items, Areas
 
-- Labyrinths 1 to 20 are fixed. Labyrinth n uses entry n of the seed table below ([play-improvements spec](../play-improvements/spec.md) part 3). This replaces the rule "Labyrinth n uses seed n" of gap-audit default 15. Labyrinth 1 is always the same Labyrinth.
+- A **Voyage** is the 20 Labyrinths from Labyrinth 1 to the Goal of Labyrinth 20. Each Voyage has its own 20 seeds, one for each slot n, and Labyrinth n uses the seed of slot n ([game-flow spec](../game-flow/spec.md) part 1). The Goal of Labyrinth 20 starts a new Voyage (section 6.4). No Labyrinth 21 exists. This replaces the rule "Labyrinths 1 to 20 are fixed" of the [play-improvements spec](../play-improvements/spec.md) part 3 and the rule "Labyrinth n uses seed n" of gap-audit default 15.
+- **New Voyage:** the module `src/difficulty_curve.gd` holds `meets_conditions(n, seed)` (the conditions below) and `new_voyage(start_value)`. `new_voyage` does no search. It picks the seed of each slot n from the seed pool `src/seed_pool.gd`: 100 seeds for each slot, the first seeds from 1 upward that meet `meets_conditions`. The own PRNG with `start_value` gives the pick: index `prng.next() % 100`. The second slot of a size never takes the seed of the first slot of that size: on the same seed, it takes the next seed of its row. The game gives `randi()` as `start_value`. One new Voyage takes less than 0.1 ms. This replaces the search from a random start seed of the [game-flow spec](../game-flow/spec.md) part 1 (Parent decision of 2026-11-22: the search took about 1.1 s). After a change of the curve, run `tools/seed_search.gd -- --pool` to write the pool again.
+- The seed table below stays: for the save migration (section 12.3), for a new game with no save, and for the tests. A new game with no save uses the seed table, so Labyrinth 1 of the first Voyage is always the same Labyrinth.
 - The size grows by one column or one row after every 2 Labyrinths (gap-audit default 17).
 - Item count: `clamp(floor(W * H / 6), 2, 8)` (gap-audit default 18).
 - Area: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, and 16 to 20 Area 4. For every n: `area = ((n - 1) / 5) % 4 + 1`, with integer division ([ticket 15](issues/15-reward-after-labyrinth-20.md)).
@@ -147,9 +149,8 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 | 15, 16 | 8 × 6 | 17 × 13 | 8 |
 | 17, 18 | 9 × 6 | 19 × 13 | 8 |
 | 19, 20 | 9 × 7 | 19 × 15 | 8 |
-| 21 and later (random) | 10 × 7 | 21 × 15 | 8 |
 
-**Seed table.** Each Labyrinth 1 to 20 is a little harder than the one before. The seed-search tool `tools/seed_search.gd` selects the seed of each Labyrinth by measured difficulty and prints the table. Run it headless: `godot --headless --path . --script res://tools/seed_search.gd`. The Parent can change T or the conditions in the tool and run it again to tune the curve. Then copy the printed seeds into `LabyrinthPlan.FIXED_SEEDS`, and update `tests/spec_port.py` and the pins of the tests.
+**Seed table.** Each Labyrinth 1 to 20 is a little harder than the one before. The seed-search tool `tools/seed_search.gd` selects the seed of each Labyrinth by measured difficulty and prints the table. Run it headless: `godot --headless --path . --script res://tools/seed_search.gd`. Its second mode, `-- --cost`, measures for each slot the tries from 1000 random start seeds (largest and median), the different valid seeds of the two 4 × 3 slots, and the time of one new Voyage. Its third mode, `-- --pool`, writes the seed pool `src/seed_pool.gd` ([game-flow spec](../game-flow/spec.md) part 1). The conditions are in `src/difficulty_curve.gd`, which the game and the tool share. The Parent can change T or the conditions there and run the tool again to tune the curve. Then copy the printed seeds into `LabyrinthPlan.FIXED_SEEDS`, and update `tests/spec_port.py` and the pins of the tests.
 
 - The measure of a Labyrinth with its Items (`src/labyrinth_measure.gd`):
   - **Main path:** the only chain of squares P from the start P[0] to the Goal P[L]. The **main path length** L counts moves.
@@ -181,10 +182,7 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 
 ### 4.4 Random Labyrinths after Labyrinth 20
 
-- From Labyrinth 21, each Labyrinth is random at 10 × 7 ([ticket 05](issues/05-levels-and-difficulty.md)).
-- Call `randomize()` one time at startup. For each new random Labyrinth, the seed is `randi()`. A seed of 0 becomes 1. The game saves this seed in `random_seed` (section 12). Generation uses only the own PRNG (gap-audit default 16).
-- The Area changes every 5 Labyrinths in the order of Labyrinths 1 to 20: 21 to 25 is Area 1, 26 to 30 is Area 2, and so on ([ticket 15](issues/15-reward-after-labyrinth-20.md)).
-- The valid-seed check does not change, so a saved `random_seed` gives the same layout as before the [play-improvements spec](../play-improvements/spec.md). Only the Item squares change, because of the placement rule of section 4.6 (play-improvements spec part 3).
+- Removed ([game-flow spec](../game-flow/spec.md) part 1). The game has no Labyrinth after Labyrinth 20. The Goal of Labyrinth 20 starts a new Voyage with new seeds (sections 4.3 and 6.4). Call `randomize()` one time at startup: the start value of a new Voyage is `randi()`. Generation uses only the own PRNG (gap-audit default 16).
 
 ### 4.5 Squares and tiles
 
@@ -206,7 +204,7 @@ Source: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](issu
 4. Each Item has its own square. No Item is on the start square or the Goal square.
 5. Item i (0-based, in placement order) has kind `area_items[i % len(area_items)]` (section 7.2).
 6. The Item ID is `"x,y"` with the square coordinates.
-7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. For a random Labyrinth, add 1 to the seed and generate again. A test checks that the seeds of the seed table of section 4.3 are valid. See Open gap 4.
+7. If no dead end exists except the start and the Goal, the seed does not give a valid Labyrinth. `meets_conditions` is false for such a seed, so no seed of a Voyage has this problem ([game-flow spec](../game-flow/spec.md) part 1). A test checks that the seeds of the seed table of section 4.3 are valid. See Open gap 4.
 8. The Child can reach each Item before the Goal, because no square is behind the Goal (section 4.2). The Child gets at least one Item on the way to the Goal, also when she sails straight to the chest.
 
 ### 4.7 Sea friend for each Labyrinth
@@ -272,7 +270,7 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 - Each Labyrinth has 2 to 8 Items (section 4.3). The Child does not need any Item to reach the Goal.
 - The boat stops on each Item square that it reaches. The Item makes a pop sound and a sparkle, then flies to its outline at the top (section 8.4).
 - The Item row at the top shows one outline for each Item of this Labyrinth. Each collected Item fills its outline. The row never gets smaller.
-- The total count of all collected Items goes up by 1 for each new Item. It never goes down, except after a Parent reset.
+- The total count of all collected Items goes up by 1 for each new Item. It never goes down, except after a Parent reset. It stays at the start of a new Voyage ([game-flow spec](../game-flow/spec.md) part 1).
 - The game saves after each Item (section 12).
 
 ### 6.2 Goal
@@ -288,13 +286,12 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 - At 1.4 s, the Sea friend of this Labyrinth appears next to the Goal island. Its sound plays. At 3.0 s it flies to its slot in the Collection strip, and it arrives at 3.7 s (section 8.6).
 - At 4.2 s the next Labyrinth starts by itself with the fade (section 8.8). The Child does not choose.
 
-### 6.4 Reward after Labyrinth 20
+### 6.4 The end of a Voyage
 
-Source: [ticket 15](issues/15-reward-after-labyrinth-20.md), gap-audit default 30.
+Source: [game-flow spec](../game-flow/spec.md) part 1. This replaces the Sea friends that came back after Labyrinth 20 ([ticket 15](issues/15-reward-after-labyrinth-20.md)).
 
-- At each Goal from Labyrinth 21, a random Sea friend from the Collection comes back. It does the same arrival motion and plays its own sound.
-- The game never picks the same Sea friend two times in a row. The save keeps the last one in `last_returning_friend`, so the rule also holds after a restart. At the Goal of Labyrinth 21, `last_returning_friend` is `""`, so the game uses the last Sea friend of the Collection (the flamingo of Labyrinth 20) as the last one.
-- It flies back to its own slot in the strip. The strip does not grow.
+- The Goal of Labyrinth 20 adds the flamingo to the Collection, then starts a new Voyage: Labyrinth 1, new seeds, no collected Items, and an empty Collection. The total count of collected Items stays. The game saves this new progress before the celebration (section 12.2).
+- No Sea friend comes back. The Child never gets a Sea friend that she already has.
 
 ### 6.5 Collection
 
@@ -412,7 +409,6 @@ The times start at the arrival on the Goal square (0 ms):
 - 1.9 s: it wiggles. Its rotation goes from −0.15 rad to +0.15 rad in 250 ms (`inout`), then to 0 in 250 ms (`inout`).
 - 3.0 s: it flies to its strip slot in 700 ms (`inout`) and shrinks to the strip icon size.
 - 3.7 s: 10 sparkles in `#ffffff` and `#ffe07a`, speed 100 px/s, life 500 ms. The slot now shows the Sea friend.
-- After Labyrinth 20, the Sea friend that comes back does the same motion and flies to its own slot (section 6.4).
 
 ### 8.7 Item outlines
 
@@ -615,7 +611,7 @@ Sources: [ticket 09](issues/09-saved-progress.md), [ticket 16](issues/16-parent-
 - **Hold buttons (reset and quit):** use `Button.button_down` and `Button.button_up`. The hold time and the full ring colour are values of each hold button. A ring around the button fills in the hold time of the button. If the Parent lets go before the hold time, the ring goes back to empty and nothing happens (play-improvements spec, part 5).
   - Reset: a hold of 8 s, so the Child cannot reset the game by accident. The ring fills in `#ff7a59`.
   - Quit: a hold of 3 s. The ring fills in `#ffd447`.
-- **Reset after 8 s:** the panel closes and the game unpauses. Before the reset writes the new save, the save store copies the current `user://save.json` to `user://save.before-reset.json`. The copy uses the write rule of section 12.3: `user://save.before-reset.json.tmp`, then a rename.
+- **Reset after 8 s:** the panel closes and the game unpauses. The reset starts a new Voyage: new seeds, Labyrinth 1, an empty Collection, and a total of 0 ([game-flow spec](../game-flow/spec.md) part 1). Before the reset writes the new save, the save store copies the current `user://save.json` to `user://save.before-reset.json`. The copy uses the write rule of section 12.3: `user://save.before-reset.json.tmp`, then a rename.
   - The game makes the copy only when the progress in memory is not fresh. Progress is fresh when the Labyrinth is 1, the Collection is empty, and `total_items` is 0. So a reset of fresh progress keeps the older copy, and a second reset after a reset by mistake does not replace the real Collection. A reset of progress that is not fresh replaces the older copy.
   - With no save file, or in the no-write state of section 12.3, the game makes no copy.
   - If the copy fails, the game logs a warning and the reset goes on.
@@ -658,32 +654,30 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "labyrinth": 7,
-  "random_seed": 0,
+  "seeds": [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30],
   "collected_items": ["3,1", "0,2"],
   "collection": ["crab", "octopus", "spouting_whale", "whale", "dolphin", "fish"],
-  "total_items": 23,
-  "last_returning_friend": ""
+  "total_items": 23
 }
 ```
 
 | Field | Content |
 |---|---|
-| `version` | Schema version. Now 1. |
-| `labyrinth` | Current Labyrinth number, from 1. |
-| `random_seed` | Seed of the current random Labyrinth when `labyrinth` > 20. Otherwise 0. |
+| `version` | Schema version. Now 2 ([game-flow spec](../game-flow/spec.md) part 1). |
+| `labyrinth` | Current Labyrinth number, from 1 to 20. |
+| `seeds` | The 20 seeds of the current Voyage. Labyrinth n uses entry n. Each seed is a positive integer. |
 | `collected_items` | IDs (`"x,y"`) of the Items collected in the current Labyrinth. |
 | `collection` | Sea friend IDs in the order the Child got them. |
 | `total_items` | Total count of collected Items. |
-| `last_returning_friend` | ID of the last Sea friend that came back after Labyrinth 20, or `""`. |
 
-- Godot JSON reads every number as a float. Convert `version`, `labyrinth`, `random_seed`, and `total_items` with `int()` after the load ([save-systems skill](../../.claude/skills/save-systems/SKILL.md)).
+- Godot JSON reads every number as a float. Convert `version`, `labyrinth`, each entry of `seeds`, and `total_items` with `int()` after the load ([save-systems skill](../../.claude/skills/save-systems/SKILL.md)).
 
 ### 12.2 When to save
 
 - After each collected Item.
-- At each Goal, before the celebration. This save has the new Sea friend in `collection` (Labyrinths 1 to 20) or the new `last_returning_friend` (after 20), `labyrinth` + 1, an empty `collected_items`, and a new `random_seed` when the next Labyrinth is above 20. A quit during the celebration keeps the Sea friend.
+- At each Goal, before the celebration. After Labyrinths 1 to 19, this save has the new Sea friend in `collection`, `labyrinth` + 1, and an empty `collected_items`. A quit during the celebration keeps the Sea friend. After Labyrinth 20, this save has the new Voyage: `labyrinth` 1, new `seeds`, an empty `collected_items`, an empty `collection`, and the same `total_items` ([game-flow spec](../game-flow/spec.md) part 1).
 - After a Parent reset, and before a quit.
 - The boat position is not saved. After a restart, the boat starts on the start square. The collected Items of the current Labyrinth stay collected, so one Item never counts two times.
 
@@ -695,17 +689,20 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
   - the JSON does not parse, or it is not a dictionary,
   - a field is absent or has the wrong type,
   - `version` is not a whole number, or it is 0 or less (not a real version),
-  - `labyrinth` is below 1,
-  - `labyrinth` is above 20 and `random_seed` is 0,
+  - `labyrinth` is below 1 or above 20,
+  - `seeds` does not hold exactly 20 entries, or an entry is not a whole number, or it is 0 or less ([game-flow spec](../game-flow/spec.md) part 1),
   - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
 - **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
-- **Save from before the seed table:** a save from before the seed table of section 4.3 keeps its Labyrinth number and its Collection ([play-improvements spec](../play-improvements/spec.md) part 3). The current fixed Labyrinth gets a new layout and new Item squares. A current random Labyrinth keeps its layout and gets new Item squares (section 4.6 rule 3). The load then does this with `collected_items`:
+- **Save from before the seed table:** a save from before the seed table of section 4.3 keeps its Labyrinth number and its Collection ([play-improvements spec](../play-improvements/spec.md) part 3). The current fixed Labyrinth gets a new layout and new Item squares. The load then does this with `collected_items`:
   - The rule "Old Item ID" drops each collected Item ID that has no Item now. The Items of the new layout that the save does not name show on the water.
   - A collected Item ID that matches a new Item square counts that new Item as collected. The Item does not show.
   - `total_items` does not change on the load. An Item that comes back adds 1 again when the Child collects it.
   - No save becomes broken, because each ID is still a free square: the start and Goal squares do not move.
-- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain and the target version as inputs, so a test can run a chain of one migration. Version 1 is the first version, so the chain is empty now. A version of 0 or less is not an older version: the file is broken (see the list above).
+- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain and the target version as inputs, so a test can run a chain of one migration. The chain holds one migration now, from version 1 to version 2 ([game-flow spec](../game-flow/spec.md) part 1):
+  - `labyrinth` 1 to 20: `seeds` becomes the seed table of section 4.3, so the Labyrinth and its Items stay the same. The other fields stay. `random_seed` and `last_returning_friend` go away.
+  - `labyrinth` above 20: a new Voyage. `labyrinth` becomes 1, `seeds` become a new Voyage, `collected_items` and `collection` become empty, and `total_items` stays.
+  - The result goes through the checks of the list above, so a broken version 1 field stays broken. A version of 0 or less is not an older version: the file is broken (see the list above).
 - **Newer version:** a file with a `version` above the current version is from a newer build. It is not broken. Do not rename it to `save.bak`: it stays in place with the same bytes. The game plays Labyrinth 1 in memory. The save store goes into a no-write state for the session: each save call returns without a write and logs one warning. A reset makes no copy (play-improvements spec, part 5).
 
 ### 12.4 Settings file
@@ -779,7 +776,7 @@ godot --headless --path . --script res://tests/run.gd
 
 Tests:
 1. **PRNG:** the first 5 outputs for seed 1 are pinned. Seed 0 gives the same outputs as seed 1. All outputs are from 1 to 2^32 − 1.
-2. **Generator:** for Labyrinths 1 to 20 and for 200 random seeds:
+2. **Generator:** for Labyrinths 1 to 20 and for 200 random seeds at 9 × 7:
    - the size matches the table of section 4.3,
    - exactly W × H − 1 walls are open,
    - each square is reachable from the start,
@@ -787,7 +784,7 @@ Tests:
    - the Goal square has exactly one open side,
    - each square is reachable from the start with a breadth-first search that does not continue from the Goal square. No Labyrinth has a square behind the Goal.
    The full wall data of Labyrinth 1 is pinned. The pinned values of the tests come from `tests/spec_port.py`, a separate Python port of section 4.
-3. **Items:** for Labyrinths 1 to 20 and for 200 random seeds:
+3. **Items:** for Labyrinths 1 to 20 of the seed table and of one new Voyage with a fixed start value ([game-flow spec](../game-flow/spec.md) part 1):
    - the count matches section 4.3,
    - at least one Item is in a dead end,
    - Item 1 is on the farthest dead end,
@@ -795,7 +792,8 @@ Tests:
    - no Item is on the start square or the Goal square,
    - all Item squares are different,
    - the kinds follow the Area list.
-   The seeds of the seed table of section 4.3 are all valid. A random seed with no valid dead end moves to seed + 1. The Item IDs of Labyrinths 1 to 20 and of two random seeds are pinned from `tests/spec_port.py`. A random Labyrinth keeps its layout for its saved seed: the wall data of one random seed is pinned.
+   The seeds of the seed table of section 4.3 are all valid. The Item IDs of Labyrinths 1 to 20 are pinned from `tests/spec_port.py`.
+   **Difficulty curve** ([game-flow spec](../game-flow/spec.md) part 1): each seed of `new_voyage` meets the conditions of its slot. The same start value gives the same seeds, and two different values give different Voyages. The second slot of a size never takes the seed of the first. Each seed of the seed pool meets the conditions of its slot.
    **Fixed seeds:** for each Labyrinth 1 to 20, the measure of section 4.3 gives presses = T(n) and decisions from d to d + 2, and the other conditions of the seed search hold. The two Labyrinths of each size have different seeds. `tests/spec_port.py` runs its own seed search and checks that it gives the seed table.
 4. **Move rule:** on fixed small Labyrinths, the boat stops at:
    - a junction,
@@ -815,7 +813,7 @@ Tests:
    - The Area of n = 1 to 45 matches section 4.3.
    - The music track matches the Area.
    - The Sea friend of n = 1 to 20 matches section 4.7.
-   - In 1000 draws after Labyrinth 20, the Sea friend that comes back is never the same two times in a row, and it is always in the Collection. At the Goal of Labyrinth 21, the flamingo of Labyrinth 20 does not come back.
+   - The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage: Labyrinth 1, new seeds, an empty Collection, and the same total ([game-flow spec](../game-flow/spec.md) part 1).
 7. **Save:**
    - A save and a load give the same state.
    - No file gives Labyrinth 1.
@@ -867,11 +865,11 @@ The build is complete when each criterion is true:
 3. The arrow keys are the only keys that act in play. A held arrow key moves the boat one time.
 4. One arrow press moves the boat in a straight line to the next junction, bend, dead end, Item, or Goal, at 180 ms for each tile, with the `out` curve.
 5. A press toward a wall makes a bump of 0.12 tile (70 ms, then 110 ms), plays the wall sound, and does not move the boat.
-6. Labyrinth 1 is 4 × 3 squares with 2 Items and is the same at each new start. Labyrinths 1 to 20 match the table of section 4.3. Labyrinths from 21 are random at 10 × 7 with 8 Items.
+6. Labyrinth 1 is 4 × 3 squares with 2 Items and is the same at each new start. Labyrinths 1 to 20 match the table of section 4.3. Each later Voyage has new Labyrinths with the same sizes and Item counts ([game-flow spec](../game-flow/spec.md) part 1).
 7. Each Labyrinth has at least one Item in a dead end. No Item is on the start square or the Goal square.
 8. The boat stops on each Item square. The Item pops, plays the pop sound, flies to its outline, and the outline fills.
 9. At the Goal of Labyrinth n (1 to 20): the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade.
-10. After Labyrinth 20, a random Sea friend from the Collection comes back at each Goal, never the same one two times in a row, also after a restart.
+10. The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage at Labyrinth 1 with an empty Collection and the same total count. No Sea friend comes back ([game-flow spec](../game-flow/spec.md) part 1).
 11. The Area look and the music change at Labyrinths 6, 11, 16, 21, and every 5 Labyrinths after that, in the order Area 1, 2, 3, 4, 1. The first Item kind of the new Area pops up big in the centre, then fades.
 12. The islands are Kenney tiles with sand coasts. The water and the foam do not move, the boat leaves a wake, and the boat rocks when it does not move.
 13. The Goal island has a palm and a chest. No wall island has a palm.
@@ -922,7 +920,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 15. New-Area sign: the motion prototype (the Area number) against the Answer of [ticket 11](issues/11-motion-and-animation.md) (the first Item, big). The Answer wins.
 16. Area-start times: [ticket 11](issues/11-motion-and-animation.md) "plays while the screen fades in" (1.4 s), the 500 ms fade-in, and the 900 ms delay in the prototype. The ticket text wins: the Item starts with the fade-in, and the input unlocks at the end of the fade-in.
 17. `save.bak`: [ticket 09](issues/09-saved-progress.md) "A broken file: rename it to save.bak" against the [save-systems skill](../../.claude/skills/save-systems/SKILL.md) (keep the last good save as `.bak`). The ticket wins.
-18. Random Labyrinth size: [ticket 05](issues/05-levels-and-difficulty.md) "at the largest size" against its own step rule, which reaches only 9 × 7 at Labyrinth 20. Gap-audit default 17 decides: random Labyrinths are 10 × 7.
+18. Random Labyrinth size: [ticket 05](issues/05-levels-and-difficulty.md) "at the largest size" against its own step rule, which reaches only 9 × 7 at Labyrinth 20. Gap-audit default 17 decides: random Labyrinths are 10 × 7. The random Labyrinths are removed now ([game-flow spec](../game-flow/spec.md) part 1).
 19. Tile size: [research/graphics.md](research/graphics.md) "64×64 tiles" against the repo tiles at 128 × 128. The repo files win.
 20. Speed unit: [ticket 03](issues/03-arrow-key-movement.md) "180 ms for each square" was set on a thin-wall grid. The motion prototype, which the Parent judged last, moves 180 ms for each 130 px tile. With the tile grid of section 4.5, one square is 2 tiles. The motion prototype wins: 180 ms for each tile.
 21. Sound downloads: [ticket 10](issues/10-source-the-sounds.md) and [research/sounds.md](research/sounds.md) ("Downloads from Freesound need a free account", "do not use" the preview files) against [ticket 19](issues/19-gaps-before-the-spec.md) Q6 (use the `-hq.mp3` previews, no login). Ticket 19 wins.
@@ -938,7 +936,7 @@ No source decides these facts. The build uses the stated value. The Parent can c
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
 2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
 3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 are spec values. The chest is 115 % of a tile wide on the seam of the 2 Goal island tiles, and the palm is on the outer tile ([game-flow spec](../game-flow/spec.md) part 5, fix 4). This replaces the chest of 100 px × `s` at the side next to the Goal square, which covered a part of the foam line ([play-improvements spec](../play-improvements/spec.md) part 2). A test checks that the opaque pixels of the chest and of the palm are over the land of the Kenney tiles in Labyrinths 1 to 20.
-4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. A random seed moves to seed + 1. The seed search of section 4.3 takes only seeds with a free dead end, so the 20 seeds of the seed table are valid. A test checks them.
+4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. The seed search of section 4.3 and `meets_conditions` of a new Voyage take only seeds with a free dead end, so the 20 seeds of the seed table are valid. A test checks them.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
 6. **Decoration values.** Ticket 19 Q3 names the decorations, but no source gives their counts or sizes. The spec values, in prototype px (multiply by `s`). The decorations do not move ([game-flow spec](../game-flow/spec.md) part 5, fix 2):
    - Area 1 waves: 6 crests, 24 × 8 px, at 85 % opacity.

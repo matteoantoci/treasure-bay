@@ -4,7 +4,6 @@ extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
 
-const RANDOM_SEED_COUNT := 200
 # An L-shaped main path (0, 0) to (2, 1). The squares (1, 0) and (2, 0) are a side branch.
 const BEND := [
 	"#######",
@@ -92,11 +91,10 @@ func test_junctions_on_the_main_path_are_decisions(t) -> bool:
 func test_presses_equal_the_moves_of_the_move_rule_along_the_main_path(t) -> bool:
 	for n in PINNED_MEASURES:
 		_check_presses(t, LabyrinthPlan.build(n), "Labyrinth %d" % n)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 505
-	for i in RANDOM_SEED_COUNT:
-		var seed_value := rng.randi()
-		_check_presses(t, LabyrinthPlan.build(21 + i, seed_value), "random seed %d" % seed_value)
+	# The Labyrinths of a new Voyage (game-flow spec Part 1).
+	var seeds := DifficultyCurve.new_voyage(505)
+	for n in range(1, 21):
+		_check_presses(t, LabyrinthPlan.build(n, seeds), "Labyrinth %d of the Voyage of 505" % n)
 	return true
 
 

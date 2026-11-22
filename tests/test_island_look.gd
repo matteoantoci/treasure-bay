@@ -95,10 +95,8 @@ func test_wall_island_decorations_of_labyrinth_1(t) -> bool:
 
 func test_wall_islands_get_rocks_and_bushes_and_no_palm(t) -> bool:
 	var kinds := {}
-	var numbers := range(1, 21)
-	numbers.append(21)
-	for number in numbers:
-		var labyrinth := LabyrinthPlan.build(number, 12345)
+	for number in range(1, 21):
+		var labyrinth := LabyrinthPlan.build(number)
 		var look := IslandLook.build(labyrinth)
 		for tile: Vector2i in look.decorations:
 			var kind: int = look.decorations[tile]

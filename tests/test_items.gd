@@ -2,13 +2,11 @@
 ## Part 1, the Item counts of spec 4.3, and the Item kinds of spec 7.2.
 extends RefCounted
 
-const RANDOM_SEED_COUNT := 200
 # Spec 4.3: Labyrinth n -> Item count.
 const COUNTS := {
 	1: 2, 2: 2, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 4, 10: 4,
 	11: 5, 12: 5, 13: 6, 14: 6, 15: 8, 16: 8, 17: 8, 18: 8, 19: 8, 20: 8,
 }
-const RANDOM_COUNT := 8
 # Spec 7.2: Item kinds of Areas 1 to 4, in list order.
 const AREA_KINDS := [
 	["spiral_shell", "starfish", "pearl"],
@@ -41,53 +39,18 @@ const PINNED_IDS := {
 	19: ["4,5", "4,6", "2,1", "5,1", "7,6", "3,2", "6,4", "0,6"],
 	20: ["8,2", "3,1", "3,6", "1,4", "3,5", "2,1", "7,6", "0,6"],
 }
-# The same Python port, for random Labyrinths (10 x 7) with these seeds.
-const PINNED_RANDOM_IDS := {
-	4242: ["0,4", "1,3", "6,0", "0,6", "5,5", "9,0", "2,3", "7,3"],
-	123456789: ["6,4", "0,4", "3,5", "3,6", "2,3", "1,0", "4,2", "9,5"],
-}
-# Random seed 4242 (10 x 7), wall bits of each square row by row (north 1, east 2, south 4, west 8),
-# from the same Python port. The layout of a saved seed is the same as before the main-path Items.
-const RANDOM_4242_WALLS := [
-	11, 13, 1, 5, 3, 13, 1, 3, 9, 7,
-	12, 5, 6, 9, 6, 9, 6, 10, 12, 3,
-	9, 5, 5, 6, 9, 4, 3, 12, 3, 10,
-	12, 3, 13, 1, 6, 9, 6, 11, 10, 10,
-	11, 12, 3, 14, 9, 6, 9, 2, 10, 10,
-	8, 3, 12, 5, 6, 11, 10, 12, 4, 6,
-	14, 12, 5, 5, 5, 4, 4, 5, 5, 7,
-]
 
 
 func test_item_count_matches_the_table(t) -> bool:
 	for n in COUNTS:
 		t.assert_eq(LabyrinthPlan.item_count(n), COUNTS[n], "Item count of Labyrinth %d" % n)
 		t.assert_eq(LabyrinthPlan.build(n).items.size(), COUNTS[n], "Items in Labyrinth %d" % n)
-	for n in [21, 45]:
-		t.assert_eq(LabyrinthPlan.item_count(n), RANDOM_COUNT, "Item count of Labyrinth %d" % n)
-		t.assert_eq(LabyrinthPlan.build(n, 4242).items.size(), RANDOM_COUNT, "Items in Labyrinth %d" % n)
 	return true
 
 
 func test_item_squares_of_labyrinths_1_to_20_are_pinned(t) -> bool:
 	for n in PINNED_IDS:
 		t.assert_eq(_ids(LabyrinthPlan.build(n)), PINNED_IDS[n], "Item IDs of Labyrinth %d" % n)
-	return true
-
-
-func test_item_squares_of_random_labyrinths_are_pinned(t) -> bool:
-	for seed_value in PINNED_RANDOM_IDS:
-		t.assert_eq(_ids(LabyrinthPlan.build(21, seed_value)), PINNED_RANDOM_IDS[seed_value], "Item IDs of random seed %d" % seed_value)
-	return true
-
-
-func test_random_labyrinth_keeps_its_layout_for_its_seed(t) -> bool:
-	var labyrinth := LabyrinthPlan.build(21, 4242)
-	var bits := []
-	for y in labyrinth.height:
-		for x in labyrinth.width:
-			bits.append(labyrinth.wall_bits(Vector2i(x, y)))
-	t.assert_eq(bits, RANDOM_4242_WALLS, "wall bits of random seed 4242")
 	return true
 
 
@@ -105,26 +68,11 @@ func test_fixed_labyrinths_follow_the_placement_rules(t) -> bool:
 	return true
 
 
-func test_random_labyrinths_follow_the_placement_rules(t) -> bool:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 4104
-	for i in RANDOM_SEED_COUNT:
-		var number := 21 + i
-		var seed_value := rng.randi()
-		_check_items(t, LabyrinthPlan.build(number, seed_value), number, "random seed %d" % seed_value)
-	return true
-
-
-func test_random_seed_with_no_free_dead_end_moves_to_seed_plus_1(t) -> bool:
-	# At 3 x 2 squares, tests/spec_port.py finds no free dead end for seeds 9, 15, and 16.
-	var size := Vector2i(3, 2)
-	for seed_value in [9, 15, 16]:
-		var labyrinth := LabyrinthGenerator.generate(size.x, size.y, Prng.new(seed_value))
-		t.assert_true(not ItemPlacement.has_free_dead_end(labyrinth), "seed %d at 3 x 2 is not valid" % seed_value)
-	t.assert_eq(LabyrinthPlan.valid_seed(size, 9), 10, "seed 9 moves to 10")
-	t.assert_eq(LabyrinthPlan.valid_seed(size, 15), 17, "seed 15 moves past 16 to 17")
-	t.assert_eq(LabyrinthPlan.valid_seed(size, 10), 10, "a valid seed stays")
-	t.assert_eq(LabyrinthPlan.build(21, 4242).seed_value, 4242, "a valid random seed stays")
+## The Labyrinths of a new Voyage (game-flow spec Part 1) follow the placement rules too.
+func test_the_labyrinths_of_a_new_voyage_follow_the_placement_rules(t) -> bool:
+	var seeds := DifficultyCurve.new_voyage(4242)
+	for n in COUNTS:
+		_check_items(t, LabyrinthPlan.build(n, seeds), n, "Labyrinth %d of the Voyage of 4242" % n)
 	return true
 
 
@@ -140,7 +88,7 @@ func test_first_item_is_in_the_farthest_dead_end(t) -> bool:
 ## The rules of spec 4.6, play-improvements Part 1, and spec 14.1 test 3 for one Labyrinth.
 func _check_items(t, labyrinth: Labyrinth, number: int, label: String) -> void:
 	var items: Array = labyrinth.items
-	t.assert_eq(items.size(), COUNTS.get(number, RANDOM_COUNT), label + ": Item count")
+	t.assert_eq(items.size(), COUNTS[number], label + ": Item count")
 	var in_dead_end := false
 	var squares := {}
 	var kinds_follow := true

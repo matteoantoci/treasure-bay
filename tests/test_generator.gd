@@ -14,7 +14,8 @@ const SIZES := {
 	17: Vector2i(9, 6), 18: Vector2i(9, 6),
 	19: Vector2i(9, 7), 20: Vector2i(9, 7),
 }
-const RANDOM_SIZE := Vector2i(10, 7)
+## The size of Labyrinths 19 and 20. The random seed tests use it.
+const RANDOM_SIZE := Vector2i(9, 7)
 const RANDOM_SEED_COUNT := 200
 
 # Labyrinth 1 (seed 1, 4 x 3), wall bits of each square row by row: north 1, east 2, south 4,
@@ -33,8 +34,6 @@ const LABYRINTH_1_WALLS := [11, 9, 5, 3, 10, 14, 9, 6, 12, 5, 4, 7]
 func test_sizes_match_the_table(t) -> bool:
 	for n in SIZES:
 		t.assert_eq(LabyrinthPlan.size_for(n), SIZES[n], "size of Labyrinth %d" % n)
-	for n in [21, 22, 45, 1000]:
-		t.assert_eq(LabyrinthPlan.size_for(n), RANDOM_SIZE, "size of Labyrinth %d" % n)
 	return true
 
 
@@ -46,12 +45,12 @@ func test_labyrinth_1_wall_data_is_pinned(t) -> bool:
 func test_same_seed_gives_same_labyrinth(t) -> bool:
 	for n in [1, 7, 20]:
 		t.assert_eq(_wall_list(LabyrinthPlan.build(n)), _wall_list(LabyrinthPlan.build(n)), "Labyrinth %d two times" % n)
-	t.assert_eq(_wall_list(LabyrinthPlan.build(21, 4242)), _wall_list(LabyrinthPlan.build(37, 4242)), "random seed 4242 two times")
+	t.assert_eq(_wall_list(_random(4242)), _wall_list(_random(4242)), "random seed 4242 two times")
 	return true
 
 
 func test_seed_sets_the_labyrinth(t) -> bool:
-	var differ := _wall_list(LabyrinthPlan.build(21, 1)) != _wall_list(LabyrinthPlan.build(21, 2))
+	var differ := _wall_list(_random(1)) != _wall_list(_random(2))
 	t.assert_true(differ, "random seeds 1 and 2 give different Labyrinths")
 	return true
 
@@ -64,7 +63,7 @@ func test_fixed_labyrinths_are_perfect(t) -> bool:
 
 func test_random_labyrinths_are_perfect(t) -> bool:
 	for seed_value in _random_seeds():
-		_check_perfect(t, LabyrinthPlan.build(21, seed_value), RANDOM_SIZE, "random seed %d" % seed_value)
+		_check_perfect(t, _random(seed_value), RANDOM_SIZE, "random seed %d" % seed_value)
 	return true
 
 
@@ -82,7 +81,7 @@ func test_fixed_labyrinths_have_no_square_behind_the_goal(t) -> bool:
 func test_random_labyrinths_have_no_square_behind_the_goal(t) -> bool:
 	var behind := []
 	for seed_value in _random_seeds():
-		if not _check_goal_is_a_dead_end(t, LabyrinthPlan.build(21, seed_value), "random seed %d" % seed_value):
+		if not _check_goal_is_a_dead_end(t, _random(seed_value), "random seed %d" % seed_value):
 			behind.append(seed_value)
 	t.assert_eq(behind.size(), 0, "random Labyrinths (of %d) with a square behind the Goal" % RANDOM_SEED_COUNT)
 	return true
@@ -106,6 +105,11 @@ func test_goal_check_finds_a_square_behind_the_goal(t) -> bool:
 	labyrinth.open_wall(Vector2i(2, 0), Vector2i.DOWN)
 	t.assert_eq(_squares_reached_without_the_goal(labyrinth), 6, "the Goal at the end of the line")
 	return true
+
+
+## The 9 x 7 Labyrinth of `seed_value`, with no Items: a new Voyage can use each seed.
+func _random(seed_value: int) -> Labyrinth:
+	return LabyrinthGenerator.generate(RANDOM_SIZE.x, RANDOM_SIZE.y, Prng.new(seed_value))
 
 
 ## The 200 random seeds of spec 14.1 test 2.

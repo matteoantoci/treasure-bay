@@ -32,24 +32,6 @@ func test_a_restart_continues_at_the_saved_labyrinth(t) -> bool:
 	return true
 
 
-func test_a_restart_continues_at_the_saved_random_labyrinth_with_its_seed(t) -> bool:
-	var dir := Fixtures.new_save_dir()
-	var saved := Progress.new()
-	saved.labyrinth_number = 25
-	saved.random_seed = 4242
-	saved.collection = SeaFriends.IDS
-	saved.last_returning_friend = "crab"
-	SaveStore.new(dir).save(saved)
-	var main := await Scene.add_main(t, dir)
-	t.assert_eq(main.progress.labyrinth_number, 25, "Labyrinth 25")
-	t.assert_eq(main.progress.random_seed, 4242, "random seed")
-	t.assert_eq(main.progress.last_returning_friend, "crab", "last returning Sea friend")
-	t.assert_eq(_ids(main.labyrinth), _ids(LabyrinthPlan.build(25, 4242)), "the Labyrinth of seed 4242")
-	t.assert_eq(Scene.wall_list(main.labyrinth), Scene.wall_list(LabyrinthPlan.build(25, 4242)), "the walls of seed 4242")
-	await Scene.remove(t, main)
-	return true
-
-
 func test_a_broken_file_starts_at_labyrinth_1(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
@@ -144,7 +126,7 @@ func test_the_scene_saves_at_the_goal_before_the_celebration(t) -> bool:
 func test_a_newer_save_plays_labyrinth_1_and_writes_nothing(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var save_path := dir.path_join("save.json")
-	var text := JSON.stringify({"version": 2, "labyrinth": 9, "a_new_field": [1, 2]})
+	var text := JSON.stringify({"version": 3, "labyrinth": 9, "a_new_field": [1, 2]})
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
@@ -176,3 +158,24 @@ func _ids(labyrinth: Labyrinth) -> Array:
 	for item in labyrinth.items:
 		ids.append(item.id)
 	return ids
+
+
+## Game-flow spec Part 1: a version 1 save past Labyrinth 20 becomes a new Voyage. The launch shows
+## Labyrinth 1 with an empty strip and the same total count.
+func test_a_version_1_save_past_labyrinth_20_starts_a_new_voyage(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({
+		"version": 1, "labyrinth": 34, "random_seed": 4242, "collected_items": [],
+		"collection": SeaFriends.IDS, "total_items": 260, "last_returning_friend": "crab",
+	}))
+	file.close()
+	var main := await Scene.add_main(t, dir)
+	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(4, 3), "Labyrinth 1 is 4 x 3")
+	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "an empty strip")
+	t.assert_eq(main.get_node("CollectionStrip").count_text(), "260", "the same total count")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "the old save is not broken")
+	await Scene.remove(t, main)
+	Fixtures.remove_save_dir(dir)
+	return true

@@ -9,7 +9,6 @@ const Scene := preload("res://tests/scene_helpers.gd")
 func _show(main: Node, number: int) -> void:
 	var progress := Progress.new()
 	progress.labyrinth_number = number
-	progress.random_seed = 777 if LabyrinthPlan.is_random(number) else 0
 	main.progress = progress
 	main.show_labyrinth()
 
@@ -17,7 +16,7 @@ func _show(main: Node, number: int) -> void:
 func test_the_water_fills_the_screen_in_the_area_colours(t) -> bool:
 	var main := await Scene.add_main(t)
 	var water: WaterView = main.get_node("Water")
-	var expected := {1: "#3fb4d8", 5: "#3fb4d8", 6: "#2aa6a0", 11: "#1f6fb5", 16: "#14284f", 21: "#3fb4d8", 26: "#2aa6a0"}
+	var expected := {1: "#3fb4d8", 5: "#3fb4d8", 6: "#2aa6a0", 11: "#1f6fb5", 16: "#14284f"}
 	for number: int in expected:
 		_show(main, number)
 		t.assert_eq(water.get_rect(), main.get_viewport().get_visible_rect(), "Labyrinth %d: the water covers the screen" % number)
@@ -46,7 +45,7 @@ func test_the_islands_are_kenney_tiles(t) -> bool:
 
 func test_the_goal_island_has_the_palm_and_the_closed_chest(t) -> bool:
 	var main := await Scene.add_main(t)
-	for number in [1, 13, 21]:
+	for number in [1, 13, 20]:
 		_show(main, number)
 		var view: LabyrinthView = main.get_node("LabyrinthView")
 		var tile_px: float = view.tile_px
