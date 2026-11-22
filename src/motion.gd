@@ -137,22 +137,28 @@ const CONFETTI_LIFE := 2.6
 ## The pieces turn 0.2 rad in each frame at 60 fps (the prototype).
 const CONFETTI_SPIN_RAD := 0.2 * 60.0
 
-# Sea friend (spec 8.6). Times from the arrival on the Goal square.
+# Sea friend (spec 8.6, game-flow spec part 6, fix 5). Times from the arrival on the Goal square.
 const FRIEND_APPEARS_AT := 1.4
-## Spec 8.6 says (-60, +60) px from the Goal island centre. In the prototype the Goal island was
-## below the boat; here it is right of the Goal square, so at x = -60 the Sea friend covered the
-## chest and the boat. The chest of 115 % of a tile sits on the seam of the Goal island tile and
-## the outer tile (game-flow spec part 5, fix 4), so the Sea friend grows at x = +175, right of the
-## chest, over the outer tile. The open chest and the boat stay in view.
-const FRIEND_START_PX := Vector2(175, 60)
-const FRIEND_PX := 110.0
-const FRIEND_SCALE := 1.3
-const FRIEND_GROW_SECONDS := 0.45
-const FRIEND_GROW_CURVE := Easing.BACK
-## It moves up to 30 px above the Goal island centre while it grows.
-const FRIEND_RISE_PX := 30.0
+## At the reveal the screen gets darker: black at 55 % in 250 ms. The dark layer fades out while
+## the Sea friend flies to its slot.
+const REVEAL_DARK_COLOUR := Color(0, 0, 0, 0.55)
+const REVEAL_DARK_SECONDS := 0.25
+const REVEAL_DARK_CURVE := Easing.OUT
+## A soft light disc in the middle of the Labyrinth area: a warm white at 55 % in its centre that
+## goes to 0 at its edge. Its radius is 280 px at a height of 1200 px (the polish mockup).
+const REVEAL_LIGHT_COLOUR := Color("#fff0b4", 0.55)
+const REVEAL_LIGHT_RADIUS_SHARE := 280.0 / 1200.0
+## The Sea friend flips in at the middle of the Labyrinth area. Its full size, the longer side of
+## the picture, is 35 % of the visible height. The flip has two halves of 140 ms. In the first
+## half the horizontal scale goes from 0 to full and the size from 50 % to 108 %. In the second
+## half the size settles at 100 %.
+const FRIEND_HEIGHT_SHARE := 0.35
+const FRIEND_FLIP_HALF_SECONDS := 0.14
+const FRIEND_FLIP_CURVE := Easing.OUT
+const FRIEND_FLIP_START_SIZE := 0.5
+const FRIEND_FLIP_PEAK_SIZE := 1.08
 const FRIEND_WIGGLES_AT := 1.9
-const FRIEND_WIGGLE_RAD := 0.15
+const FRIEND_WIGGLE_RAD := 0.08
 const FRIEND_WIGGLE_SECONDS := 0.25
 const FRIEND_WIGGLE_CURVE := Easing.INOUT
 const FRIEND_FLIES_AT := 3.0

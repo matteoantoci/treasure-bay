@@ -1,9 +1,9 @@
 ## Takes frames in the middle of the motion of spec 8 in a window (spec 14.2), at 1920 x 1200: the
 ## wake of a slide, an Item in flight to its outline, the locked chest during its shake and the open
 ## chest after the padlock pops (game-flow spec Part 2), the Goal celebration (chest, hop, confetti,
-## Sea friend), the fade to the next Labyrinth, and the first Item of a new Area. A headless run has
-## no pixels. The game draws into a SubViewport of the exact size, so the window size does not
-## matter. The arrow keys go in through the SubViewport.
+## the Sea friend reveal), the fade to the next Labyrinth, and the first Item of a new Area. A
+## headless run has no pixels. The game draws into a SubViewport of the exact size, so the window
+## size does not matter. The arrow keys go in through the SubViewport.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/take_motion_shots.gd
@@ -90,8 +90,10 @@ func _initialize() -> void:
 	# goal_reached fires on the arrival, just before move_finished.
 	await _wait(0.2)
 	await _shot("motion-goal.png", "0.2 s: the open chest, the hop, the confetti")
-	await _wait(1.8)
-	await _shot("motion-sea-friend.png", "2.0 s: the Sea friend wiggles next to the Goal island")
+	await _wait(1.6)
+	await _shot("motion-reveal.png", "1.8 s: the reveal, the Sea friend large on the darker screen")
+	await _wait(0.2)
+	await _shot("motion-sea-friend.png", "2.0 s: the Sea friend wiggles at the reveal")
 	await _wait(1.35)
 	await _shot("motion-sea-friend-fly.png", "3.35 s: the Sea friend flies to its slot")
 	await _wait(1.1)

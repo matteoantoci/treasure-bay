@@ -13,7 +13,7 @@ signal item_collected(item: Item)
 ## Emitted when the boat arrives on the Goal square, before the celebration. The progress already
 ## holds the Sea friend and the next Labyrinth (spec 12.2).
 signal goal_reached(sea_friend: String)
-## Emitted when the Sea friend of the Goal appears next to the Goal island.
+## Emitted when the Sea friend of the Goal flips in at the reveal (game-flow spec part 6, fix 5).
 signal sea_friend_appeared(sea_friend: String)
 ## Emitted at 4.2 s of the Goal celebration, when the fade to the next Labyrinth starts (spec 8.8).
 signal next_labyrinth_coming(number: int)
@@ -61,6 +61,7 @@ var _items_in_flight := 0
 @onready var _collection_strip: CollectionStrip = $CollectionStrip
 @onready var _gear: GearView = $Gear
 @onready var _sea_friend: SeaFriendView = $SeaFriend
+@onready var _reveal: RevealView = $Reveal
 @onready var _effects: EffectsView = $Effects
 @onready var _fade: FadeView = $Fade
 @onready var _settings: SettingsPanel = $Settings
@@ -139,6 +140,7 @@ func _show_current_labyrinth() -> void:
 	_boat.rotation = 0.0
 	_kept_direction = Vector2i.ZERO
 	_sea_friend.stop()
+	_reveal.stop()
 	_effects.clear()
 	_wake.clear()
 	var area := Area.for_labyrinth(progress.labyrinth_number)
@@ -316,16 +318,22 @@ func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
 		Motion.GoalStep.CONFETTI:
 			_effects.burst(Burst.confetti(), island + Vector2(0, -Motion.CONFETTI_RISE_PX * s), s)
 		Motion.GoalStep.FRIEND_APPEARS:
+			# The reveal: the screen gets darker, and the Sea friend flips in large in the middle of
+			# the Labyrinth area (game-flow spec part 6, fix 5).
 			if not friend.is_empty():
-				_sea_friend.appear(load(SeaFriends.texture_path(friend)), island, s)
+				_reveal.show_reveal()
+				var full_px := Motion.FRIEND_HEIGHT_SHARE * _visible_size().y
+				_sea_friend.appear(load(SeaFriends.texture_path(friend)), _reveal.light_centre, full_px)
 				sea_friend_appeared.emit(friend)
 		Motion.GoalStep.FRIEND_WIGGLES:
 			_sea_friend.wiggle()
 		Motion.GoalStep.FRIEND_FLIES:
 			if not friend.is_empty():
 				_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
+				_reveal.fade_out(Motion.FRIEND_FLY_SECONDS, Motion.FRIEND_FLY_CURVE)
 		Motion.GoalStep.FRIEND_IN_SLOT:
 			_sea_friend.stop()
+			_reveal.stop()
 			if not friend.is_empty():
 				_collection_strip.show_friend(friend)
 				var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
@@ -348,6 +356,7 @@ func _layout() -> void:
 	var visible := get_viewport().get_visible_rect()
 	_item_row.layout(visible.size)
 	_collection_strip.layout(visible.size)
+	_reveal.layout(visible, ScreenLayout.labyrinth_area(visible.size))
 	_gear.layout(visible.size)
 	_fade.layout(visible)
 	if labyrinth == null:

@@ -119,17 +119,16 @@ func test_goal_hop_and_confetti(t) -> bool:
 	return true
 
 
-func test_sea_friend_arrival(t) -> bool:
-	# Spec 8.6. The x of the start place is +175, right of the chest on the seam of the 2 Goal island
-	# tiles, not -60: at -60 the Sea friend covers the chest and the boat (ticket 28, game-flow spec
-	# part 5, fix 4).
-	t.assert_eq(Motion.FRIEND_START_PX, Vector2(175, 60), "start place from the Goal island centre")
-	_near(t, Motion.FRIEND_PX, 110.0, "Sea friend size")
-	_near(t, Motion.FRIEND_SCALE, 1.3, "Sea friend scale next to the island")
-	_near(t, Motion.FRIEND_GROW_SECONDS, 0.45, "grow time")
-	t.assert_eq(Motion.FRIEND_GROW_CURVE, Motion.Easing.BACK, "grow curve")
-	_near(t, Motion.FRIEND_RISE_PX, 30.0, "end height above the island centre")
-	_near(t, Motion.FRIEND_WIGGLE_RAD, 0.15, "wiggle angle")
+func test_sea_friend_reveal(t) -> bool:
+	# Spec 8.6 and the reveal of the game-flow spec part 6, fix 5.
+	t.assert_eq(Motion.REVEAL_DARK_COLOUR, Color(0, 0, 0, 0.55), "the dark layer is black at 55 %")
+	_near(t, Motion.REVEAL_DARK_SECONDS, 0.25, "the screen gets darker in 250 ms")
+	_near(t, Motion.FRIEND_HEIGHT_SHARE, 0.35, "the Sea friend is 35 % of the visible height")
+	_near(t, Motion.FRIEND_FLIP_HALF_SECONDS, 0.14, "flip half time")
+	t.assert_eq(Motion.FRIEND_FLIP_CURVE, Motion.Easing.OUT, "flip curve")
+	_near(t, Motion.FRIEND_FLIP_START_SIZE, 0.5, "flip start size")
+	_near(t, Motion.FRIEND_FLIP_PEAK_SIZE, 1.08, "flip peak size")
+	_near(t, Motion.FRIEND_WIGGLE_RAD, 0.08, "wiggle angle")
 	_near(t, Motion.FRIEND_WIGGLE_SECONDS, 0.25, "wiggle half time")
 	t.assert_eq(Motion.FRIEND_WIGGLE_CURVE, Motion.Easing.INOUT, "wiggle curve")
 	_near(t, Motion.FRIEND_FLY_SECONDS, 0.7, "fly to the slot")

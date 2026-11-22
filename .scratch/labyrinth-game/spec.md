@@ -283,7 +283,7 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 ### 6.3 Goal celebration and the Sea friend (Labyrinths 1 to 20)
 
 - When the boat arrives on the Goal square, the game saves first (section 12). Then the celebration plays: the boat hops, confetti falls, the fanfare plays, and the chest opens (section 8.5).
-- At 1.4 s, the Sea friend of this Labyrinth appears next to the Goal island. Its sound plays. At 3.0 s it flies to its slot in the Collection strip, and it arrives at 3.7 s (section 8.6).
+- At 1.4 s, the screen gets darker and the Sea friend of this Labyrinth flips in large in the middle of the Labyrinth area. Its sound plays. At 3.0 s it flies to its slot in the Collection strip, and it arrives at 3.7 s (section 8.6, [game-flow spec](../game-flow/spec.md) part 6, fix 5).
 - At 4.2 s the next Labyrinth starts by itself with the fade (section 8.8). The Child does not choose.
 
 ### 6.4 The end of a Voyage
@@ -405,9 +405,12 @@ The times start at the arrival on the Goal square (0 ms):
 
 ### 8.6 Sea friend
 
-- 1.4 s: the Sea friend appears at (+175, +60) px from the Goal island tile centre, right of the chest of section 6.2 (ticket 28, [game-flow spec](../game-flow/spec.md) part 5, fix 4). This place is temporary: the reveal of the game-flow spec part 6 replaces it. It grows from 0 to 1.3× of 110 px in 450 ms (`back`), and it moves up to 30 px above the island centre in the same 450 ms (`back`).
-- 1.9 s: it wiggles. Its rotation goes from −0.15 rad to +0.15 rad in 250 ms (`inout`), then to 0 in 250 ms (`inout`).
-- 3.0 s: it flies to its strip slot in 700 ms (`inout`) and shrinks to the strip icon size.
+Source of the reveal: [game-flow spec](../game-flow/spec.md) part 6, fix 5. It replaces the Sea friend that grew next to the Goal island (ticket 28).
+
+- 1.4 s: the reveal starts. The screen gets darker: a dark layer of black at 55 % over the whole visible rectangle, from 0 to full in 250 ms (`out`). A soft light disc shows in the middle of the Labyrinth area (section 10): `#fff0b4` at 55 % in its centre, to 0 at its edge, with a radius of 280 px at a height of 1200 px (the polish mockup). The disc fades in with the dark layer. The Labyrinth, the Items, the boat, the Item row, and the gear are under the dark layer. The Collection strip, the Sea friend, and the bursts are above it, so the slot stays clear.
+- 1.4 s: the Sea friend flips in at the middle of the Labyrinth area. Its full size, the longer side of its picture, is 35 % of the visible height (420 px at 1200). The flip has two halves of 140 ms (`out`). In the first half the horizontal scale goes from 0 to full and the size from 50 % to 108 %. In the second half the size settles at 100 %. Its sound plays at the start of the flip.
+- 1.9 s: it wiggles. Its rotation goes from −0.08 rad to +0.08 rad in 250 ms (`inout`), then to 0 in 250 ms (`inout`).
+- 3.0 s: it flies to its strip slot in 700 ms (`inout`) and shrinks to the strip icon size. The dark layer and the light disc fade out in the same 700 ms (`inout`).
 - 3.7 s: 10 sparkles in `#ffffff` and `#ffe07a`, speed 100 px/s, life 500 ms. The slot now shows the Sea friend.
 
 ### 8.7 Item outlines
@@ -581,7 +584,8 @@ Read the visible size from `get_viewport().get_visible_rect().size`. With the as
 - **Top band:** height `round(Hv * 150 / 760)`, 237 px at 1200. It holds the Item row and the gear.
 - **Bottom strip:** height `round(Hv * 70 / 760)`, 111 px at 1200, colour black at 25 % opacity (`Color(0, 0, 0, 0.25)`). It is the Collection.
 - **Labyrinth:** `tile_px = floor(min((Hv - top - bottom) / (2H + 1), Wv / (2W + 1)))`. The Labyrinth is in the middle of the space between the top band and the strip. A 4 × 3 Labyrinth has 121 px tiles, and a 10 × 7 Labyrinth has 56 px tiles at 1920 × 1200. The water fills the whole screen.
-- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px, Sea friend 110 px. These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2. The chest is 115 % of a tile wide ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4).
+- **Labyrinth area:** the space between the top band and the strip, the full width of the screen (`ScreenLayout.labyrinth_area`). The Labyrinth sits in its middle, and the Sea friend reveal too (section 8.6).
+- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px. These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2. The chest is 115 % of a tile wide ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4). The Sea friend of the reveal does not use `s`: it is 35 % of the visible height (section 8.6, [game-flow spec](../game-flow/spec.md) part 6, fix 5).
 - **Item row:** the outlines sit in a row at the centre of the top band, at `y = 60 * h`. The distance between outline centres is `90 * h`, and each outline is `56 * h` px. The row is centred left to right.
 - **Gear:** 64 px, in the top-right corner. Its centre has the same height as the Item row and the same distance from the right edge.
 - **Collection strip:** the total Item count at the left end as a number, in the Godot default font at `64 * h / (1200 / 760)` px (64 px at 1200). The 20 slots fill the rest of the strip with the same distance between their centres. Each slot icon is `44 * h` px (69 px at 1200).
@@ -847,7 +851,7 @@ The build does these checks on the Parent's Mac and reports each result:
 2. The key test of section 11.4, for each key.
 3. Sprite edges are smooth on light water (Area 1) and on dark water (Area 4). The dark outline of each sprite is complete ([ticket 14](issues/14-clean-sprite-edges.md)).
 4. The water and the foam do not move. The boat leaves a soft wake of white dots, and the boat rocks when it does not move.
-5. Each of the 7 motions of section 8 plays: idle, water, wake, Item collect, Goal hop and confetti, Sea friend arrival, fade and new-Area Item.
+5. Each of the 7 motions of section 8 plays: idle, water, wake, Item collect, Goal hop and confetti, Sea friend reveal, fade and new-Area Item.
 6. The chest opens at the Goal.
 7. Each Area shows its colours, Items, decoration, and music.
 8. The music loops with no audible jump, and the Area change crossfades.
