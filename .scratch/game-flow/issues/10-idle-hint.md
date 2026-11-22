@@ -14,3 +14,17 @@
 - [x] The build spec (`.scratch/labyrinth-game/spec.md`) gets errata for each section that this ticket changes.
 
 Build note (gf/10-idle-hint): The new node `IdleHint` (`src/idle_hint.gd`) in `main.tscn` counts the seconds of free play with no key press. Each key press (any key, not only the arrow keys) sets the time and the hop count to 0. While the play is not free, the time does not count, and it starts again from 0 when the play is free again: after a move, after the fade-in, and after the settings close. The main scene gives the rule of free play in `_is_play_free()`: a Labyrinth shows, no lock, no move, no opening screen, and the settings closed. The Goal celebration, the fades, the opening screen, and the Party keep the input locked, so no hop comes on them. After 6 s (`Motion.HINT_IDLE_SECONDS`) the main scene hops the target and emits `hint_hopped(square)`. At most 3 hops (`Motion.HINT_HOP_COUNT`) come until the next key press. The target is the Goal square while the chest is open, else the uncollected Item with the shortest press path from the boat. `MoveRule.nearest_target()` finds the path with the move rule. It is the breadth-first search that `first_press()` of `tests/scene_helpers.gd` had: that helper now calls it, so the game and the tests use one path finder. Of two paths with the same press count, the first in the order up, right, down, left wins. In Labyrinth 1 the target is the Item on (0, 2), one press down, and not the Item on (1, 1), which is first in the Item list and nearer in a straight line. `LabyrinthView.hop_chest()` and `ItemsView.hop_item()` play the hop. The spec gives no shape for the hop and the squash. The values: in the first 70 % of the 350 ms (245 ms) the target goes up by 12 % of a tile and down again on a sine arc. In the last 30 % (105 ms) it lands with a squash of at most 108 % wide and 92 % tall, with its bottom in place. The Item bob goes on during the hop. A collected Item or a new Labyrinth stops the hop. In the short time from the arrival on the last Item to the pop of the padlock, no target is open: the hop of that time does not show, but it counts as one of the 3. A person must check the feel of the hop and the 6 s value in play. No screenshot shows the hop.
+
+Open (gf/10-idle-hint): the test "no hop on the Party" waits for ticket 07, because `game-flow` has no Party yet. The other main-scene tests are in `tests/test_idle_hint.gd`. The merger of the second of 07 and 10 adds this test to `tests/test_idle_hint.gd` and ticks the box:
+
+```gdscript
+## No hop on the Party.
+func test_no_hop_on_the_party(t) -> bool:
+	var main := await Scene.add_main(t)
+	var hops := _record_hops(main)
+	main.show_party()
+	await _wait(t, HOP_TIMEOUT)
+	t.assert_eq(hops, [], "no hop on the Party")
+	await Scene.remove(t, main)
+	return true
+```
