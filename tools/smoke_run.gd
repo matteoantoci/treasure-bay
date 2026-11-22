@@ -1,8 +1,8 @@
-## Smoke run in a window (ticket 28): the main scene sails Labyrinths 1 to 3 through their Goals
-## with arrow key events through Input.parse_input_event(), with the real audio driver and the
-## Master bus muted. It also bumps into a wall one time. The game saves into a new folder in the OS
-## temp folder, which the tool removes at the end: it never reads or changes the real save or the
-## real settings.
+## Smoke run in a window (ticket 28): Space starts the game on the opening screen, then the main
+## scene sails Labyrinths 1 to 3 through their Goals with arrow key events through
+## Input.parse_input_event(), with the real audio driver and the Master bus muted. It also bumps into
+## a wall one time. The game saves into a new folder in the OS temp folder, which the tool removes
+## at the end: it never reads or changes the real save or the real settings.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/smoke_run.gd
@@ -27,8 +27,9 @@ func _initialize() -> void:
 	root.add_child(_main)
 	current_scene = _main
 	AudioServer.set_bus_mute(AudioServer.get_bus_index(&"Master"), true)
+	_press(KEY_SPACE)
 	if not await _wait_for(_main.labyrinth_ready):
-		_end("the launch fade-in did not end")
+		_end("the start press on the opening screen did not start the game")
 		return
 	# The start square (0, 0) of every Labyrinth has the border to the left, so this press is a
 	# bump whatever the Labyrinth shape. The bump signal fires at the press.

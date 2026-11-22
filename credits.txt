@@ -1,6 +1,7 @@
-Sounds, music, and art in this game
+Sounds, music, art, and the font in this game
 
 Only one file below needs a credit by its licence (CC BY 4.0).
+The font needs its licence file next to it (SIL Open Font License 1.1).
 The other files are CC0 or Pixabay Content License and need no credit.
 We list them all to thank the authors.
 
@@ -44,3 +45,9 @@ Sea friends
 The Sea friends, the Items, and the treasure chest were generated for this family game
 with xai-oauth/grok-imagine-image (the Parent's xAI subscription), in the style of the
 Kenney Pirate Pack. Their rights follow the xAI terms of that subscription.
+
+== Font: SIL Open Font License 1.1 (the licence file goes with the font) ==
+"Fredoka" by Milena Brandão and Hafontia (The Fredoka Project Authors)
+  https://github.com/google/fonts/tree/main/ofl/fredoka
+  Licence: SIL Open Font License 1.1, in assets/fonts/fredoka/OFL.txt
+  Change: none. We renamed the file "Fredoka[wdth,wght].ttf" to "Fredoka-Variable.ttf".

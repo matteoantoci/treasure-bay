@@ -1,10 +1,11 @@
-## Spec 14.1 test 11: the project settings of spec 3.4, and the move actions of spec 5.1.
+## Spec 14.1 test 11: the project settings of spec 3.4, the move actions of spec 5.1, and the
+## confirm action of the opening screen (game-flow spec part 3).
 extends RefCounted
 
 
 func test_settings_of_spec_3_4(t) -> bool:
 	var expected := {
-		"application/config/name": "Labyrinth",
+		"application/config/name": "Treasure Bay",
 		"application/run/main_scene": "res://main.tscn",
 		"display/window/size/viewport_width": 1920,
 		"display/window/size/viewport_height": 1200,
@@ -44,4 +45,20 @@ func test_esc_fires_no_move_action(t) -> bool:
 	esc.pressed = true
 	for action in ["move_up", "move_down", "move_left", "move_right"]:
 		t.assert_true(not InputMap.event_is_action(esc, action), "Esc is not " + action)
+	return true
+
+
+## Game-flow spec part 3: one action holds Space and Enter, as physical keys. The arrow keys keep
+## their own actions.
+func test_the_confirm_action_holds_space_and_enter(t) -> bool:
+	t.assert_true(InputMap.has_action("confirm"), "confirm exists")
+	var keys := []
+	for event in InputMap.action_get_events("confirm"):
+		keys.append([event.physical_keycode, event.keycode] if event is InputEventKey else event.get_class())
+	t.assert_eq(keys, [[KEY_SPACE, KEY_NONE], [KEY_ENTER, KEY_NONE]], "confirm is bound to Space and Enter")
+	for key in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+		var arrow := InputEventKey.new()
+		arrow.physical_keycode = key
+		arrow.pressed = true
+		t.assert_true(not InputMap.event_is_action(arrow, "confirm"), "an arrow key is not confirm")
 	return true

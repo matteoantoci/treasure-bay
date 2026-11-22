@@ -63,6 +63,7 @@ var decorations := {}
 
 static func build(labyrinth: Labyrinth) -> IslandLook:
 	var look := IslandLook.new()
+	var is_island := func(tile: Vector2i) -> bool: return _is_island(labyrinth, tile)
 	var tiles: Array[Vector2i] = []
 	var count := labyrinth.tile_count()
 	for y in count.y:
@@ -72,12 +73,8 @@ static func build(labyrinth: Labyrinth) -> IslandLook:
 	# PRNG outputs.
 	tiles.append(goal_island_tiles(labyrinth)[1])
 	for tile in tiles:
-		if not _is_island(labyrinth, tile):
-			continue
-		for cy in CELLS_PER_TILE:
-			for cx in CELLS_PER_TILE:
-				var side := Vector2i(cx - 1, cy - 1)
-				look.cells[tile * CELLS_PER_TILE + Vector2i(cx, cy)] = _cell_tile(labyrinth, tile, side)
+		if is_island.call(tile):
+			look._add_tile(is_island, tile)
 	var prng := Prng.new(labyrinth.seed_value + 1)
 	for y in count.y:
 		for x in count.x:
@@ -88,11 +85,21 @@ static func build(labyrinth: Labyrinth) -> IslandLook:
 			if r % DECORATION_CHANCE == 0:
 				var pick := (r / DECORATION_CHANCE) % (2 * ROCKS.size())
 				look.decorations[tile] = BUSH if pick < ROCKS.size() else ROCKS[pick - ROCKS.size()]
-	for cell: Vector2i in look.cells:
-		var r := prng.next()
-		var variants: Array = VARIANTS.get(look.cells[cell], [])
-		if r % VARIANT_CHANCE == 0 and not variants.is_empty():
-			look.cells[cell] = variants[(r / VARIANT_CHANCE) % variants.size()]
+	look._pick_variants(prng)
+	return look
+
+
+## An island of `tiles` Labyrinth tiles, all land, from tile (0, 0), in the sea: a sand coast around
+## a grass top, with the cell rules of build(). It has no rock and no bush. A PRNG with seed
+## `seed_value` picks the tile variants. The opening screen and the Party show it (game-flow spec
+## parts 3 and 4).
+static func block(tiles: Vector2i, seed_value: int) -> IslandLook:
+	var look := IslandLook.new()
+	var is_island := func(tile: Vector2i) -> bool: return Rect2i(Vector2i.ZERO, tiles).has_point(tile)
+	for y in tiles.y:
+		for x in tiles.x:
+			look._add_tile(is_island, Vector2i(x, y))
+	look._pick_variants(Prng.new(seed_value))
 	return look
 
 
@@ -103,18 +110,35 @@ static func goal_island_tiles(labyrinth: Labyrinth) -> Array[Vector2i]:
 	return [tile, tile + Vector2i.RIGHT]
 
 
+## Adds the 3 x 3 Kenney cells of the island tile `tile`. `is_island` tells if a tile is island.
+func _add_tile(is_island: Callable, tile: Vector2i) -> void:
+	for cy in CELLS_PER_TILE:
+		for cx in CELLS_PER_TILE:
+			var side := Vector2i(cx - 1, cy - 1)
+			cells[tile * CELLS_PER_TILE + Vector2i(cx, cy)] = _cell_tile(is_island, tile, side)
+
+
+## One Kenney cell in VARIANT_CHANCE gets a variant of its tile, in the order of `cells`.
+func _pick_variants(prng: Prng) -> void:
+	for cell: Vector2i in cells:
+		var r := prng.next()
+		var variants: Array = VARIANTS.get(cells[cell], [])
+		if r % VARIANT_CHANCE == 0 and not variants.is_empty():
+			cells[cell] = variants[(r / VARIANT_CHANCE) % variants.size()]
+
+
 ## The Kenney tile of the cell of `tile` on `side`: (-1, -1) is the top-left cell, (0, 0) the
 ## centre cell. The cell faces the neighbours of `tile` on that side.
-static func _cell_tile(labyrinth: Labyrinth, tile: Vector2i, side: Vector2i) -> int:
-	var island_beside := side.x == 0 or _is_island(labyrinth, tile + Vector2i(side.x, 0))
-	var island_above_or_below := side.y == 0 or _is_island(labyrinth, tile + Vector2i(0, side.y))
+static func _cell_tile(is_island: Callable, tile: Vector2i, side: Vector2i) -> int:
+	var island_beside: bool = side.x == 0 or is_island.call(tile + Vector2i(side.x, 0))
+	var island_above_or_below: bool = side.y == 0 or is_island.call(tile + Vector2i(0, side.y))
 	if not island_beside and not island_above_or_below:
 		return OUTER_CORNERS[side]
 	if not island_above_or_below:
 		return COAST[Vector2i(0, side.y)]
 	if not island_beside:
 		return COAST[Vector2i(side.x, 0)]
-	if side.x != 0 and side.y != 0 and not _is_island(labyrinth, tile + side):
+	if side.x != 0 and side.y != 0 and not is_island.call(tile + side):
 		return INNER_CORNERS[side]
 	return GRASS
 

@@ -1,6 +1,6 @@
-## The motion of the main scene (spec 8): the launch fade-in, the Item fly, the Goal celebration
-## with the chest, the hops, the confetti, and the Sea friend, the fade between Labyrinths, and the
-## first Item of a new Area. The motion values are in test_motion.gd.
+## The motion of the main scene (spec 8): the fades after the start press, the Item fly, the Goal
+## celebration with the chest, the hops, the confetti, and the Sea friend, the fade between
+## Labyrinths, and the first Item of a new Area. The motion values are in test_motion.gd.
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
@@ -23,16 +23,23 @@ func _show(main: Node, number: int) -> void:
 	main.show_labyrinth()
 
 
-func test_the_game_fades_in_from_dark_at_launch(t) -> bool:
-	var main: Node = load("res://main.tscn").instantiate()
-	main.save_store = SaveStore.new(preload("res://tests/fixtures.gd").new_save_dir())
-	t.root.add_child(main)
+## Game-flow spec part 3: the start press on the opening screen fades the screen to dark in 0.8 s.
+## Then the Labyrinth shows, and the screen fades in from dark in 500 ms with no Area Item (spec 8.8).
+func test_the_start_press_fades_to_dark_and_the_labyrinth_fades_in(t) -> bool:
+	var main := await Scene.add_main_at_opening(t)
 	var fade: FadeView = main.get_node("Fade")
-	t.assert_true(fade.dark.color.a > 0.9, "the screen starts dark")
+	t.assert_true(fade.dark.color.a < 0.001, "the opening screen is clear")
+	var start := Time.get_ticks_usec()
+	Scene.send_key(KEY_SPACE)
+	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.MOVE_TIMEOUT), "the Labyrinth shows")
+	_near(t, _seconds_since(start), 0.8, "the Labyrinth shows at the end of the fade to dark")
+	t.assert_true(fade.dark.color.a > 0.9, "the screen is dark")
 	t.assert_true(fade.dark.color.is_equal_approx(Color("#0a1428", fade.dark.color.a)), "dark colour")
+	t.assert_true(not main.is_opening_shown(), "the opening screen is gone")
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in ends")
+	_near(t, _seconds_since(start), 1.3, "the fade-in ends 500 ms later")
 	t.assert_true(fade.dark.color.a < 0.001, "the screen is clear")
-	t.assert_true(not fade.area_item.visible, "no Area Item at launch")
+	t.assert_true(not fade.area_item.visible, "no Area Item")
 	await Scene.remove(t, main)
 	return true
 

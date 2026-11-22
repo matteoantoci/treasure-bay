@@ -85,29 +85,32 @@ func test_presses_are_dropped_from_the_goal_to_the_end_of_the_fade_in(t) -> bool
 	return true
 
 
-## Spec 5.4 and 8.8: at launch the screen fades in from dark. The Child sails after the end of the
-## fade-in (labyrinth_ready), so a press while the screen is dark does not move the boat.
-func test_presses_are_dropped_during_the_launch_fade_in(t) -> bool:
-	var main: Node = load("res://main.tscn").instantiate()
-	main.save_store = SaveStore.new(Scene.Fixtures.new_save_dir())
+## Spec 5.4 and 8.8, game-flow spec part 3: the start press on the opening screen locks the input.
+## The screen fades to dark, and the Labyrinth fades in from dark. The Child sails after the end of
+## the fade-in (labyrinth_ready), so a press during the fades does not move the boat.
+func test_presses_are_dropped_from_the_start_press_to_the_end_of_the_fade_in(t) -> bool:
+	var main := await Scene.add_main_at_opening(t)
 	var moves := Scene.record_moves(main)
-	t.root.add_child(main)
-	Engine.time_scale = Scene.TIME_SCALE
-	await t.process_frame
+	Scene.send_key(KEY_SPACE)
+	# During the fade to dark.
+	Scene.send_key(KEY_DOWN)
+	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.MOVE_TIMEOUT), "Labyrinth 1 shows")
 	t.assert_true(main.get_node("Fade").dark.color.a > 0.5, "the screen is still dark")
+	# During the fade-in.
 	Scene.send_key(KEY_DOWN)
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in ends")
 	await t.create_timer(Scene.NO_MOVE_SECONDS).timeout
-	t.assert_eq(moves, [], "no move and no bump from a press during the launch fade-in")
+	t.assert_eq(moves, [], "no move and no bump from a press during the fades")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat waits on the start square")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "after the fade-in, a press moves the boat")
 	await Scene.remove(t, main)
 	return true
 
 
-## Spec 5.4 and 8.8: after a Parent reset the settings close, and the screen fades in from dark. A
-## press while the screen is dark does not move the boat.
-func test_presses_are_dropped_during_the_fade_in_after_a_reset(t) -> bool:
+## Spec 5.4 and 8.8, game-flow spec part 3: after a Parent reset the settings close, and the
+## opening screen shows. An arrow press on it starts Labyrinth 1 and does not move the boat. A press
+## while the screen is dark does not move the boat.
+func test_presses_are_dropped_after_a_reset_until_the_end_of_the_fade_in(t) -> bool:
 	var main := await Scene.add_main(t)
 	var panel: SettingsPanel = main.get_node("Settings")
 	var moves := Scene.record_moves(main)
@@ -116,11 +119,14 @@ func test_presses_are_dropped_during_the_fade_in_after_a_reset(t) -> bool:
 	panel.reset_button.advance(panel.reset_button.hold_seconds)
 	panel.reset_button.button_up.emit()
 	t.assert_true(not panel.is_open() and not t.paused, "the reset closes the settings and unpauses play")
+	t.assert_true(main.is_opening_shown(), "the opening screen shows")
+	Scene.send_key(KEY_DOWN)
+	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.MOVE_TIMEOUT), "Labyrinth 1 shows")
 	t.assert_true(main.get_node("Fade").dark.color.a > 0.5, "the screen is dark")
 	Scene.send_key(KEY_DOWN)
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in ends")
 	await t.create_timer(Scene.NO_MOVE_SECONDS).timeout
-	t.assert_eq(moves, [], "no move and no bump from a press during the fade-in after the reset")
+	t.assert_eq(moves, [], "no move and no bump from a press on the opening screen or during the fades")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat waits on the start square of Labyrinth 1")
 	t.assert_true(await Scene.press(t, main, KEY_DOWN), "after the fade-in, a press moves the boat")
 	await Scene.remove(t, main)

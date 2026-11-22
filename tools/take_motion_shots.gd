@@ -2,7 +2,7 @@
 ## wake of a slide, an Item in flight to its outline, the Goal celebration (chest, hop, confetti,
 ## Sea friend), the fade to the next Labyrinth, and the first Item of a new Area. A headless run has
 ## no pixels. The game draws into a SubViewport of the exact size, so the window size does not
-## matter. The arrow keys go in through the SubViewport.
+## matter. The arrow keys go in through the SubViewport. Space starts the game on the opening screen.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/take_motion_shots.gd
@@ -31,8 +31,9 @@ func _initialize() -> void:
 	_main = load("res://main.tscn").instantiate()
 	_main.save_store = SaveStore.new(_save_dir)
 	_viewport.add_child(_main)
+	_press(KEY_SPACE)
 	if not await _wait_for(_main.labyrinth_ready):
-		await _end("the launch fade-in did not end")
+		await _end("the start press on the opening screen did not start the game")
 		return
 	# Labyrinth 1: the boat sails the path to the Goal. The first slide shows the wake, the boat
 	# stops on an Item of the path, and the arrival on the Goal starts the celebration.

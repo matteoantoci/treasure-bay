@@ -1,6 +1,7 @@
 ## Acceptance criteria of spec 15 that no other test file checks: the game shows no words
 ## (criterion 2), only the arrow keys act in play (criterion 3), and the game has no network code
-## (criterion 21).
+## (criterion 21). The one exception to criterion 2 is the title of the opening screen (game-flow
+## spec part 3).
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
@@ -12,10 +13,12 @@ const FORBIDDEN_SOURCE := ["draw_string", "draw_char", "draw_multiline_string", 
 	"HTTPClient", "StreamPeerTCP", "StreamPeerTLS", "TCPServer", "PacketPeerUDP", "UDPServer",
 	"WebSocket", "WebRTC", "ENetMultiplayerPeer", "MultiplayerPeer", "IP.resolve", "shell_open",
 	"JavaScriptBridge", "DTLSServer"]
+## The opening screen draws its title letter by letter on an arc (game-flow spec part 3).
+const TITLE_SOURCE := "res://src/opening_screen.gd"
 
 
-## Criterion 2 and spec 10: the only text is the total Item count number in the Collection strip,
-## also with the settings panel open. No Control has a tooltip.
+## Criterion 2 and spec 10: in play, the only text is the total Item count number in the Collection
+## strip, also with the settings panel open. No Control has a tooltip.
 func test_the_only_text_is_the_total_item_count(t) -> bool:
 	var dir := Scene.Fixtures.new_save_dir()
 	var saved := Progress.new()
@@ -31,12 +34,25 @@ func test_the_only_text_is_the_total_item_count(t) -> bool:
 	var tooltips := []
 	for node in _all_nodes(main):
 		var text: Variant = node.get("text")
-		if text is String and not text.is_empty():
+		if text is String and not text.is_empty() and node.is_visible_in_tree():
 			texts.append(text)
 		if node is Control and not node.tooltip_text.is_empty():
 			tooltips.append(node.tooltip_text)
 	t.assert_eq(texts, ["23"], "the only text is the total Item count")
 	t.assert_eq(tooltips, [], "no tooltips")
+	await Scene.remove(t, main)
+	return true
+
+
+## Game-flow spec part 3: on the opening screen, the only text is the game name.
+func test_the_only_text_of_the_opening_screen_is_the_name(t) -> bool:
+	var main := await Scene.add_main_at_opening(t)
+	var texts := []
+	for node in _all_nodes(main.get_node("Opening")):
+		var text: Variant = node.get("text")
+		if text is String and not text.is_empty():
+			texts.append(text)
+	t.assert_eq(texts, ["Treasure Bay"], "the only text is the game name")
 	await Scene.remove(t, main)
 	return true
 
@@ -82,6 +98,8 @@ func test_the_game_has_no_network_code_and_draws_no_text(t) -> bool:
 		var text := FileAccess.get_file_as_string(path)
 		t.assert_true(not text.is_empty(), path + " is read")
 		for word: String in FORBIDDEN_SOURCE:
+			if path == TITLE_SOURCE and word == "draw_char":
+				continue
 			t.assert_true(not text.contains(word), "%s has no %s" % [path, word])
 	return true
 

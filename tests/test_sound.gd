@@ -18,9 +18,10 @@ const CROSSFADE_WAIT := 2.0
 const EARLY_IN_A_CROSSFADE := 0.2
 
 
-## Adds the main scene at saved Labyrinth `number`, with a recorder connected before the launch, and
-## waits for the end of the launch fade-in. Returns [main, calls]; each call is [path, bus].
-static func _add_main(t, number: int) -> Array:
+## Adds the main scene at saved Labyrinth `number`, with a recorder connected before the launch. If
+## `start` is true, it goes through the opening screen and waits for the end of the fade-in of the
+## Labyrinth. Returns [main, calls]; each call is [path, bus].
+static func _add_main(t, number: int, start := true) -> Array:
 	var dir := Fixtures.new_save_dir()
 	var saved := Progress.new()
 	saved.labyrinth_number = number
@@ -32,7 +33,8 @@ static func _add_main(t, number: int) -> Array:
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = Scene.TIME_SCALE
-	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the launch fade-in ends")
+	if start:
+		t.assert_true(await Scene.start_from_opening(t, main), "the fade-in after the start press ends")
 	return [main, calls]
 
 
@@ -57,8 +59,10 @@ func test_the_music_and_effects_buses_send_to_master(t) -> bool:
 	return true
 
 
-func test_launch_plays_the_music_of_the_area_on_the_music_bus(t) -> bool:
-	var added := await _add_main(t, 1)
+## Game-flow spec part 3: the opening screen plays the music of Area 1, also for a save in a later
+## Area.
+func test_the_opening_screen_plays_the_area_1_music_on_the_music_bus(t) -> bool:
+	var added := await _add_main(t, 14, false)
 	var main: Node = added[0]
 	var sound: Sound = main.get_node("Sound")
 	t.assert_eq(added[1], [[MUSIC + "lagoon.mp3", &"Music"]], "launch: the Area 1 track on Music")
@@ -70,6 +74,21 @@ func test_launch_plays_the_music_of_the_area_on_the_music_bus(t) -> bool:
 	t.assert_eq(player.stream.loop, false, "the import does not loop the track")
 	for music_player in sound.music_players:
 		t.assert_eq(music_player.process_mode, Node.PROCESS_MODE_ALWAYS, "music goes on in the pause")
+	await Scene.remove(t, main)
+	return true
+
+
+## Game-flow spec part 3: the start press plays the Item sound. Then the Labyrinth shows, and the
+## music changes to the track of its Area.
+func test_the_start_press_plays_the_item_sound_then_the_track_of_the_area(t) -> bool:
+	var added := await _add_main(t, 14, false)
+	var main: Node = added[0]
+	var calls: Array = added[1]
+	calls.clear()
+	Scene.send_key(KEY_ENTER)
+	t.assert_eq(calls, [[EFFECTS + "item.wav", &"Effects"]], "the Item sound at the press")
+	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.MOVE_TIMEOUT), "Labyrinth 14 shows")
+	t.assert_eq(calls, [[EFFECTS + "item.wav", &"Effects"], [Area.music_path(3), &"Music"]], "then the Area 3 track")
 	await Scene.remove(t, main)
 	return true
 

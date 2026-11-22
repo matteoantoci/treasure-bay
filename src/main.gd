@@ -1,7 +1,7 @@
-## The main scene: one Labyrinth on the screen, the boat, the Items, the Item row, and the
-## Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects each Item that it
-## stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth fades in. The
-## motion values of spec 8 are in Motion.
+## The main scene: the opening screen, then one Labyrinth on the screen, the boat, the Items, the
+## Item row, and the Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects
+## each Item that it stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth
+## fades in. The motion values of spec 8 are in Motion.
 extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.
@@ -24,6 +24,11 @@ signal labyrinth_ready(number: int)
 signal move_started
 ## Emitted when the boat bumps at a wall (spec 5.3, 9.7).
 signal bumped
+## Emitted when the opening screen shows: at launch and after a Parent reset (game-flow spec
+## part 3).
+signal opening_shown
+## Emitted when the Child presses the start button of the opening screen.
+signal start_pressed
 
 ## The progress of the Child. _ready() loads it from the save file. Tests and tools can replace it,
 ## then call show_labyrinth().
@@ -33,8 +38,9 @@ var save_store := SaveStore.new()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
-## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth, and during the
-## fade-in at launch and after a reset. Presses are dropped (spec 5.4, 8.8). Only _unlock() clears it.
+## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth, while the
+## opening screen shows, and from the start press to the end of the fade-in of the Labyrinth.
+## Presses are dropped (spec 5.4, 8.8). Only _unlock() clears it.
 var _locked := false
 ## One early press, kept while the boat is busy (spec 5.4). ZERO means none.
 var _kept_direction := Vector2i.ZERO
@@ -57,6 +63,7 @@ var _move_tween: Tween
 @onready var _effects: EffectsView = $Effects
 @onready var _fade: FadeView = $Fade
 @onready var _settings: SettingsPanel = $Settings
+@onready var _opening: OpeningScreen = $Opening
 
 
 func _ready() -> void:
@@ -70,7 +77,8 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	_wake.boat = _boat
 	_settings.reset_requested.connect(_reset_progress)
-	start_with_fade()
+	_opening.button.clicked.connect(_press_start)
+	show_opening()
 
 
 ## Shows the current Labyrinth of `progress` at once, with the boat on its start square, and the
@@ -79,17 +87,52 @@ func _ready() -> void:
 func show_labyrinth() -> void:
 	_stop_celebration()
 	_fade.stop()
+	_opening.hide()
 	_show_current_labyrinth()
 	_unlock()
 
 
+## Shows the opening screen: at launch and after a Parent reset. A Goal celebration, a move, or a
+## fade stops. The input of the Labyrinth is locked. An arrow key, Space, Enter, or a click on the
+## button starts the current Labyrinth.
+func show_opening() -> void:
+	_stop_celebration()
+	_stop_move()
+	_locked = true
+	_kept_direction = Vector2i.ZERO
+	_fade.stop()
+	_sea_friend.stop()
+	_effects.clear()
+	_wake.clear()
+	_opening.open()
+	_layout()
+	opening_shown.emit()
+
+
+## True while the opening screen shows.
+func is_opening_shown() -> bool:
+	return _opening.visible
+
+
+## The start press: the button press motion, the Item sound, and the fade to dark in 0.8 s. Then the
+## current Labyrinth fades in. The input stays locked from the press to the end of the fade-in. While
+## the settings are open, the button does nothing.
+func _press_start() -> void:
+	if not _opening.visible or _opening.button.is_pressed() or _settings.is_open():
+		return
+	_opening.button.press()
+	start_pressed.emit()
+	_fade.fade_out(OpeningScreen.FADE_OUT_SECONDS).finished.connect(start_with_fade)
+
+
 ## Shows the current Labyrinth of `progress`, and the screen fades in from dark in 500 ms with no
-## Area Item: at launch and after a Parent reset (spec 8.8). The input is locked until the end of the
-## fade-in (spec 5.4).
+## Area Item: after the start press on the opening screen (spec 8.8, game-flow spec part 3). The
+## input is locked until the end of the fade-in (spec 5.4).
 func start_with_fade() -> void:
 	_stop_celebration()
 	_locked = true
 	_fade.set_dark()
+	_opening.hide()
 	_show_current_labyrinth()
 	_boat.idle = true
 	_fade.fade_in().finished.connect(_unlock)
@@ -104,15 +147,15 @@ func save_progress() -> void:
 
 ## The Parent reset (spec 11.2). The game keeps a copy of the old save. A new Voyage starts: new
 ## seeds, Labyrinth 1, an empty Collection, and a total of 0 (game-flow spec Part 1). The game writes
-## the save (spec 12.2), and the screen fades in from dark (spec 8.8). If the copy fails, the reset
-## still goes on, because the Parent held the button for the whole hold time.
+## the save (spec 12.2), and the opening screen shows (game-flow spec part 3). If the copy fails, the
+## reset still goes on, because the Parent held the button for the whole hold time.
 func _reset_progress() -> void:
 	var error := save_store.copy_before_reset(progress)
 	if error != OK:
 		push_warning("The copy before the reset was not made: %s" % error_string(error))
 	progress = Progress.new_voyage(randi())
 	save_progress()
-	start_with_fade()
+	show_opening()
 
 
 ## The settings pause play, and the input is locked while they are open. The game does not keep a
@@ -123,10 +166,7 @@ func _notification(what: int) -> void:
 
 
 func _show_current_labyrinth() -> void:
-	# A move of the old Labyrinth stops and never ends.
-	if _move_tween != null:
-		_move_tween.kill()
-		_move_tween = null
+	_stop_move()
 	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
@@ -152,6 +192,13 @@ func _stop_celebration() -> void:
 		_celebration = null
 
 
+## A move of the old Labyrinth stops and never ends.
+func _stop_move() -> void:
+	if _move_tween != null:
+		_move_tween.kill()
+		_move_tween = null
+
+
 ## The input unlocks, the boat rocks, and the Child can sail the shown Labyrinth.
 func _unlock() -> void:
 	_locked = false
@@ -161,6 +208,12 @@ func _unlock() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo():
+		return
+	# On the opening screen, an arrow key, Space, or Enter presses the start button.
+	if _opening.visible:
+		if _direction_of(event) != Vector2i.ZERO or event.is_action_pressed("confirm"):
+			get_viewport().set_input_as_handled()
+			_press_start()
 		return
 	var direction := _direction_of(event)
 	if direction == Vector2i.ZERO:
@@ -311,6 +364,7 @@ func _layout() -> void:
 	_collection_strip.layout(visible.size)
 	_gear.layout(visible.size)
 	_fade.layout(visible)
+	_opening.layout(visible)
 	if labyrinth == null:
 		return
 	var rect := ScreenLayout.labyrinth_rect(visible.size, labyrinth.tile_count())
