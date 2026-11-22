@@ -29,6 +29,15 @@ func test_bands_at_1200(t) -> bool:
 	return true
 
 
+## The Labyrinth area is the space between the top band and the strip, the full width of the
+## screen. Its middle is the place of the Sea friend reveal (game-flow spec part 6, fix 5).
+func test_labyrinth_area_is_between_the_top_band_and_the_strip(t) -> bool:
+	t.assert_eq(ScreenLayout.labyrinth_area(SCREEN_16_10), Rect2(0, 237, 1920, 852), "area at 1200")
+	t.assert_eq(ScreenLayout.labyrinth_area(SCREEN_16_10).get_center(), Vector2(960, 663), "middle at 1200")
+	t.assert_eq(ScreenLayout.labyrinth_area(SCREEN_1512_982), Rect2(0, 246, 1920, 886), "area at 1247")
+	return true
+
+
 func test_tile_size_of_each_labyrinth_size(t) -> bool:
 	for row: Array in TILE_PX:
 		var tiles: Vector2i = row[0]
