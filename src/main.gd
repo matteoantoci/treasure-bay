@@ -341,7 +341,7 @@ func _collect(index: int) -> void:
 	var sprite := _items.sprite_of(item.id)
 	var from := _items.position + sprite.position
 	_effects.burst(Burst.stars(Motion.SPLASH_COUNT, Motion.SPLASH_COLOURS, Motion.SPLASH_SPEED_PX, Motion.SPLASH_LIFE), from, _labyrinth_scale())
-	_effects.fly_item(sprite.texture, from, _items.item_px(), _item_row.outline_centre(index), _show_item_in_outline.bind(index))
+	_effects.fly_item(sprite.texture, from, _items.item_px(), _item_row.slot_centre(index), _show_item_in_outline.bind(index))
 	_items.remove_item(item.id)
 	_item_row.collect(index)
 	_collection_strip.set_count(progress.total_items)
@@ -351,7 +351,7 @@ func _collect(index: int) -> void:
 func _show_item_in_outline(index: int) -> void:
 	_item_row.show_fill(index)
 	var sparkles := Burst.stars(Motion.OUTLINE_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.OUTLINE_SPARKLE_SPEED_PX, Motion.OUTLINE_SPARKLE_LIFE)
-	_effects.burst(sparkles, _item_row.outline_centre(index), _hud_scale())
+	_effects.burst(sparkles, _item_row.slot_centre(index), _hud_scale())
 	_items_in_flight -= 1
 	if _items_in_flight == 0 and _labyrinth_view.locked and _all_items_collected():
 		_unlock_chest()
