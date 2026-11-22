@@ -115,6 +115,21 @@ const PADLOCK_SPARKLE_COUNT := 6
 const PADLOCK_SPARKLE_SPEED_PX := 100.0
 const PADLOCK_SPARKLE_LIFE := 0.5
 
+# Idle hint (game-flow spec part 5, fix 10).
+## When the Child presses no key for this time while the play is free, the hint target hops one
+## time. The Parent can ask to tune this value.
+const HINT_IDLE_SECONDS := 6.0
+## The hop repeats after each further HINT_IDLE_SECONDS, at most this count of times. A key press
+## starts the count again.
+const HINT_HOP_COUNT := 3
+## One hop takes 350 ms. In the first 70 % of the time the target goes up by 12 % of a tile and
+## down again on a sine arc. In the last 30 % it lands with a small squash: at most 108 % wide and
+## 92 % tall, with its bottom in place.
+const HINT_HOP_SECONDS := 0.35
+const HINT_HOP_TILES := 0.12
+const HINT_LIFT_SHARE := 0.7
+const HINT_SQUASH := 0.08
+
 # Goal (spec 8.5). Times from the arrival on the Goal square.
 const CHEST_OPENS_AT := 0.0
 const CONFETTI_AT := 0.0
@@ -257,3 +272,19 @@ static func wake_dot_radius(age: float) -> float:
 
 static func wake_dot_alpha(age: float) -> float:
 	return WAKE_START_ALPHA * clampf(1.0 - age / WAKE_LIFE, 0.0, 1.0)
+
+
+## The lift of the hint target in tiles at `phase` of its hop, from 0 to 1.
+static func hint_hop_lift(phase: float) -> float:
+	if phase <= 0.0 or phase >= HINT_LIFT_SHARE:
+		return 0.0
+	return HINT_HOP_TILES * sin(PI * phase / HINT_LIFT_SHARE)
+
+
+## The scale factor of the hint target at `phase` of its hop, from 0 to 1: wider and shorter in
+## the landing squash, else 1.
+static func hint_hop_squash(phase: float) -> Vector2:
+	if phase <= HINT_LIFT_SHARE or phase >= 1.0:
+		return Vector2.ONE
+	var squash := HINT_SQUASH * sin(PI * (phase - HINT_LIFT_SHARE) / (1.0 - HINT_LIFT_SHARE))
+	return Vector2(1.0 + squash, 1.0 - squash)

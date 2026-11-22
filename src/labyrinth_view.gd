@@ -4,7 +4,8 @@
 ## below. The tile (0, 0) is at the node position. IslandLook picks the tiles. The palm sways (spec
 ## 8.2). The chest has a padlock while an Item is not collected (game-flow spec Part 2). The locked
 ## chest shakes at a visit, and the padlock pops off at the unlock. The open chest sparkles like an
-## Item, and it opens at the start of the Goal celebration (spec 8.5).
+## Item, and it opens at the start of the Goal celebration (spec 8.5). The open chest hops for the
+## idle hint (game-flow spec part 5, fix 10).
 class_name LabyrinthView
 extends Node2D
 
@@ -69,6 +70,12 @@ var chest_shake_px := 0.0:
 	set(value):
 		chest_shake_px = value
 		_place_chest()
+## The phase of the idle hint hop of the chest, from 0 to 1 (game-flow spec part 5, fix 10). 0 is
+## the rest place.
+var chest_hop := 0.0:
+	set(value):
+		chest_hop = value
+		_place_chest()
 
 var _islands := TileMapLayer.new()
 ## Labyrinth tile -> the Sprite2D of its rock or bush.
@@ -76,6 +83,7 @@ var _decorations := {}
 var _decoration_layer := Node2D.new()
 var _shake: Tween
 var _padlock_pop: Tween
+var _chest_hop: Tween
 ## The scale of the padlock without the pop.
 var _padlock_scale := Vector2.ONE
 
@@ -173,6 +181,17 @@ func pop_padlock() -> Tween:
 	return _padlock_pop
 
 
+## The idle hint: the chest hops one time, up and back with a landing squash (game-flow spec part
+## 5, fix 10). The values are in Motion. A new hop starts from the rest place.
+func hop_chest() -> Tween:
+	if _chest_hop != null:
+		_chest_hop.kill()
+	chest_hop = 0.0
+	_chest_hop = create_tween()
+	_chest_hop.tween_property(self, "chest_hop", 1.0, Motion.HINT_HOP_SECONDS)
+	return _chest_hop
+
+
 func _process(delta: float) -> void:
 	time += delta
 	_idle()
@@ -197,6 +216,9 @@ func _show_look() -> void:
 	if _shake != null:
 		_shake.kill()
 	chest_shake_px = 0.0
+	if _chest_hop != null:
+		_chest_hop.kill()
+	chest_hop = 0.0
 	for sprite: Sprite2D in _decorations.values():
 		sprite.queue_free()
 	_decorations.clear()
@@ -226,14 +248,15 @@ func _place() -> void:
 	_place_chest()
 
 
-## Places the chest on the seam of the Goal island, moved by the shake, with the padlock on its
-## front and the sparkle at its corner.
+## Places the chest on the seam of the Goal island, moved by the shake and the hint hop, with the
+## padlock on its front and the sparkle at its corner.
 func _place_chest() -> void:
 	if labyrinth == null:
 		return
 	var s := ScreenLayout.labyrinth_scale(tile_px)
 	var centre := (Vector2(labyrinth.goal_island_tile()) + CHEST_PLACE) * tile_px + Vector2(chest_shake_px * s, 0.0)
 	_fit(chest, centre, CHEST_TILES * tile_px)
+	IdleHint.place_hop(chest, chest.position, chest.scale, chest_hop, tile_px)
 	_fit(padlock, centre + PADLOCK_OFFSET * tile_px, PADLOCK_TILES * tile_px)
 	_padlock_scale = padlock.scale
 	chest_sparkle.position = chest.position + Motion.SPARKLE_OFFSET_PX * s
