@@ -32,6 +32,9 @@ const MOVE_POLYPHONY := 4
 ## When a Sea friend appears, the fanfare goes 12 dB down in 0.2 s, so the Sea friend sound is clear.
 const DUCK_DB := 12.0
 const DUCK_SECONDS := 0.2
+## On the Party, a Sea friend pops in every 120 ms. Each sound file has its own player, and each
+## player can play this many copies at one time, so the sounds overlap (game-flow spec part 4).
+const PARTY_POLYPHONY := 4
 
 ## The two music players of the crossfade. `_active` is the one with the current track.
 var music_players: Array[AudioStreamPlayer] = []
@@ -46,6 +49,8 @@ var unlock_player: AudioStreamPlayer
 var _active := 0
 var _crossfade: Tween
 var _duck: Tween
+## Sound file -> its player on the Party.
+var _party_players := {}
 
 
 ## Adds the `Music` and `Effects` buses, each sending to `Master`, if they do not exist yet (spec 9.1).
@@ -98,6 +103,11 @@ func _ready() -> void:
 	main.start_pressed.connect(_play.bind(item_player, ITEM_PATH))
 	main.locked_chest_reached.connect(_play.bind(locked_player, LOCKED_PATH))
 	main.chest_unlocked.connect(_play.bind(unlock_player, UNLOCK_PATH))
+	# The Party plays the music of Area 1, each Sea friend sound, and the Goal sound when the chest
+	# opens (game-flow spec part 4).
+	main.party_coming.connect(play_area.bind(Area.for_labyrinth(1)))
+	main.party_friend_popped.connect(play_party_friend)
+	main.party_chest_opened.connect(play_goal)
 
 
 ## Stops the music, so the audio server holds no playback of a freed scene.
@@ -144,6 +154,17 @@ func play_goal() -> void:
 		_duck.kill()
 	goal_player.volume_db = SoundLevels.volume_db(GOAL_PATH)
 	_play(goal_player, GOAL_PATH)
+
+
+## Plays the sound of a Sea friend when it pops in on the Party: its own sound or the splash
+## (spec 9.4). The sounds of the Sea friends overlap.
+func play_party_friend(sea_friend: String) -> void:
+	var path := sea_friend_sound_path(sea_friend)
+	if not _party_players.has(path):
+		var player := _add_player(EFFECTS_BUS, PROCESS_MODE_PAUSABLE, load(path), path)
+		player.max_polyphony = PARTY_POLYPHONY
+		_party_players[path] = player
+	_play(_party_players[path], path)
 
 
 ## Plays the sound of a Sea friend when it appears (spec 9.4).

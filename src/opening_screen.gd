@@ -43,7 +43,7 @@ var time := 0.0
 var water := WaterView.new()
 ## The logo and the button, scaled with the visible height.
 var logo := Node2D.new()
-var island := TileMapLayer.new()
+var island: TileMapLayer
 var chest := Sprite2D.new()
 var chest_sparkle := Polygon2D.new()
 var items: Array[Sprite2D] = []
@@ -54,7 +54,6 @@ var button := StartButton.new()
 func _init() -> void:
 	water.name = "Water"
 	logo.name = "Logo"
-	island.name = "Island"
 	chest.name = "Chest"
 	chest_sparkle.name = "ChestSparkle"
 	title.name = "Title"
@@ -62,13 +61,8 @@ func _init() -> void:
 	water.show_area(Area.for_labyrinth(1))
 	add_child(water)
 	add_child(logo)
-	island.tile_set = LabyrinthView.kenney_tile_set()
-	var look := IslandLook.block(ISLAND_TILES, ISLAND_SEED)
-	for cell: Vector2i in look.cells:
-		island.set_cell(cell, look.cells[cell], Vector2i.ZERO)
-	var island_px := Vector2(ISLAND_TILES) * ISLAND_TILE_PX
-	island.position = ISLAND_CENTRE - island_px / 2.0
-	island.scale = Vector2.ONE * ISLAND_TILE_PX / IslandLook.CELLS_PER_TILE / LabyrinthView.KENNEY_TILE_PX
+	island = new_island(ISLAND_TILES, ISLAND_TILE_PX, ISLAND_CENTRE, ISLAND_SEED)
+	island.name = "Island"
 	logo.add_child(island)
 	chest.texture = LabyrinthView.CHEST_CLOSED
 	chest.position = CHEST_CENTRE
@@ -95,6 +89,20 @@ func _init() -> void:
 ## The size of the chest sprite on the screen at a visible height of 1200 px.
 func chest_px() -> Vector2:
 	return chest.texture.get_size() * chest.scale
+
+
+## An all-land island of `tiles` Labyrinth tiles from the Kenney tiles, with the island rules of the
+## game (IslandLook.block()), `tile_px` px for each Labyrinth tile, centred on `centre`. The opening
+## screen and the Party show it (game-flow spec parts 3 and 4).
+static func new_island(tiles: Vector2i, tile_px: float, centre: Vector2, seed_value: int) -> TileMapLayer:
+	var layer := TileMapLayer.new()
+	layer.tile_set = LabyrinthView.kenney_tile_set()
+	var look := IslandLook.block(tiles, seed_value)
+	for cell: Vector2i in look.cells:
+		layer.set_cell(cell, look.cells[cell], Vector2i.ZERO)
+	layer.position = centre - Vector2(tiles) * tile_px / 2.0
+	layer.scale = Vector2.ONE * tile_px / IslandLook.CELLS_PER_TILE / LabyrinthView.KENNEY_TILE_PX
+	return layer
 
 
 ## Covers the visible rectangle. The logo scales with the visible height.

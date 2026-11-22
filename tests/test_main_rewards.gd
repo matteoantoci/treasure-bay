@@ -1,6 +1,7 @@
 ## The main scene with Items, the Item row, and the Collection strip (spec 6): Items fill their
 ## outlines and count one time, the Sea friend of each Goal joins the strip, and the Goal of
-## Labyrinth 20 starts a new Voyage (game-flow spec Part 1).
+## Labyrinth 20 shows the Party, then the opening screen, and starts a new Voyage (game-flow spec
+## Parts 1 and 4).
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
@@ -64,7 +65,10 @@ func test_goal_of_labyrinth_1_brings_the_crab_to_the_strip(t) -> bool:
 	return true
 
 
-func test_goal_of_labyrinth_20_adds_the_flamingo_and_starts_a_new_voyage(t) -> bool:
+## Game-flow spec Parts 1 and 4: the flamingo joins the strip, then the screen fades to the Party.
+## Presses in the first 3 s of the Party do nothing. A press after that shows the opening screen, and
+## the start shows Labyrinth 1 of the new Voyage with an empty strip and the same total count.
+func test_goal_of_labyrinth_20_adds_the_flamingo_shows_the_party_and_starts_a_new_voyage(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var main := await Scene.add_main(t, dir)
 	var progress := Progress.new()
@@ -73,22 +77,47 @@ func test_goal_of_labyrinth_20_adds_the_flamingo_and_starts_a_new_voyage(t) -> b
 	progress.total_items = 150
 	main.progress = progress
 	main.show_labyrinth()
-	t.assert_eq(main.get_node("CollectionStrip").shown_friends().size(), 19, "19 Sea friends in the strip")
+	var strip: CollectionStrip = main.get_node("CollectionStrip")
+	t.assert_eq(strip.shown_friends().size(), 19, "19 Sea friends in the strip")
 	var friends := []
 	main.sea_friend_appeared.connect(func(friend: String) -> void: friends.append(friend))
+	var started := []
+	main.labyrinth_started.connect(func(number: int) -> void: started.append(number))
+	var shown := []
+	main.opening_shown.connect(func() -> void: shown.append(true))
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed Labyrinth 20 to the Goal")
 	var saved := SaveStore.new(dir).load_progress()
 	t.assert_eq(saved.labyrinth_number, 1, "the save at the Goal holds Labyrinth 1 of the new Voyage")
 	t.assert_eq(saved.collection, PackedStringArray(), "the save holds an empty Collection")
 	var total: int = main.progress.total_items
-	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "the next Labyrinth starts")
+	t.assert_true(await t.wait_for(main.party_coming, Scene.NEXT_LABYRINTH_TIMEOUT), "the fade to the Party starts")
 	t.assert_eq(friends, ["flamingo"], "the flamingo appears")
+	t.assert_eq(strip.shown_friends(), SeaFriends.IDS, "the flamingo is in its slot before the fade")
+	t.assert_true(await t.wait_for(main.party_started, Scene.NEXT_LABYRINTH_TIMEOUT), "the Party starts")
+	t.assert_true(main.is_party_shown(), "the Party shows")
+	t.assert_eq(started, [], "no Labyrinth starts")
+	var party: PartyView = main.get_node("Party")
+	for key in [KEY_SPACE, KEY_ENTER, KEY_DOWN, KEY_RIGHT]:
+		Scene.send_key(key)
+	await t.create_timer(2.5).timeout
+	for key in [KEY_SPACE, KEY_UP]:
+		Scene.send_key(key)
+	await t.create_timer(0.3).timeout
+	t.assert_true(party.time < 3.0, "the Party is in its first 3 s")
+	t.assert_eq(shown, [], "the presses in the first 3 s do nothing")
+	t.assert_true(main.is_party_shown(), "the Party stays")
+	await t.create_timer(0.4).timeout
+	Scene.send_key(KEY_SPACE)
+	t.assert_true(await t.wait_for(main.opening_shown, Scene.MOVE_TIMEOUT), "a press after 3 s shows the opening screen")
+	t.assert_true(not main.is_party_shown(), "the Party is gone")
+	t.assert_true(await Scene.start_from_opening(t, main), "the start press starts the game")
+	t.assert_eq(started, [1], "Labyrinth 1 starts")
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
 	t.assert_true(main.progress.seeds != LabyrinthPlan.FIXED_SEEDS, "the new Voyage has new seeds")
 	t.assert_eq(main.labyrinth.seed_value, main.progress.seeds[0], "Labyrinth 1 uses the seed of slot 1")
 	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(4, 3), "Labyrinth 1 is 4 x 3")
-	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "an empty strip")
-	t.assert_eq(main.get_node("CollectionStrip").count_text(), str(total), "the same total count")
+	t.assert_eq(strip.shown_friends(), PackedStringArray(), "an empty strip")
+	t.assert_eq(strip.count_text(), str(total), "the same total count")
 	t.assert_true(total >= 150, "the total count stays")
 	await Scene.remove(t, main)
 	Fixtures.remove_save_dir(dir)
