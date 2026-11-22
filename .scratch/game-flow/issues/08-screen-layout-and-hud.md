@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 (Name and opening screen; it adds the font)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The top band goes away. All HUD values use the HUD scale h = visible height / 760.
 - [x] The Item column is 100 h wide at the left, with a margin of 12 h. The Labyrinth is centred in the space right of the Item column and above the strip, less the margins.
