@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://src/labyrinth_view.gd" id="2_labyrinth_view"]
@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://src/fullscreen_guard.gd" id="16_fullscreen_guard"]
 [ext_resource type="Script" path="res://src/reveal_view.gd" id="17_reveal_view"]
 [ext_resource type="Script" path="res://src/opening_screen.gd" id="18_opening_screen"]
+[ext_resource type="Script" path="res://src/idle_hint.gd" id="19_idle_hint"]
 
 [node name="Main" type="Node2D"]
 texture_filter = 4
@@ -83,3 +84,6 @@ script = ExtResource("15_settings_panel")
 
 [node name="FullscreenGuard" type="Node" parent="."]
 script = ExtResource("16_fullscreen_guard")
+
+[node name="IdleHint" type="Node" parent="."]
+script = ExtResource("19_idle_hint")

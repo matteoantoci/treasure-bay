@@ -76,6 +76,15 @@ func test_the_labyrinths_of_a_new_voyage_follow_the_placement_rules(t) -> bool:
 	return true
 
 
+## A new Voyage takes its seeds from the seed pool (src/seed_pool.gd), so each Labyrinth of the pool
+## follows the placement rules.
+func test_the_labyrinths_of_the_seed_pool_follow_the_placement_rules(t) -> bool:
+	for n in COUNTS:
+		for seed_value in SeedPool.SEEDS[n - 1]:
+			_check_items(t, LabyrinthPlan.build_from_seed(n, seed_value), n, "Labyrinth %d of pool seed %d" % [n, seed_value])
+	return true
+
+
 func test_first_item_is_in_the_farthest_dead_end(t) -> bool:
 	# Labyrinth 2 (4 x 3). From tests/spec_port.py: its free dead ends are (3, 0) at distance 5 and
 	# (0, 1) at distance 7 from the start, so Item 1 is on (0, 1).

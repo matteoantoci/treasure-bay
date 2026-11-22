@@ -29,18 +29,36 @@ static func meets_conditions(number: int, seed_value: int) -> bool:
 
 ## The 20 seeds of a new Voyage. The own PRNG with `start_value` picks one seed of the seed pool
 ## (src/seed_pool.gd) for each slot, so the call does no search (Parent decision of 2026-11-22).
-## The second slot of a size never takes the seed of the first slot of that size: it takes the next
-## seed of its pool row.
+## The second slot of a size never gets the layout of the first slot of that size: on the same
+## layout, it takes the next seed of its pool row. No two seeds of a pool row have the same layout,
+## so the next seed has a different layout.
 static func new_voyage(start_value: int) -> Array[int]:
 	var prng := Prng.new(start_value)
 	var seeds: Array[int] = []
+	var first_layout := 0
 	for number in range(1, LabyrinthPlan.FIXED_COUNT + 1):
 		var row: Array = SeedPool.SEEDS[number - 1]
+		var layouts: Array = SeedPool.LAYOUTS[number - 1]
 		var index := prng.next() % row.size()
-		if number % 2 == 0 and row[index] == seeds[-1]:
+		if number % 2 == 1:
+			first_layout = layouts[index]
+		elif layouts[index] == first_layout:
 			index = (index + 1) % row.size()
 		seeds.append(row[index])
 	return seeds
+
+
+## The layout of `labyrinth`: the wall bits of each square row by row, then the Item IDs in
+## placement order (the ID of an Item is its square). Two Labyrinths of one size with the same key
+## look the same. tools/seed_search.gd keeps one seed for each layout of a slot.
+static func layout_key(labyrinth: Labyrinth) -> String:
+	var parts := PackedStringArray()
+	for y in labyrinth.height:
+		for x in labyrinth.width:
+			parts.append(str(labyrinth.wall_bits(Vector2i(x, y))))
+	for item in labyrinth.items:
+		parts.append(item.id)
+	return " ".join(parts)
 
 
 ## The first seed from `start_seed` upward that meets the conditions of slot `number` and is not

@@ -1,6 +1,7 @@
 ## Draws the Items that are still on the water, one Sprite2D for each Item (spec 6.1). Each Item
 ## bobs, and a small white sparkle shows next to it from time to time (spec 8.2). Each Item has a
-## still shadow (FloatShadow) that does not bob. The tile (0, 0) is at the node position.
+## still shadow (FloatShadow) that does not bob. One Item hops for the idle hint (game-flow spec
+## part 5, fix 10). The tile (0, 0) is at the node position.
 class_name ItemsView
 extends Node2D
 
@@ -18,6 +19,12 @@ var _sprites := {}
 var _indexes := {}
 ## Item ID -> the sprite centre without the bob.
 var _centres := {}
+## Item ID -> the sprite scale without the hint hop.
+var _scales := {}
+## The Item of the hint hop, its phase from 0 to 1, and its tween.
+var _hop_id := ""
+var _hop_phase := 0.0
+var _hop: Tween
 var _sparkles := Node2D.new()
 
 
@@ -31,6 +38,7 @@ func _init() -> void:
 
 ## Shows the Items of `labyrinth` that the Child has not collected.
 func show_items(labyrinth: Labyrinth, progress: Progress) -> void:
+	_stop_hop()
 	for sprite: Sprite2D in _sprites.values():
 		sprite.queue_free()
 	_items.clear()
@@ -53,11 +61,14 @@ func show_items(labyrinth: Labyrinth, progress: Progress) -> void:
 func remove_item(item_id: String) -> void:
 	if not _sprites.has(item_id):
 		return
+	if item_id == _hop_id:
+		_stop_hop()
 	_sprites[item_id].queue_free()
 	_sprites.erase(item_id)
 	_items.erase(item_id)
 	_indexes.erase(item_id)
 	_centres.erase(item_id)
+	_scales.erase(item_id)
 	queue_redraw()
 
 
@@ -83,6 +94,17 @@ func item_px() -> float:
 	return ITEM_PX * ScreenLayout.labyrinth_scale(_tile_px)
 
 
+## The idle hint: Item `item_id` hops one time, up and back with a landing squash (game-flow spec
+## part 5, fix 10). The values are in Motion. A hop of another Item stops.
+func hop_item(item_id: String) -> Tween:
+	_stop_hop()
+	_hop_id = item_id
+	_hop = create_tween()
+	_hop.tween_method(_set_hop_phase, 0.0, 1.0, Motion.HINT_HOP_SECONDS)
+	_hop.tween_callback(_stop_hop)
+	return _hop
+
+
 func set_tile_px(tile_px: float) -> void:
 	_tile_px = tile_px
 	_place()
@@ -96,12 +118,14 @@ func _process(delta: float) -> void:
 
 func _place() -> void:
 	_centres.clear()
+	_scales.clear()
 	for item_id: String in _sprites:
 		var sprite: Sprite2D = _sprites[item_id]
 		var centre := (Vector2(Labyrinth.square_to_tile(_items[item_id].square)) + Vector2(0.5, 0.5)) * _tile_px
 		var rect := ScreenLayout.sprite_rect(centre, sprite.texture.get_size(), item_px())
 		_centres[item_id] = rect.get_center()
 		sprite.scale = rect.size / sprite.texture.get_size()
+		_scales[item_id] = sprite.scale
 	_bob()
 	queue_redraw()
 
@@ -109,7 +133,24 @@ func _place() -> void:
 func _bob() -> void:
 	var s := ScreenLayout.labyrinth_scale(_tile_px)
 	for item_id: String in _sprites:
-		_sprites[item_id].position = _centres[item_id] + Vector2(0, Motion.item_bob(time, _indexes[item_id]) * s)
+		var centre: Vector2 = _centres[item_id] + Vector2(0, Motion.item_bob(time, _indexes[item_id]) * s)
+		var phase := _hop_phase if item_id == _hop_id else 0.0
+		IdleHint.place_hop(_sprites[item_id], centre, _scales[item_id], phase, _tile_px)
+
+
+func _set_hop_phase(phase: float) -> void:
+	_hop_phase = phase
+	_bob()
+
+
+## The hop stops, and its Item is back in its place.
+func _stop_hop() -> void:
+	if _hop != null:
+		_hop.kill()
+		_hop = null
+	_hop_id = ""
+	_hop_phase = 0.0
+	_bob()
 
 
 ## The shadows draw under the Item sprites, the children of this node.

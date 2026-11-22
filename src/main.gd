@@ -1,7 +1,8 @@
 ## The main scene: the opening screen, then one Labyrinth on the screen, the boat, the Items, the
 ## Item row, and the Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects
 ## each Item that it stops on. The chest of the Goal is locked until the last Item. At the open
-## chest, a Sea friend comes to the strip, then the next Labyrinth fades in. The motion values of
+## chest, a Sea friend comes to the strip, then the next Labyrinth fades in. When the Child presses
+## no key for a while, the open chest or the nearest Item hops (IdleHint). The motion values of
 ## spec 8 are in Motion.
 extends Node2D
 
@@ -35,6 +36,9 @@ signal start_pressed
 signal locked_chest_reached
 ## Emitted when the last Item of the Labyrinth arrives in its slot and the padlock pops off.
 signal chest_unlocked
+## Emitted when the idle hint target hops (game-flow spec part 5, fix 10): the Goal square for the
+## open chest, or the square of the Item.
+signal hint_hopped(square: Vector2i)
 
 ## The progress of the Child. _ready() loads it from the save file. Tests and tools can replace it,
 ## then call show_labyrinth().
@@ -73,6 +77,7 @@ var _items_in_flight := 0
 @onready var _fade: FadeView = $Fade
 @onready var _settings: SettingsPanel = $Settings
 @onready var _opening: OpeningScreen = $Opening
+@onready var _idle_hint: IdleHint = $IdleHint
 
 
 func _ready() -> void:
@@ -87,6 +92,8 @@ func _ready() -> void:
 	_wake.boat = _boat
 	_settings.reset_requested.connect(_reset_progress)
 	_opening.button.clicked.connect(_press_start)
+	_idle_hint.is_play_free = _is_play_free
+	_idle_hint.hop_due.connect(_hop_hint)
 	show_opening()
 
 
@@ -413,6 +420,27 @@ func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
 		Motion.GoalStep.UNLOCK:
 			_celebration = null
 			_unlock()
+
+
+# Idle hint (game-flow spec part 5, fix 10).
+
+## True while the Child can sail with no move: no lock, no opening screen, and the settings closed.
+func _is_play_free() -> bool:
+	return labyrinth != null and not _locked and _move_tween == null and not _opening.visible and not _settings.is_open()
+
+
+## The open chest or the nearest uncollected Item hops.
+func _hop_hint() -> void:
+	var square := IdleHint.target_square(labyrinth, boat_square, progress.item_states(labyrinth), not _labyrinth_view.locked)
+	if square == IdleHint.NO_TARGET:
+		return
+	if square == labyrinth.goal_square():
+		_labyrinth_view.hop_chest()
+	else:
+		for item in labyrinth.items:
+			if item.square == square:
+				_items.hop_item(item.id)
+	hint_hopped.emit(square)
 
 
 func _layout() -> void:

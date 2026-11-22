@@ -129,25 +129,8 @@ static func first_press(labyrinth: Labyrinth, from: Vector2i, items: Dictionary)
 			targets[square] = true
 	if targets.is_empty():
 		targets[labyrinth.goal_square()] = true
-	if targets.has(from):
-		return Vector2i.ZERO
-	# Breadth-first search over the stops of the move rule. `first` holds the first press that
-	# reaches each stop.
-	var first := {from: Vector2i.ZERO}
-	var queue: Array[Vector2i] = [from]
-	var head := 0
-	while head < queue.size():
-		var square := queue[head]
-		head += 1
-		for direction in Labyrinth.DIRECTIONS:
-			var move := MoveRule.plan(labyrinth, square, direction, items)
-			if move.bump or first.has(move.target):
-				continue
-			first[move.target] = direction if square == from else first[square]
-			if targets.has(move.target):
-				return first[move.target]
-			queue.append(move.target)
-	return Vector2i.ZERO
+	var path := MoveRule.nearest_target(labyrinth, from, items, targets)
+	return Vector2i.ZERO if path == null else path.first_press
 
 
 ## The direction of the first step on the path from `from` to the Goal.
