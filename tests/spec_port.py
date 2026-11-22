@@ -129,31 +129,25 @@ def place(walls, w, h, prng, count, k=None):
 
 
 SIZES = [(4, 3), (5, 3), (5, 4), (6, 4), (7, 4), (7, 5), (8, 5), (8, 6), (9, 6), (9, 7)]
-# Play-improvements Part 3: Labyrinth n (1 to 20) uses seed FIXED_SEEDS[n - 1]. check_seeds() checks
-# that seed_search() gives this table.
+# Play-improvements Part 3: the fixed seed table. Slot n (1 to 20) uses seed FIXED_SEEDS[n - 1].
+# check_seeds() checks that seed_search() gives this table. Game-flow Part 1: a new Voyage has its own
+# seeds, and the table stays for a slot with no seed within its tries, for the save migration, and
+# for the tests.
 FIXED_SEEDS = [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30]
 
 
 def size(n):
-    return SIZES[(n - 1) // 2] if n <= 20 else (10, 7)
+    return SIZES[(n - 1) // 2]
 
 
 def count(w, h):
     return max(2, min(8, (w * h) // 6))
 
 
-def valid_seed(w, h, seed):
-    """Spec 4.6 rule 7: a seed with no free dead end moves to seed + 1."""
-    seed = seed & M or 1
-    while not dead_ends(generate(w, h, Prng(seed)), w, h):
-        seed = (seed + 1) & M or 1
-    return seed
-
-
-def build(n, random_seed=0, k=None):
-    """Labyrinth n: (w, h, walls, Item squares). k as in place()."""
-    w, h = size(n)
-    return build_from_seed(n, FIXED_SEEDS[n - 1] if n <= 20 else valid_seed(w, h, random_seed), k)
+def build(n, k=None):
+    """Labyrinth n (1 to 20) with the fixed seed table: (w, h, walls, Item squares). k as in
+    place()."""
+    return build_from_seed(n, FIXED_SEEDS[n - 1], k)
 
 
 def build_from_seed(n, seed, k=None):
@@ -283,7 +277,7 @@ def measure(walls, w, h, items):
     }
 
 
-# Item IDs of Labyrinths 1 to 20 with seed n, and of the random seeds 4242 and 123456789, before
+# Item IDs of Labyrinths 1 to 20 with seed n, before
 # play-improvements Part 1. The rule with k = 0 must give them (Part 1: "this rule with k = 0
 # gives the placement of today").
 PLACEMENT_BEFORE_PART_1 = {
@@ -298,19 +292,16 @@ PLACEMENT_BEFORE_PART_1 = {
     18: ["6,3", "4,5", "8,4", "3,1", "5,1", "3,5", "0,4", "4,3"],
     19: ["4,6", "5,1", "3,3", "8,3", "2,5", "1,2", "0,6", "0,1"],
     20: ["4,2", "1,4", "3,3", "8,1", "0,6", "2,5", "6,3", "3,1"],
-    4242: ["0,4", "0,6", "5,5", "9,0", "2,3", "7,3", "5,0", "3,4"],
-    123456789: ["6,4", "3,6", "2,3", "1,0", "4,2", "9,5", "6,1", "0,2"],
 }
 
 
 def check_placement():
     """Self-checks of play-improvements Part 1. Raises AssertionError on a failure."""
     for key, expected in PLACEMENT_BEFORE_PART_1.items():
-        got = ids(build_from_seed(key, key, k=0)[3]) if key <= 20 else ids(build(21, key, k=0)[3])
+        got = ids(build_from_seed(key, key, k=0)[3])
         assert got == expected, ("k = 0 placement", key, got, expected)
-    seeds = list(range(1, 21)) + [(21, s) for s in range(1, 201)]
-    for key in seeds:
-        w, h, walls, items = build(key) if isinstance(key, int) else build(*key)
+    for key in range(1, 21):
+        w, h, walls, items = build(key)
         path = main_path(walls, w, h)
         k = on_path_count(len(items), len(path) - 1)
         dist = bfs(walls, w, h)
@@ -421,10 +412,3 @@ if __name__ == "__main__":
     dist = bfs(walls, w, h)
     print("Labyrinth 2 free dead ends", [(s, dist[s]) for s in dead_ends(walls, w, h)])
     print("3x2 invalid seeds", [s for s in range(1, 200) if not dead_ends(generate(3, 2, Prng(s)), 3, 2)][:20])
-    for s in [4242, 123456789]:
-        print("random", s, "valid seed", valid_seed(10, 7, s), ids(build(21, s)[3]))
-    behind = 0
-    for s in range(1, 1001):
-        w, h, walls, _ = build(21, s)
-        behind += 1 if behind_goal(walls, w, h) else 0
-    print("random seeds 1 to 1000 with a square behind the Goal", behind)

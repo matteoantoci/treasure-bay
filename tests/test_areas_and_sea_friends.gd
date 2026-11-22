@@ -1,14 +1,12 @@
 ## Spec 14.1 test 6: the Area of each Labyrinth (spec 4.3, 4.4, 7.2), its music track (spec 9.2),
-## the Sea friend of Labyrinths 1 to 20 (spec 4.7), and the Sea friend that comes back after
-## Labyrinth 20 (spec 6.4).
+## and the Sea friend of Labyrinths 1 to 20 (spec 4.7).
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
 const Fixtures := preload("res://tests/fixtures.gd")
 
-const DRAWS := 1000
-# Saved Labyrinths whose music the scene test checks: one of each Area, and Areas after 20.
-const MUSIC_LABYRINTHS := [1, 6, 11, 16, 21, 26, 36]
+# Saved Labyrinths whose music the scene test checks: one of each Area.
+const MUSIC_LABYRINTHS := [1, 6, 11, 16]
 
 # Spec 4.3 and 4.4: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, 16 to 20 Area 4,
 # then 21 to 25 Area 1 again, and so on.
@@ -59,7 +57,6 @@ func test_the_music_player_plays_the_track_of_the_area(t) -> bool:
 		var dir := Fixtures.new_save_dir()
 		var saved := Progress.new()
 		saved.labyrinth_number = n
-		saved.random_seed = 4242
 		SaveStore.new(dir).save(saved)
 		var main := await Scene.add_main(t, dir)
 		var player: AudioStreamPlayer = main.get_node("Sound").active_music_player()
@@ -91,37 +88,3 @@ func test_each_sea_friend_has_a_sprite(t) -> bool:
 		t.assert_true(ResourceLoader.exists(SeaFriends.texture_path(id)), "sprite of %s exists" % id)
 	return true
 
-
-func test_returning_sea_friend_never_repeats_and_is_in_the_collection(t) -> bool:
-	seed(20261104)
-	var collection := PackedStringArray(SEA_FRIENDS)
-	var last := ""
-	var repeats := 0
-	var outside := 0
-	var seen := {}
-	for i in DRAWS:
-		var friend := SeaFriends.pick_returning(collection, last, randi())
-		if friend == last:
-			repeats += 1
-		if not collection.has(friend):
-			outside += 1
-		seen[friend] = true
-		last = friend
-	t.assert_eq(repeats, 0, "draws that repeat the last Sea friend")
-	t.assert_eq(outside, 0, "draws outside the Collection")
-	t.assert_eq(seen.size(), SEA_FRIENDS.size(), "every Sea friend of the Collection comes back sometimes")
-	return true
-
-
-func test_returning_sea_friend_comes_only_from_the_collection(t) -> bool:
-	var collection := PackedStringArray(["seal", "duck", "crab"])
-	for value in range(0, 12):
-		var friend := SeaFriends.pick_returning(collection, "duck", value)
-		t.assert_true(friend in ["seal", "crab"], "draw %d gives a Sea friend of the Collection, not the last one" % value)
-	return true
-
-
-func test_no_sea_friend_comes_back_when_none_can(t) -> bool:
-	t.assert_eq(SeaFriends.pick_returning(PackedStringArray(), "", 5), "", "empty Collection")
-	t.assert_eq(SeaFriends.pick_returning(PackedStringArray(["crab"]), "crab", 5), "", "only the last one")
-	return true

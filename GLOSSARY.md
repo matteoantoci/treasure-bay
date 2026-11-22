@@ -28,6 +28,18 @@ _Avoid_: album, inventory, sticker book
 A part of the sea with its own look, that holds a group of Labyrinths, for example a lagoon or a coral reef.
 _Avoid_: world, zone, chapter, stage
 
+**Voyage**:
+The 20 Labyrinths from Labyrinth 1 to the Goal of Labyrinth 20. Each Voyage has its own Labyrinths.
+_Avoid_: round, run, game, level
+
+**Opening screen**:
+The screen with the logo and the start button.
+_Avoid_: title screen, menu, home
+
+**Party**:
+The end screen of a Voyage.
+_Avoid_: credits, victory screen
+
 **Child**:
 The one player of the game: the Parent's 5-year-old daughter, who cannot read but knows numbers well.
 _Avoid_: player, user, kid

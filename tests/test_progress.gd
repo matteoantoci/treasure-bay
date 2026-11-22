@@ -1,27 +1,18 @@
-## The Progress model: Labyrinth number, seed, collected Items, Collection, total count, and the
-## last Sea friend that came back (spec 6, the fields of spec 12.1).
+## The Progress model: Labyrinth number, the seeds of the Voyage, collected Items, Collection, and
+## total count (spec 6, the fields of spec 12.1, game-flow spec Part 1).
 extends RefCounted
 
-const GOALS_AFTER_20 := 1000
-## With 20 Sea friends to pick from, about 1 seed in 20 picks a given Sea friend.
-const SEEDS_AT_LABYRINTH_21 := 200
-# Spec 4.7.
-const SEA_FRIENDS := [
-	"crab", "octopus", "spouting_whale", "whale", "dolphin",
-	"fish", "blowfish", "shark", "squid", "lobster",
-	"shrimp", "oyster", "seal", "turtle", "jellyfish",
-	"otter", "penguin", "duck", "swan", "flamingo",
-]
+## A fixed start value, so the new Voyage of each test is the same at each run.
+const START_VALUE := 4242
 
 
 func test_new_progress_starts_at_labyrinth_1_with_nothing_collected(t) -> bool:
 	var progress := Progress.new()
 	t.assert_eq(progress.labyrinth_number, 1, "Labyrinth number")
-	t.assert_eq(progress.random_seed, 0, "random seed")
+	t.assert_eq(progress.seeds, LabyrinthPlan.FIXED_SEEDS, "the fixed seed table")
 	t.assert_eq(progress.collected_items, PackedStringArray(), "collected Items")
 	t.assert_eq(progress.collection, PackedStringArray(), "Collection")
 	t.assert_eq(progress.total_items, 0, "total Items")
-	t.assert_eq(progress.last_returning_friend, "", "last returning Sea friend")
 	return true
 
 
@@ -50,84 +41,50 @@ func test_build_labyrinth_makes_the_current_labyrinth(t) -> bool:
 	var progress := Progress.new()
 	progress.labyrinth_number = 7
 	t.assert_eq(_ids(progress.build_labyrinth()), _ids(LabyrinthPlan.build(7)), "Labyrinth 7")
-	progress.labyrinth_number = 33
-	progress.random_seed = 4242
-	t.assert_eq(_ids(progress.build_labyrinth()), _ids(LabyrinthPlan.build(33, 4242)), "random Labyrinth 33 with seed 4242")
+	progress.seeds[6] = 4242
+	t.assert_eq(_ids(progress.build_labyrinth()), _ids(LabyrinthPlan.build_from_seed(7, 4242)), "Labyrinth 7 from the seed of slot 7")
 	return true
 
 
-func test_goals_of_labyrinths_1_to_20_fill_the_collection_in_order(t) -> bool:
+func test_goals_of_labyrinths_1_to_19_fill_the_collection_in_order(t) -> bool:
 	var progress := Progress.new()
-	for n in range(1, 21):
+	for n in range(1, 20):
 		progress.collect_item("0,1")
 		var friend := progress.reach_goal()
-		t.assert_eq(friend, SEA_FRIENDS[n - 1], "Sea friend of Labyrinth %d" % n)
+		t.assert_eq(friend, SeaFriends.IDS[n - 1], "Sea friend of Labyrinth %d" % n)
 		t.assert_eq(progress.labyrinth_number, n + 1, "Labyrinth after the Goal of %d" % n)
 		t.assert_eq(progress.collected_items, PackedStringArray(), "no collected Items in Labyrinth %d" % (n + 1))
-		if n < 20:
-			t.assert_eq(progress.random_seed, 0, "no random seed for Labyrinth %d" % (n + 1))
-	t.assert_eq(progress.collection, PackedStringArray(SEA_FRIENDS), "Collection after Labyrinth 20")
-	t.assert_eq(progress.total_items, 20, "one Item from each Labyrinth")
-	t.assert_true(progress.random_seed != 0, "Labyrinth 21 has a random seed")
-	t.assert_eq(progress.last_returning_friend, "", "no Sea friend came back yet")
+	t.assert_eq(progress.collection, SeaFriends.IDS.slice(0, 19), "Collection before Labyrinth 20")
+	t.assert_eq(progress.seeds, LabyrinthPlan.FIXED_SEEDS, "the seeds stay in one Voyage")
+	t.assert_eq(progress.total_items, 19, "one Item from each Labyrinth")
 	return true
 
 
-func test_goals_after_labyrinth_20_bring_back_a_different_sea_friend(t) -> bool:
-	seed(4104)
+## Game-flow spec Part 1: the Goal of Labyrinth 20 gives the flamingo, then a new Voyage: Labyrinth
+## 1, new seeds, no collected Items, an empty Collection, and the same total.
+func test_the_goal_of_labyrinth_20_gives_the_flamingo_and_a_new_voyage(t) -> bool:
 	var progress := Progress.new()
-	for n in range(1, 21):
-		progress.reach_goal()
-	var last := ""
-	var repeats := 0
-	var outside := 0
-	var unsaved := 0
-	var seeds_zero := 0
-	for i in GOALS_AFTER_20:
-		var friend := progress.reach_goal()
-		if friend == last:
-			repeats += 1
-		if not SEA_FRIENDS.has(friend):
-			outside += 1
-		if progress.last_returning_friend != friend:
-			unsaved += 1
-		if progress.random_seed == 0:
-			seeds_zero += 1
-		last = friend
-	t.assert_eq(repeats, 0, "Goals that repeat the last Sea friend")
-	t.assert_eq(outside, 0, "Sea friends from outside the Collection")
-	t.assert_eq(unsaved, 0, "Goals where last_returning_friend is not the Sea friend that came back")
-	t.assert_eq(seeds_zero, 0, "random Labyrinths without a seed")
-	t.assert_eq(progress.labyrinth_number, 21 + GOALS_AFTER_20, "Labyrinth number")
-	t.assert_eq(progress.collection.size(), 20, "the strip does not grow")
+	progress.labyrinth_number = 20
+	progress.collection = SeaFriends.IDS.slice(0, 19)
+	progress.total_items = 150
+	progress.collect_item("0,1")
+	t.assert_eq(progress.reach_goal(START_VALUE), "flamingo", "the Sea friend of Labyrinth 20")
+	t.assert_eq(progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(progress.seeds, DifficultyCurve.new_voyage(START_VALUE), "the seeds of the new Voyage")
+	t.assert_true(progress.seeds != LabyrinthPlan.FIXED_SEEDS, "new seeds")
+	t.assert_eq(progress.collected_items, PackedStringArray(), "no collected Items")
+	t.assert_eq(progress.collection, PackedStringArray(), "an empty Collection")
+	t.assert_eq(progress.total_items, 151, "the same total")
 	return true
 
 
-func test_returning_sea_friend_rule_holds_after_a_restart(t) -> bool:
-	# A restart loads last_returning_friend from the save (spec 6.4).
-	var progress := Progress.new()
-	progress.labyrinth_number = 30
-	progress.random_seed = 99
-	progress.collection = PackedStringArray(["crab", "octopus"])
-	progress.last_returning_friend = "crab"
-	t.assert_eq(progress.reach_goal(), "octopus", "the other Sea friend comes back")
-	t.assert_eq(progress.last_returning_friend, "octopus", "last returning Sea friend")
-	return true
-
-
-## Spec 6.4: the game never picks the same Sea friend two times in a row. The Goal of Labyrinth 20
-## gives the flamingo, so the Goal of Labyrinth 21 does not bring it back. The check runs with many
-## random seeds.
-func test_the_sea_friend_of_labyrinth_20_does_not_come_back_at_labyrinth_21(t) -> bool:
-	var flamingos := 0
-	for seed_value in SEEDS_AT_LABYRINTH_21:
-		seed(seed_value)
-		var progress := Progress.new()
-		for n in range(1, 21):
-			progress.reach_goal()
-		if progress.reach_goal() == "flamingo":
-			flamingos += 1
-	t.assert_eq(flamingos, 0, "Goals of Labyrinth 21 that bring back the flamingo of Labyrinth 20")
+func test_a_new_voyage_starts_at_labyrinth_1_with_its_total(t) -> bool:
+	var progress := Progress.new_voyage(START_VALUE, 12)
+	t.assert_eq(progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(progress.seeds, DifficultyCurve.new_voyage(START_VALUE), "the seeds of the start value")
+	t.assert_eq(progress.collection, PackedStringArray(), "an empty Collection")
+	t.assert_eq(progress.total_items, 12, "the total")
+	t.assert_true(Progress.new_voyage(START_VALUE).is_fresh(), "a new Voyage with a total of 0 is fresh progress")
 	return true
 
 

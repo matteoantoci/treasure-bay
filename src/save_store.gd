@@ -4,7 +4,7 @@ class_name SaveStore
 extends RefCounted
 
 ## Schema version of save.json.
-const VERSION := 1
+const VERSION := 2
 const SAVE_FILE := "save.json"
 const TMP_FILE := "save.json.tmp"
 ## Holds only a broken file, never a last good copy (spec 12.3).
@@ -14,10 +14,9 @@ const BROKEN_FILE := "save.bak"
 const BEFORE_RESET_FILE := "save.before-reset.json"
 const BEFORE_RESET_TMP_FILE := "save.before-reset.json.tmp"
 ## The migration chain of save.json (spec 12.3): migrations[i] turns a save of version i + 1 into
-## version i + 2. Version 1 is the first version, so the chain is empty now. A change to the save
-## schema raises VERSION and appends its migration here, for example `_version_1_to_2`, a static
-## function that takes the dictionary and returns the new one.
-static var migrations: Array[Callable] = []
+## version i + 2. A change to the save schema raises VERSION and appends its migration here: a
+## static function that takes the dictionary and returns the new one.
+static var migrations: Array[Callable] = [_version_1_to_2]
 
 ## The folder of the save files.
 var dir: String
@@ -95,17 +94,17 @@ static func to_dictionary(progress: Progress) -> Dictionary:
 	return {
 		"version": VERSION,
 		"labyrinth": progress.labyrinth_number,
-		"random_seed": progress.random_seed,
+		"seeds": progress.seeds.duplicate(),
 		"collected_items": Array(progress.collected_items),
 		"collection": Array(progress.collection),
 		"total_items": progress.total_items,
-		"last_returning_friend": progress.last_returning_friend,
 	}
 
 
 ## The progress of a parsed save.json, or null when the file is broken (spec 12.3). A file is broken
 ## when it is not a dictionary, or has a version of 0 or less, or a field that is absent or of the
-## wrong type. It is also broken with a Labyrinth below 1, or a random Labyrinth with seed 0. An Item
+## wrong type. It is also broken with a Labyrinth below 1 or above 20, or with a `seeds` list that
+## does not hold 20 seeds, or with a seed of 0 or less. An Item
 ## ID that is not a square where an Item can be also breaks it, as does a Sea friend ID that is not
 ## in spec 4.7. A version above VERSION also gives null: this build cannot read it, and
 ## load_progress() keeps that file. An older version goes through `migrations` first. An Item ID of
@@ -116,24 +115,27 @@ static func from_dictionary(data: Variant) -> Progress:
 	if version < 1 or version > VERSION:
 		return null
 	data = JsonFile.migrate(data, version, migrations, VERSION)
-	for field in ["labyrinth", "random_seed", "total_items"]:
+	for field in ["labyrinth", "total_items"]:
 		if not JsonFile.is_whole_number(data.get(field)):
 			return null
 	for field in ["collected_items", "collection"]:
 		if not _is_string_list(data.get(field)):
 			return null
-	if not data.get("last_returning_friend") is String:
+	var seeds: Variant = data.get("seeds")
+	if not seeds is Array or seeds.size() != LabyrinthPlan.FIXED_COUNT:
 		return null
+	for seed_value in seeds:
+		if not JsonFile.is_whole_number(seed_value) or seed_value <= 0:
+			return null
 	var progress := Progress.new()
 	progress.labyrinth_number = int(data["labyrinth"])
-	progress.random_seed = int(data["random_seed"])
+	progress.seeds.clear()
+	for seed_value in seeds:
+		progress.seeds.append(int(seed_value))
 	progress.collected_items = PackedStringArray(data["collected_items"])
 	progress.collection = PackedStringArray(data["collection"])
 	progress.total_items = int(data["total_items"])
-	progress.last_returning_friend = data["last_returning_friend"]
-	if progress.labyrinth_number < 1:
-		return null
-	if LabyrinthPlan.is_random(progress.labyrinth_number) and progress.random_seed == 0:
+	if progress.labyrinth_number < 1 or progress.labyrinth_number > LabyrinthPlan.FIXED_COUNT:
 		return null
 	var labyrinth := progress.build_labyrinth()
 	var item_ids := PackedStringArray()
@@ -149,9 +151,26 @@ static func from_dictionary(data: Variant) -> Progress:
 	for id in progress.collection:
 		if not SeaFriends.IDS.has(id):
 			return null
-	if progress.last_returning_friend != "" and not SeaFriends.IDS.has(progress.last_returning_friend):
-		return null
 	return progress
+
+
+## Migration 1 to 2 (game-flow spec Part 1). A save in Labyrinths 1 to 20 gets the fixed seed
+## table, so its Labyrinth and its Items stay the same. A save past Labyrinth 20 becomes a new
+## Voyage with the same total. `random_seed` and `last_returning_friend` go away. A broken field
+## stays broken: from_dictionary() checks the result.
+static func _version_1_to_2(data: Dictionary) -> Dictionary:
+	data = data.duplicate()
+	data.erase("random_seed")
+	data.erase("last_returning_friend")
+	data["version"] = 2
+	data["seeds"] = LabyrinthPlan.FIXED_SEEDS.duplicate()
+	var labyrinth: Variant = data.get("labyrinth")
+	if JsonFile.is_whole_number(labyrinth) and labyrinth > LabyrinthPlan.FIXED_COUNT:
+		data["labyrinth"] = 1
+		data["seeds"] = DifficultyCurve.new_voyage(randi())
+		data["collected_items"] = []
+		data["collection"] = []
+	return data
 
 
 ## True if `id` is the "x,y" ID of a square where an Item can be: inside `labyrinth`, and not the

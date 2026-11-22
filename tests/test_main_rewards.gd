@@ -1,9 +1,10 @@
 ## The main scene with Items, the Item row, and the Collection strip (spec 6): Items fill their
-## outlines and count one time, the Sea friend of each Goal joins the strip, and after
-## Labyrinth 20 a Sea friend comes back.
+## outlines and count one time, the Sea friend of each Goal joins the strip, and the Goal of
+## Labyrinth 20 starts a new Voyage (game-flow spec Part 1).
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
+const Fixtures := preload("res://tests/fixtures.gd")
 
 
 func test_labyrinth_1_shows_its_items_and_empty_outlines(t) -> bool:
@@ -63,43 +64,32 @@ func test_goal_of_labyrinth_1_brings_the_crab_to_the_strip(t) -> bool:
 	return true
 
 
-func test_goal_of_labyrinth_20_completes_the_strip_and_starts_a_random_labyrinth(t) -> bool:
-	var main := await Scene.add_main(t)
+func test_goal_of_labyrinth_20_adds_the_flamingo_and_starts_a_new_voyage(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	var main := await Scene.add_main(t, dir)
 	var progress := Progress.new()
 	progress.labyrinth_number = 20
 	progress.collection = SeaFriends.IDS.slice(0, 19)
+	progress.total_items = 150
 	main.progress = progress
 	main.show_labyrinth()
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends().size(), 19, "19 Sea friends in the strip")
+	var friends := []
+	main.sea_friend_appeared.connect(func(friend: String) -> void: friends.append(friend))
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed Labyrinth 20 to the Goal")
-	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 21 starts")
-	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), SeaFriends.IDS, "all 20 Sea friends in the strip")
-	t.assert_eq(main.progress.labyrinth_number, 21, "Labyrinth 21")
-	t.assert_true(main.progress.random_seed != 0, "Labyrinth 21 has a random seed")
-	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(10, 7), "Labyrinth 21 is 10 x 7")
-	t.assert_eq(main.labyrinth.items.size(), 8, "Labyrinth 21 has 8 Items")
+	var saved := SaveStore.new(dir).load_progress()
+	t.assert_eq(saved.labyrinth_number, 1, "the save at the Goal holds Labyrinth 1 of the new Voyage")
+	t.assert_eq(saved.collection, PackedStringArray(), "the save holds an empty Collection")
+	var total: int = main.progress.total_items
+	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "the next Labyrinth starts")
+	t.assert_eq(friends, ["flamingo"], "the flamingo appears")
+	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_true(main.progress.seeds != LabyrinthPlan.FIXED_SEEDS, "the new Voyage has new seeds")
+	t.assert_eq(main.labyrinth.seed_value, main.progress.seeds[0], "Labyrinth 1 uses the seed of slot 1")
+	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(4, 3), "Labyrinth 1 is 4 x 3")
+	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "an empty strip")
+	t.assert_eq(main.get_node("CollectionStrip").count_text(), str(total), "the same total count")
+	t.assert_true(total >= 150, "the total count stays")
 	await Scene.remove(t, main)
-	return true
-
-
-func test_after_labyrinth_20_a_different_sea_friend_comes_back(t) -> bool:
-	var main := await Scene.add_main(t)
-	var progress := Progress.new()
-	progress.labyrinth_number = 25
-	progress.random_seed = 4242
-	progress.collection = SeaFriends.IDS
-	progress.last_returning_friend = "crab"
-	main.progress = progress
-	main.show_labyrinth()
-	var reached := []
-	main.goal_reached.connect(func(friend: String) -> void: reached.append(friend))
-	t.assert_true(await Scene.sail_to_goal(t, main), "sailed Labyrinth 25 to the Goal")
-	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth 26 starts")
-	t.assert_eq(reached.size(), 1, "one Goal")
-	t.assert_true(SeaFriends.IDS.has(reached[0]) and reached[0] != "crab", "a Sea friend of the Collection comes back, not the crab")
-	t.assert_eq(main.progress.last_returning_friend, reached[0], "last returning Sea friend")
-	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), SeaFriends.IDS, "the strip does not grow")
-	t.assert_eq(main.progress.labyrinth_number, 26, "Labyrinth 26")
-	t.assert_eq(main.get_node("ItemRow").kinds, PackedStringArray(["coral", "sand_dollar", "coral", "sand_dollar", "coral", "sand_dollar", "coral", "sand_dollar"]), "Labyrinth 26 has the Items of Area 2")
-	await Scene.remove(t, main)
+	Fixtures.remove_save_dir(dir)
 	return true

@@ -38,7 +38,7 @@ func test_tile_size_of_each_labyrinth_size(t) -> bool:
 
 
 func test_the_table_has_each_labyrinth_size(t) -> bool:
-	for number in range(1, 22):
+	for number in range(1, 21):
 		var size := LabyrinthPlan.size_for(number)
 		var tiles := Vector2i(2 * size.x + 1, 2 * size.y + 1)
 		t.assert_true(TILE_PX.any(func(row: Array) -> bool: return row[0] == tiles), "Labyrinth %d size is in the table" % number)

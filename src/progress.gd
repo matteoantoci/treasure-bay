@@ -3,23 +3,31 @@
 class_name Progress
 extends RefCounted
 
-## The current Labyrinth number, from 1. The save field is "labyrinth".
+## The current Labyrinth number, from 1 to 20. The save field is "labyrinth".
 var labyrinth_number := 1
-## The seed of the current random Labyrinth (number above 20), else 0.
-var random_seed := 0
+## The 20 seeds of the Voyage: Labyrinth n uses seeds[n - 1]. A new Progress has the fixed seed
+## table. new_voyage() gives new seeds.
+var seeds: Array[int] = LabyrinthPlan.FIXED_SEEDS.duplicate()
 ## IDs ("x,y") of the Items collected in the current Labyrinth.
 var collected_items := PackedStringArray()
 ## Sea friend IDs in the order the Child got them.
 var collection := PackedStringArray()
 ## The total count of collected Items, over all Labyrinths.
 var total_items := 0
-## The last Sea friend that came back after Labyrinth 20, or "".
-var last_returning_friend := ""
+
+
+## The progress at the start of a new Voyage: Labyrinth 1, the new seeds of `start_value`, no
+## collected Items, an empty Collection, and a total of `total`.
+static func new_voyage(start_value: int, total: int = 0) -> Progress:
+	var progress := Progress.new()
+	progress.seeds = DifficultyCurve.new_voyage(start_value)
+	progress.total_items = total
+	return progress
 
 
 ## Makes the current Labyrinth with its Items.
 func build_labyrinth() -> Labyrinth:
-	return LabyrinthPlan.build(labyrinth_number, random_seed)
+	return LabyrinthPlan.build(labyrinth_number, seeds)
 
 
 ## True for the progress of a new game or of a reset: Labyrinth 1, an empty Collection, and a total
@@ -50,24 +58,20 @@ func item_states(labyrinth: Labyrinth) -> Dictionary:
 	return states
 
 
-## The Child reaches the Goal of the current Labyrinth. Labyrinth n (1 to 20) adds its Sea friend
-## to the Collection (spec 4.7). After Labyrinth 20, a random Sea friend of the Collection comes
-## back, never the last one (spec 6.4). At Labyrinth 21 no Sea friend came back yet, so the last
-## one is the last Sea friend of the Collection. Then the progress moves to the next Labyrinth, with
-## no collected Items and a new random seed above Labyrinth 20 (spec 12.2). Returns the Sea friend.
-func reach_goal() -> String:
-	var friend: String
-	if LabyrinthPlan.is_random(labyrinth_number):
-		var last := last_returning_friend
-		if last.is_empty() and not collection.is_empty():
-			last = collection[collection.size() - 1]
-		friend = SeaFriends.pick_returning(collection, last, randi())
-		last_returning_friend = friend
-	else:
-		friend = SeaFriends.for_labyrinth(labyrinth_number)
-		if not collection.has(friend):
-			collection.append(friend)
-	labyrinth_number += 1
+## The Child reaches the Goal of the current Labyrinth. Labyrinth n adds its Sea friend to the
+## Collection (spec 4.7). After Labyrinth 1 to 19, the progress moves to the next Labyrinth with no
+## collected Items. After Labyrinth 20, a new Voyage starts with the seeds of `start_value`:
+## Labyrinth 1, no collected Items, an empty Collection, and the same total (game-flow spec Part 1).
+## Returns the Sea friend.
+func reach_goal(start_value: int = randi()) -> String:
+	var friend := SeaFriends.for_labyrinth(labyrinth_number)
+	if not collection.has(friend):
+		collection.append(friend)
 	collected_items = PackedStringArray()
-	random_seed = LabyrinthPlan.new_random_seed() if LabyrinthPlan.is_random(labyrinth_number) else 0
+	if labyrinth_number < LabyrinthPlan.FIXED_COUNT:
+		labyrinth_number += 1
+	else:
+		labyrinth_number = 1
+		seeds = DifficultyCurve.new_voyage(start_value)
+		collection = PackedStringArray()
 	return friend

@@ -10,15 +10,14 @@ const WarningLog := preload("res://tests/warning_log.gd")
 func test_a_save_and_a_load_give_the_same_state(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var store := SaveStore.new(dir)
-	for progress in [_progress_7(), _progress_25()]:
+	for progress in [_progress_7(), _progress_voyage()]:
 		t.assert_eq(store.save(progress), OK, "save of Labyrinth %d" % progress.labyrinth_number)
 		var loaded := SaveStore.new(dir).load_progress()
 		t.assert_eq(loaded.labyrinth_number, progress.labyrinth_number, "Labyrinth number")
-		t.assert_eq(loaded.random_seed, progress.random_seed, "random seed of Labyrinth %d" % progress.labyrinth_number)
+		t.assert_eq(loaded.seeds, progress.seeds, "seeds of the Voyage of Labyrinth %d" % progress.labyrinth_number)
 		t.assert_eq(loaded.collected_items, progress.collected_items, "collected Items of Labyrinth %d" % progress.labyrinth_number)
 		t.assert_eq(loaded.collection, progress.collection, "Collection")
 		t.assert_eq(loaded.total_items, progress.total_items, "total Items")
-		t.assert_eq(loaded.last_returning_friend, progress.last_returning_friend, "last returning Sea friend")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "a good file makes no save.bak")
 	Fixtures.remove_save_dir(dir)
 	return true
@@ -29,13 +28,12 @@ func test_the_file_has_the_fields_of_spec_12_1(t) -> bool:
 	SaveStore.new(dir).save(_progress_7())
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("save.json")))
 	t.assert_eq(data, {
-		"version": 1.0,
+		"version": 2.0,
 		"labyrinth": 7.0,
-		"random_seed": 0.0,
+		"seeds": _floats(LabyrinthPlan.FIXED_SEEDS),
 		"collected_items": [_item_ids(7)[0]],
 		"collection": ["crab", "octopus", "spouting_whale", "whale", "dolphin", "fish"],
 		"total_items": 23.0,
-		"last_returning_friend": "",
 	}, "save.json")
 	Fixtures.remove_save_dir(dir)
 	return true
@@ -77,8 +75,8 @@ func test_a_newer_save_stays_and_the_store_writes_nothing(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var save_path := dir.path_join("save.json")
 	var data := _good_data()
-	data["version"] = 2
-	# A newer build can change a field, so a field that version 1 calls broken does not count.
+	data["version"] = 3
+	# A newer build can change a field, so a field that version 2 calls broken does not count.
 	data["labyrinth"] = "seven"
 	data["a_new_field"] = true
 	var text := JSON.stringify(data)
@@ -112,7 +110,7 @@ func test_the_write_goes_to_the_tmp_file_first(t) -> bool:
 	tmp_path = dir.path_join("save.json.tmp")
 	DirAccess.make_dir_absolute(dir.path_join("save.json"))
 	DirAccess.make_dir_absolute(dir.path_join("save.json").path_join("keep"))
-	var progress := _progress_25()
+	var progress := _progress_voyage()
 	t.assert_true(SaveStore.new(dir).save(progress) != OK, "the rename fails")
 	t.assert_eq(JSON.parse_string(FileAccess.get_file_as_string(tmp_path)), JSON.parse_string(JSON.stringify(SaveStore.to_dictionary(progress))), "the .tmp file holds the new state")
 	Fixtures.remove_save_dir(dir)
@@ -171,23 +169,16 @@ func test_a_goal_save_holds_the_new_sea_friend_and_the_next_labyrinth(t) -> bool
 	t.assert_eq(loaded.labyrinth_number, 4, "Labyrinth 3 + 1")
 	t.assert_eq(loaded.collection, PackedStringArray(["crab", "octopus", "spouting_whale"]), "the new Sea friend is in the Collection")
 	t.assert_eq(loaded.collected_items, PackedStringArray(), "no collected Items in Labyrinth 4")
-	t.assert_eq(loaded.random_seed, 0, "no random seed for Labyrinth 4")
-	# The Goal of Labyrinth 20 gives a random seed for Labyrinth 21.
+	# The Goal of Labyrinth 20 gives a new Voyage.
 	progress.labyrinth_number = 20
 	progress.collection = SeaFriends.IDS.slice(0, 19)
-	progress.reach_goal()
+	progress.reach_goal(4242)
 	store.save(progress)
 	loaded = store.load_progress()
-	t.assert_eq(loaded.labyrinth_number, 21, "Labyrinth 21")
-	t.assert_eq(loaded.collection, SeaFriends.IDS, "all 20 Sea friends")
-	t.assert_true(loaded.random_seed != 0, "Labyrinth 21 has its random seed")
-	t.assert_eq(loaded.random_seed, progress.random_seed, "the saved random seed")
-	# After Labyrinth 20, the save holds the Sea friend that came back.
-	var friend := progress.reach_goal()
-	store.save(progress)
-	loaded = store.load_progress()
-	t.assert_eq(loaded.labyrinth_number, 22, "Labyrinth 22")
-	t.assert_eq(loaded.last_returning_friend, friend, "the Sea friend that came back")
+	t.assert_eq(loaded.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(loaded.seeds, DifficultyCurve.new_voyage(4242), "the seeds of the new Voyage")
+	t.assert_eq(loaded.collection, PackedStringArray(), "an empty Collection")
+	t.assert_eq(loaded.total_items, 1, "the same total")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "each Goal save loads as a good file")
 	Fixtures.remove_save_dir(dir)
 	return true
@@ -202,7 +193,8 @@ func test_a_reset_keeps_settings_json(t) -> bool:
 	var main := await Scene.add_main(t, dir)
 	var panel: SettingsPanel = main.get_node("Settings")
 	_reset(panel)
-	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(Progress.new()), "the save holds Labyrinth 1 after the reset")
+	t.assert_true(main.progress.is_fresh(), "a new Voyage: Labyrinth 1, an empty Collection, a total of 0")
+	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(main.progress), "the save holds Labyrinth 1 after the reset")
 	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("settings.json")), settings_text, "settings.json is the same")
 	t.assert_eq([panel.settings.music_step, panel.settings.effects_step], [4, 0], "the volume steps stay")
 	t.assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index(Sound.EFFECTS_BUS)), "the effects stay muted")
@@ -220,7 +212,7 @@ func test_a_reset_keeps_a_copy_of_the_old_save(t) -> bool:
 	_reset(main.get_node("Settings"))
 	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.before-reset.json")), old_text, "the copy has the bytes of the old save")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.before-reset.json.tmp")), "the rename leaves no .tmp file")
-	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(Progress.new()), "save.json holds Labyrinth 1")
+	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(main.progress), "save.json holds Labyrinth 1")
 	# The Parent restores the copy by hand: rename it to save.json.
 	DirAccess.rename_absolute(dir.path_join("save.before-reset.json"), dir.path_join("save.json"))
 	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), _good_data(), "the renamed copy loads as the old progress")
@@ -268,8 +260,8 @@ func test_a_reset_after_new_play_replaces_the_copy(t) -> bool:
 	var panel: SettingsPanel = main.get_node("Settings")
 	_reset(panel)
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the first reset ends")
-	# Labyrinth 1: down stops on the Item 0,2 (tests/test_main_rewards.gd).
-	await Scene.press(t, main, KEY_DOWN)
+	# Labyrinth 1 of the new Voyage: the boat sails the main path to its first Item.
+	t.assert_true(await _sail_to_an_item(t, main), "the Child collects an Item")
 	var new_text := FileAccess.get_file_as_string(dir.path_join("save.json"))
 	t.assert_eq(SaveStore.new(dir).load_progress().total_items, 1, "the save holds the new Item")
 	_reset(panel)
@@ -297,7 +289,7 @@ func test_a_reset_with_no_save_file_makes_no_copy(t) -> bool:
 func test_in_the_no_write_state_a_reset_makes_no_copy_and_writes_no_save(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var data := _good_data()
-	data["version"] = 2
+	data["version"] = 3
 	var newer_text := JSON.stringify(data)
 	_write(dir.path_join("save.json"), newer_text)
 	var main := await Scene.add_main(t, dir)
@@ -330,9 +322,9 @@ func test_a_chain_of_one_migration_turns_version_1_into_version_2(t) -> bool:
 
 
 ## The Item IDs of Labyrinth `number`.
-func _item_ids(number: int, random_seed: int = 0) -> PackedStringArray:
+func _item_ids(number: int, seeds: Array[int] = LabyrinthPlan.FIXED_SEEDS) -> PackedStringArray:
 	var ids := PackedStringArray()
-	for item in LabyrinthPlan.build(number, random_seed).items:
+	for item in LabyrinthPlan.build(number, seeds).items:
 		ids.append(item.id)
 	return ids
 
@@ -346,15 +338,20 @@ func _progress_7() -> Progress:
 	return progress
 
 
-func _progress_25() -> Progress:
-	var progress := Progress.new()
-	progress.labyrinth_number = 25
-	progress.random_seed = 4242
-	progress.collected_items = _item_ids(25, 4242).slice(0, 2)
-	progress.collection = SeaFriends.IDS
-	progress.total_items = 123
-	progress.last_returning_friend = "crab"
+## Labyrinth 18 of a new Voyage, with a fixed start value.
+func _progress_voyage() -> Progress:
+	var progress := Progress.new_voyage(4242, 123)
+	progress.labyrinth_number = 18
+	progress.collected_items = _item_ids(18, progress.seeds).slice(0, 2)
+	progress.collection = SeaFriends.IDS.slice(0, 17)
 	return progress
+
+
+func _floats(values: Array[int]) -> Array:
+	var floats := []
+	for value in values:
+		floats.append(float(value))
+	return floats
 
 
 ## The file of _progress_7() as a dictionary.
@@ -375,11 +372,10 @@ func _broken_files() -> Dictionary:
 	var wrong_types := {
 		"version": "1",
 		"labyrinth": "7",
-		"random_seed": null,
+		"seeds": 17,
 		"collected_items": _item_ids(7)[0],
 		"collection": "crab",
 		"total_items": 2.5,
-		"last_returning_friend": 0,
 	}
 	for field in wrong_types:
 		var data := _good_data()
@@ -392,14 +388,19 @@ func _broken_files() -> Dictionary:
 		"version 0": {"version": 0},
 		"version -1": {"version": -1},
 		"labyrinth 0": {"labyrinth": 0},
-		"labyrinth 21 with random seed 0": {"labyrinth": 21, "random_seed": 0, "collected_items": []},
+		"labyrinth 21": {"labyrinth": 21, "collected_items": []},
+		"19 seeds": {"seeds": LabyrinthPlan.FIXED_SEEDS.slice(0, 19)},
+		"21 seeds": {"seeds": LabyrinthPlan.FIXED_SEEDS + [5]},
+		"a seed of 0": {"seeds": [0] + LabyrinthPlan.FIXED_SEEDS.slice(1)},
+		"a seed of -3": {"seeds": [-3] + LabyrinthPlan.FIXED_SEEDS.slice(1)},
+		"a seed that is not a number": {"seeds": ["1"] + LabyrinthPlan.FIXED_SEEDS.slice(1)},
+		"a seed of 1.5": {"seeds": [1.5] + LabyrinthPlan.FIXED_SEEDS.slice(1)},
 		"an Item ID outside the Labyrinth": {"collected_items": ["9,9"]},
 		"the start square as an Item ID": {"collected_items": ["0,0"]},
 		"the Goal square as an Item ID": {"collected_items": ["5,3"]},
 		"an Item ID that is not x,y": {"collected_items": ["shell"]},
 		"an Item ID with a sign": {"collected_items": ["+1,2"]},
 		"a Sea friend ID not in spec 4.7": {"collection": ["crab", "unicorn"]},
-		"a last returning Sea friend not in spec 4.7": {"last_returning_friend": "unicorn"},
 	}
 	for case_name in cases:
 		var data := _good_data()
@@ -414,9 +415,62 @@ func _write(path: String, text: String) -> void:
 	file.close()
 
 
+## Sails `main` along the main path until the boat collects an Item. Each Labyrinth has an Item on
+## its main path (section 4.6 rule 3). Returns false if no Item comes.
+func _sail_to_an_item(t, main: Node) -> bool:
+	var total: int = main.progress.total_items
+	while main.progress.total_items == total and main.boat_square != main.labyrinth.goal_square():
+		if not await Scene.press(t, main, Scene.key_for(Scene.next_step(main.labyrinth, main.boat_square))):
+			return false
+	return main.progress.total_items > total
+
+
 ## Holds the reset button for its whole hold time, through the fake clock of HoldButton.
 func _reset(panel: SettingsPanel) -> void:
 	panel.open()
 	panel.reset_button.button_down.emit()
 	panel.reset_button.advance(panel.reset_button.hold_seconds)
 	panel.reset_button.button_up.emit()
+
+
+## Game-flow spec Part 1, migration 1 to 2: a version 1 save in Labyrinths 1 to 20 keeps its
+## Labyrinth, its Items and its Collection, with the fixed seed table.
+func test_a_version_1_save_in_labyrinths_1_to_20_keeps_its_labyrinth(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	for number in [1, 14, 20]:
+		var items := _item_ids(number).slice(0, 2)
+		_write(dir.path_join("save.json"), JSON.stringify({
+			"version": 1, "labyrinth": number, "random_seed": 0, "collected_items": items,
+			"collection": SeaFriends.IDS.slice(0, number - 1), "total_items": 40, "last_returning_friend": "",
+		}))
+		var progress := SaveStore.new(dir).load_progress()
+		var label := "version 1 save of Labyrinth %d" % number
+		t.assert_eq(progress.labyrinth_number, number, label + ": Labyrinth")
+		t.assert_eq(progress.seeds, LabyrinthPlan.FIXED_SEEDS, label + ": the fixed seed table")
+		t.assert_eq(progress.collected_items, items, label + ": collected Items")
+		t.assert_eq(progress.collection, SeaFriends.IDS.slice(0, number - 1), label + ": Collection")
+		t.assert_eq(progress.total_items, 40, label + ": total")
+		t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), label + ": not broken")
+	Fixtures.remove_save_dir(dir)
+	return true
+
+
+## Game-flow spec Part 1, migration 1 to 2: a version 1 save past Labyrinth 20 becomes a new Voyage
+## with the same total.
+func test_a_version_1_save_past_labyrinth_20_becomes_a_new_voyage(t) -> bool:
+	var dir := Fixtures.new_save_dir()
+	_write(dir.path_join("save.json"), JSON.stringify({
+		"version": 1, "labyrinth": 34, "random_seed": 4242, "collected_items": ["1,1"],
+		"collection": SeaFriends.IDS, "total_items": 260, "last_returning_friend": "crab",
+	}))
+	var progress := SaveStore.new(dir).load_progress()
+	t.assert_eq(progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(progress.seeds.size(), 20, "20 seeds")
+	for n in range(1, 21):
+		t.assert_true(DifficultyCurve.meets_conditions(n, progress.seeds[n - 1]), "the seed of slot %d meets its conditions" % n)
+	t.assert_eq(progress.collected_items, PackedStringArray(), "no collected Items")
+	t.assert_eq(progress.collection, PackedStringArray(), "an empty Collection")
+	t.assert_eq(progress.total_items, 260, "the same total")
+	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "not broken")
+	Fixtures.remove_save_dir(dir)
+	return true
