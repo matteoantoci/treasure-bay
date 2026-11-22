@@ -1,9 +1,9 @@
 ## Takes the screenshots of spec 14.2 in a window: the opening screen at launch (game-flow spec
-## part 3), one Labyrinth of each Area at 1920 x 1200 (a 16:10 screen), Area 1 at 1920 x 1247 (the
-## 1512 x 982 screen of spec 10), and the open settings panel with the reset button held for half of
-## its hold time (spec 11.2). Each Labyrinth has its first Item collected and the Sea friends of the
-## Labyrinths before it. A headless run has no pixels. The game draws into a SubViewport of the
-## exact size, so the window size does not matter.
+## part 3), the Party at 4 s (game-flow spec part 4), one Labyrinth of each Area at 1920 x 1200 (a
+## 16:10 screen), Area 1 at 1920 x 1247 (the 1512 x 982 screen of spec 10), and the open settings
+## panel with the reset button held for half of its hold time (spec 11.2). Each Labyrinth has its
+## first Item collected and the Sea friends of the Labyrinths before it. A headless run has no
+## pixels. The game draws into a SubViewport of the exact size, so the window size does not matter.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/take_shots.gd
@@ -11,10 +11,15 @@
 ## `--`, for example `... --script res://tools/take_shots.gd -- settings.png`.
 extends SceneTree
 
+## The Labyrinth number of the Party shot. The shot shows the Party PARTY_SECONDS after its start:
+## the star, the wave, and confetti.
+const PARTY := -1
+const PARTY_SECONDS := 4.0
 ## [file name, Labyrinth number, visible size, settings open with the reset ring half full] of each
-## screenshot. Labyrinth number 0 is the opening screen.
+## screenshot. Labyrinth number 0 is the opening screen, and PARTY is the Party.
 const SHOTS := [
 	["opening.png", 0, Vector2i(1920, 1200), false],
+	["party.png", PARTY, Vector2i(1920, 1200), false],
 	["area1.png", 3, Vector2i(1920, 1200), false],
 	["area2.png", 8, Vector2i(1920, 1200), false],
 	["area3.png", 13, Vector2i(1920, 1200), false],
@@ -43,6 +48,9 @@ func _initialize() -> void:
 		if shot[1] > 0:
 			main.progress = _progress(shot[1])
 			main.show_labyrinth()
+		elif shot[1] == PARTY:
+			main.show_party()
+			await create_timer(PARTY_SECONDS).timeout
 		if shot[3]:
 			var panel: SettingsPanel = main.get_node("Settings")
 			panel.open()
