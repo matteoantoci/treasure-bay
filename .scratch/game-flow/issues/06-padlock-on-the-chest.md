@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Voyage), 04 (New crab and padlock art)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The padlock sprite `assets/sprites/goal/padlock.png` sits on the front of the chest while an Item is not collected.
 - [x] The move rule does not change. The boat still stops on the Goal square.
