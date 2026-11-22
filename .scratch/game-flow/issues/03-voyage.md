@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] A pure module holds `meets_conditions(number, seed)` and `new_voyage(start_value)`. The game and `tools/seed_search.gd` share it.
 - [x] Each seed of `new_voyage` meets the conditions of its slot. The same `start_value` gives the same seeds. Two different values give different Voyages. The second slot of a size never takes the seed of the first slot of that size.
