@@ -100,3 +100,7 @@ NOTE: Do these steps after the Goal fix. The Goal fix changes the shape of each 
 - Step 3 (criterion 9): the chest is larger and sparkles before it opens. Its left edge goes onto the foam line of the Goal square. Make sure that this looks correct. Listen at a Goal: the Sea friend sound must be clear over the fanfare.
 - When the boat turns, make sure that it stays inside the channel, in a small Labyrinth and in a large Labyrinth (for example Labyrinth 18).
 - Make sure that the difficulty goes up slowly from Labyrinth 1 to Labyrinth 20.
+
+## Comments
+
+- 2026-11-23 (game-flow, ticket 12): do the Parent manual check again. The layout changed (no top band, Item column at the left, Collection strip at the bottom) and the flow changed (opening screen, locked chest with padlock, reveal of the Sea friend, Party at Labyrinth 20). Also look at the empty Item slots in Area 2: the sand dollar ghost is not visible.

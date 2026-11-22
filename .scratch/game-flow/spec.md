@@ -274,3 +274,7 @@ The play screen gets a polish: a larger maze with an Item column at its left, a 
 - The opening screen, the padlock, the Party, and the layout come from the prototypes of tickets 01 and 02. The real-game layout shots of ticket 02 show fixes 1, 2, 3, 6 and 7 with the real art.
 - The Parent must do the manual check of ticket 30 of the labyrinth-game map after this change, because the layout and the flow change.
 - Time estimate for an agent: part 1 about 4 h, part 2 about 2 h, part 3 about 3 h, part 4 about 2.5 h, part 5 about 5 h, part 6 about 2 h, plus the Parent check of the art.
+
+## Comments
+
+Build report (ticket 12, 2026-11-23): all game-flow tickets are merged on `game-flow`. The suite passes (54652 passed, 0 failed), the Python port passes, and the windowed smoke run prints `SMOKE OK`. All 18 shots are new. In each shot the slot gaps are equal, the chest is fully on land, the boat is inside the channel, and the slot outlines have good contrast. One problem: the empty-slot ghost of the sand dollar is not visible (Area 2). A person must do the Parent manual check of ticket 30 again, on the real screen and with sound.
