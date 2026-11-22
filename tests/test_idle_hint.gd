@@ -79,3 +79,58 @@ func test_an_item_hops_up_with_a_landing_squash_in_350_ms(t) -> bool:
 	t.assert_eq(other.position, other_rest, "the other Item does not hop")
 	items.free()
 	return true
+
+
+## Game seconds of a check that no hop comes: a little less than the 6 s of the idle hint.
+const NO_HOP_SECONDS := 5.5
+## Game seconds to wait for a hop that is due within 6 s.
+const HOP_TIMEOUT := 7.0
+
+
+## Records the square of each hint hop of `main`.
+static func _record_hops(main: Node) -> Array:
+	var hops := []
+	main.hint_hopped.connect(func(square: Vector2i) -> void: hops.append(square))
+	return hops
+
+
+## Waits `seconds` of game time. The timer also runs while the settings pause the game.
+static func _wait(t, seconds: float) -> void:
+	await t.create_timer(seconds).timeout
+
+
+## Waits for the next hint hop of `main`. When it comes, the hop plays at the normal speed, and the
+## result tells if `sprite` goes up by more than 8 % of a tile from its place at the hop start.
+## Returns false when no hop comes in time.
+static func _wait_for_hop_of(t, main: Node, sprite: Sprite2D) -> bool:
+	var start_y := [0.0]
+	main.hint_hopped.connect(func(_square: Vector2i) -> void: start_y[0] = sprite.position.y, CONNECT_ONE_SHOT)
+	if not await t.wait_for(main.hint_hopped, HOP_TIMEOUT):
+		return false
+	Engine.time_scale = 1.0
+	var highest: float = start_y[0]
+	var timer: SceneTreeTimer = t.create_timer(Motion.HINT_HOP_SECONDS)
+	while timer.time_left > 0.0:
+		highest = minf(highest, sprite.position.y)
+		await t.process_frame
+	Engine.time_scale = Scene.TIME_SCALE
+	var tile_px: float = main.get_node("LabyrinthView").tile_px
+	return start_y[0] - highest > 0.08 * tile_px
+
+
+## After 6 s with no key press, the Item with the shortest press path hops: (0, 2), not (1, 1).
+## After the boat collects it, the next hop is on (1, 1).
+func test_the_nearest_item_hops_after_6_seconds_with_no_key_press(t) -> bool:
+	var main := await Scene.add_main(t)
+	var items: ItemsView = main.get_node("Items")
+	var hops := _record_hops(main)
+	await _wait(t, NO_HOP_SECONDS)
+	t.assert_eq(hops, [], "no hop before 6 s")
+	t.assert_true(await _wait_for_hop_of(t, main, items.sprite_of("0,2")), "the Item on (0, 2) hops up")
+	t.assert_eq(hops, [Vector2i(0, 2)], "the hop target is the Item on (0, 2)")
+	t.assert_true(await Scene.press(t, main, KEY_DOWN), "the boat sails down")
+	t.assert_eq(main.progress.collected_items, PackedStringArray(["0,2"]), "the boat collects the Item on (0, 2)")
+	t.assert_true(await _wait_for_hop_of(t, main, items.sprite_of("1,1")), "the Item on (1, 1) hops up")
+	t.assert_eq(hops, [Vector2i(0, 2), Vector2i(1, 1)], "the next hop target is the Item on (1, 1)")
+	await Scene.remove(t, main)
+	return true
