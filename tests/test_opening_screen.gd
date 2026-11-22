@@ -43,6 +43,7 @@ func test_at_launch_the_opening_screen_shows_and_an_arrow_press_starts_the_labyr
 	main.labyrinth_started.connect(func(number: int) -> void: started.append(number))
 	t.assert_true(main.is_opening_shown(), "the opening screen shows at launch")
 	t.assert_true(_opening(main).is_visible_in_tree(), "the opening screen is visible")
+	t.assert_true(not main.get_node("CollectionStrip").is_visible_in_tree(), "the Collection strip does not show over the opening screen")
 	t.assert_eq(started, [], "no Labyrinth shows yet")
 	Scene.send_key(KEY_DOWN)
 	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the arrow press starts the Labyrinth")
@@ -51,6 +52,7 @@ func test_at_launch_the_opening_screen_shows_and_an_arrow_press_starts_the_labyr
 	t.assert_eq(moves, [], "the arrow press on the opening screen does not move the boat")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
 	t.assert_true(not main.is_opening_shown(), "the opening screen is gone")
+	t.assert_true(main.get_node("CollectionStrip").is_visible_in_tree(), "the Collection strip shows in play")
 	t.assert_true(await Scene.press(t, main, Scene.key_for(Scene.next_step(main.labyrinth, main.boat_square))), "the next arrow press sails the boat")
 	await Scene.remove(t, main)
 	return true

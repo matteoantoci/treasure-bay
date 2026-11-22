@@ -1,27 +1,31 @@
-## The Sea friend of the Goal celebration (spec 8.6): it grows next to the Goal island, wiggles,
-## then flies to its slot in the Collection strip and shrinks to the strip icon size.
+## The Sea friend of the Goal celebration (spec 8.6, game-flow spec part 6, fix 5): it flips in
+## large in the middle of the Labyrinth area, wiggles, then flies to its slot in the Collection
+## strip and shrinks to the strip icon size.
 class_name SeaFriendView
 extends Sprite2D
 
 var _tweens := []
 
 
-## Grows from 0 to 1.3 times 110 px at (+175, +60) px from the Goal island tile centre, right of
-## the chest (Motion.FRIEND_START_PX), and moves up to 30 px above the island centre. `s` is the
-## Labyrinth scale of spec 8.1.
-func appear(friend_texture: Texture2D, island_centre: Vector2, s: float) -> void:
+## Flips in at `centre` with its longer side `full_px` long. In the first half of the flip the
+## horizontal scale goes from 0 to full and the size from 50 % to 108 %. In the second half the
+## size settles at 100 %.
+func appear(friend_texture: Texture2D, centre: Vector2, full_px: float) -> void:
 	stop()
 	texture = friend_texture
-	position = island_centre + Motion.FRIEND_START_PX * s
+	position = centre
 	rotation = 0.0
-	scale = Vector2.ZERO
+	var full := _scale_for(full_px)
+	scale = Vector2(0.0, full.y * Motion.FRIEND_FLIP_START_SIZE)
 	visible = true
 	var tween := _new_tween().set_parallel()
-	Motion.shape(tween.tween_property(self, "scale", _scale_for(Motion.FRIEND_PX * s) * Motion.FRIEND_SCALE, Motion.FRIEND_GROW_SECONDS), Motion.FRIEND_GROW_CURVE)
-	Motion.shape(tween.tween_property(self, "position:y", island_centre.y - Motion.FRIEND_RISE_PX * s, Motion.FRIEND_GROW_SECONDS), Motion.FRIEND_GROW_CURVE)
+	var peak := full * Motion.FRIEND_FLIP_PEAK_SIZE
+	Motion.shape(tween.tween_property(self, "scale:x", peak.x, Motion.FRIEND_FLIP_HALF_SECONDS), Motion.FRIEND_FLIP_CURVE)
+	Motion.shape(tween.tween_property(self, "scale:y", peak.y, Motion.FRIEND_FLIP_HALF_SECONDS), Motion.FRIEND_FLIP_CURVE)
+	Motion.shape(tween.chain().tween_property(self, "scale", full, Motion.FRIEND_FLIP_HALF_SECONDS), Motion.FRIEND_FLIP_CURVE)
 
 
-## Turns from -0.15 rad to +0.15 rad, then back to 0.
+## Turns from -0.08 rad to +0.08 rad, then back to 0.
 func wiggle() -> void:
 	rotation = -Motion.FRIEND_WIGGLE_RAD
 	var tween := _new_tween()
