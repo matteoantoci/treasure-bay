@@ -14,6 +14,8 @@ const SOUND_FILES := [
 	"res://assets/audio/effects/item.wav",
 	"res://assets/audio/effects/goal.wav",
 	"res://assets/audio/effects/splash.wav",
+	"res://assets/audio/effects/locked.wav",
+	"res://assets/audio/effects/unlock.wav",
 	"res://assets/audio/friends/crab.wav",
 	"res://assets/audio/friends/octopus.wav",
 	"res://assets/audio/friends/whale.wav",

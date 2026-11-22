@@ -270,7 +270,7 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 
 ### 6.1 Items
 
-- Each Labyrinth has 2 to 8 Items (section 4.3). The Child does not need any Item to reach the Goal.
+- Each Labyrinth has 2 to 8 Items (section 4.3). The chest on the Goal has a padlock until the Child collects all Items of the Labyrinth, so she must collect all Items to finish it (section 6.2, [game-flow spec](../game-flow/spec.md) part 2).
 - The boat stops on each Item square that it reaches. The Item makes a pop sound and a sparkle, then flies to its outline at the top (section 8.4).
 - The Item row at the top shows one outline for each Item of this Labyrinth. Each collected Item fills its outline. The row never gets smaller.
 - The total count of all collected Items goes up by 1 for each new Item. It never goes down, except after a Parent reset. It stays at the start of a new Voyage ([game-flow spec](../game-flow/spec.md) part 1).
@@ -279,13 +279,16 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 ### 6.2 Goal
 
 - The Goal square is the bottom-right square. The Goal island tile is the border tile to the right of the Goal square, tile (2W, 2H − 1). The tile right of it, tile (2W + 1, 2H − 1) outside the Labyrinth, is island too. So the Goal island is 2 tiles wide, with a sand coast all around. These 2 tiles get no rock and no bush ([game-flow spec](../game-flow/spec.md) part 5, fix 4).
-- The Goal island has a palm and a treasure chest. The chest is 115 % of a tile wide and sits on the seam of the 2 tiles, fully on land. The palm (tile 71, 0.6 tile) sits on the outer tile, up and to the right of the chest, inside the coast ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The chest is closed while the Child sails. The closed chest shows the Item sparkle of section 8.2, with `i` equal to the Item count of the Labyrinth. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png`, and the sparkle stops (ticket 19 Q5, [play-improvements spec](../play-improvements/spec.md) part 2).
+- The Goal island has a palm and a treasure chest. The chest is 115 % of a tile wide and sits on the seam of the 2 tiles, fully on land. The palm (tile 71, 0.6 tile) sits on the outer tile, up and to the right of the chest, inside the coast ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The chest is closed while the Child sails. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png`, and the sparkle stops (ticket 19 Q5, [play-improvements spec](../play-improvements/spec.md) part 2).
+- **Padlock** ([game-flow spec](../game-flow/spec.md) part 2): the chest is locked while at least one Item of the Labyrinth is not collected. Then `assets/sprites/goal/padlock.png` sits on the front of the chest: 36 % of a tile tall, its centre 0.19 tile right of and 0.14 tile below the chest centre, on the hasp. The locked chest does not sparkle. When the last Item arrives in its slot, the padlock pops off (section 8.5), and the chest is open. The open chest shows the Item sparkle of section 8.2, with `i` equal to the Item count of the Labyrinth. A load with all Items collected shows the open chest with its sparkle and no padlock.
+- The move rule does not change: the boat stops on the Goal square also when the chest is locked.
 - The palm has the modulate colour `Color(0.7, 0.85, 0.7)`, so it is darker than the grass ([play-improvements spec](../play-improvements/spec.md) part 2).
 - Wall islands have rocks and bushes and no palm (ticket 19 Q5).
 
 ### 6.3 Goal celebration and the Sea friend (Labyrinths 1 to 20)
 
-- When the boat arrives on the Goal square, the game saves first (section 12). Then the celebration plays: the boat hops, confetti falls, the fanfare plays, and the chest opens (section 8.5).
+- When the boat arrives on the Goal square and the chest is open, the game saves first (section 12). Then the celebration plays: the boat hops, confetti falls, the fanfare plays, and the chest opens (section 8.5).
+- **Arrival at the locked chest** ([game-flow spec](../game-flow/spec.md) part 2): the chest shakes, the locked sound plays, and each empty Item slot pulses two times (section 8.5). No celebration, no Sea friend, no change to the progress, and no save. The input stays free: one press in an open direction of the Goal square takes the boat away.
 - At 1.4 s, the screen gets darker and the Sea friend of this Labyrinth flips in large in the middle of the Labyrinth area. Its sound plays. At 3.0 s it flies to its slot in the Collection strip, and it arrives at 3.7 s (section 8.6, [game-flow spec](../game-flow/spec.md) part 6, fix 5).
 - At 4.2 s the next Labyrinth starts by itself with the fade (section 8.8). The Child does not choose.
 
@@ -379,7 +382,7 @@ All 7 motions stay, at the medium amount. The values below are the spec values. 
 |---|---|
 | Boat idle | Rock `0.06 * sin(1.6 t)` rad and bob `2 * sin(1.6 t + 1)` px. Only while the boat does not move. |
 | Item idle | Bob `4 * sin(2 t + i)` px, where i is the Item index. A white 8-point sparkle of radius 7 px at (+18, −18) px from the Item centre. It shows while `fract(0.7 t + 0.33 i) < 0.15`, with alpha `1 - fract / 0.15` (a cycle of 1.4 s). |
-| Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. The closed chest shows the Item sparkle at (+18, −18) px from the chest centre, with `i` equal to the Item count of the Labyrinth. The open chest has no sparkle. |
+| Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. The open chest (all Items collected, section 6.2) shows the Item sparkle at (+18, −18) px from the chest centre, with `i` equal to the Item count of the Labyrinth. The locked chest and the chest of the Goal celebration have no sparkle. |
 | Water waves | Short curved lines in the Area light colour, at 18 % opacity, 3 px wide. The rows are 34 px apart. In a row, a line starts every 90 px. Each line is `8 * sin(0.02 x + 0.05 y)` px from its grid place. The lines do not move, and the water has no light patterns. Nothing in the background moves ([game-flow spec](../game-flow/spec.md) part 5, fix 2). |
 | Foam | A still white line at 35 % opacity, 6 px wide, with soft edges, along each island coast and under the islands. Its centre is 3 px from the coast, so it starts at the sand. It goes round the round island corners and round the Goal island ([game-flow spec](../game-flow/spec.md) part 5, fix 2). |
 | Wake | While the boat moves, a soft white dot starts every 40 ms, 58 px behind the boat centre (just behind the stern), on the move line, 4 px to the left and to the right in turn. Its radius starts at 9 % of the tile (11.7 px) and gets smaller to 40 % of that. Its opacity starts at 42 % and goes to 0. It lives 0.6 s. The dots are under the islands ([game-flow spec](../game-flow/spec.md) part 5, fix 9). |
@@ -406,6 +409,11 @@ The times start at the arrival on the Goal square (0 ms):
 - 0 ms: the chest changes to `chest_open.png`. The fanfare starts.
 - 0 ms and 600 ms: the boat hops. One hop scales the boat height to 1.25× in 150 ms (`out`), then back to 1× in 250 ms (`back`).
 - 0 ms: 40 confetti pieces start 40 px above the Goal island centre. They are rectangles of 10 × 6 px that turn, in `#ff5a5a`, `#ffd54a`, `#5ad1ff`, `#7cff7a`, and `#ff8ad8`. Start speed is 320 px/s times a random factor from 0.4 to 1.2, in all directions, with an upward push. Gravity is 380 px/s². Life is 2.6 s.
+
+**Padlock** ([game-flow spec](../game-flow/spec.md) part 2), values in `Motion`:
+- Arrival at the locked chest: the chest and its padlock move sideways by 0, −10, 8, −6, 4, −2, 0 px, linear, in 360 ms in all (60 ms for each step). Each empty Item slot (the outline and its fill sprite) pulses two times: scale 1.0 to 1.15 in 300 ms and back in 300 ms (`inout`). The opacity of the slot does not change. When an Item arrives in a pulsing slot, the pulse of that slot stops and the bounce of section 8.4 plays.
+- The last Item arrives in its slot (no other Item in flight): the padlock grows to 1.3× and fades out in 300 ms (`out`). 6 sparkles in `#ffffff` and `#ffe07a` burst at the padlock centre, speed 100 px/s, life 500 ms. The unlock sound plays.
+- If the boat reaches the open chest before the pop, the chest opens and the padlock goes at once.
 
 ### 8.6 Sea friend
 
@@ -469,12 +477,15 @@ All effect URLs are the Freesound `-hq.mp3` preview files. They download with no
 | Item collected | `assets/audio/effects/item.wav` | Bubble Pop | YehawSnail | CC0 | https://freesound.org/people/YehawSnail/sounds/683587/ | https://cdn.freesound.org/previews/683/683587_12375565-hq.mp3 | Whole file (0.5 s) |
 | Goal | `assets/audio/effects/goal.wav` | Success Fanfare Trumpets | FunWithSound | CC0 | https://freesound.org/people/FunWithSound/sounds/456966/ | https://cdn.freesound.org/previews/456/456966_6456158-hq.mp3 | Cut at 3.7 s, fade out from 3.2 s to 3.7 s |
 | Sea friend with no own sound | `assets/audio/effects/splash.wav` | Splash | swordofkings128 | CC0 | https://freesound.org/people/swordofkings128/sounds/398032/ | https://cdn.freesound.org/previews/398/398032_7586736-hq.mp3 | Whole file (1.3 s) |
+| Arrival at the locked chest | `assets/audio/effects/locked.wav` | Impact Sounds: impactWood_light_000 and impactWood_light_003 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds | The pack zip of the page | The 2 knocks mixed 0.16 s apart, padded with silence to 0.6 s ([game-flow spec](../game-flow/spec.md) part 2) |
+| Padlock pops off | `assets/audio/effects/unlock.wav` | RPG Audio: metalLatch | Kenney | CC0 | https://kenney.nl/assets/rpg-audio | The pack zip of the page | Whole file, padded with silence to 0.5 s ([game-flow spec](../game-flow/spec.md) part 2) |
 
 - The move sound goes in an `AudioStreamRandomizer` with `random_pitch_semitones = 1.0`. Its player has `max_polyphony = 4` ([sounds.md](research/sounds.md), [audio-design skill](../../.claude/skills/audio-design/SKILL.md)).
 - The move sound plays one time for each move, not for each square.
 - The fanfare cut: `ffmpeg -i goal.mp3 -t 3.7 -af "afade=t=out:st=3.2:d=0.5" -ac 1 -ar 44100 -c:a pcm_s16le goal.wav` (ticket 11, gap-audit default 37).
 - **Fanfare duck:** when a Sea friend appears, a tween moves the volume of the Goal player from its level to its level − 12 dB in 0.2 s. The tween pauses with the game, like the Goal player. At each Goal arrival, the game kills an old duck tween, sets the Goal player to its level from the sound-levels table, and then plays the fanfare. So a reset during the celebration needs no extra step.
 - The new-Area Item makes no sound (gap-audit default 38).
+- The two padlock sounds are OGG files of the Kenney packs. The pad gives each file at least one 400 ms block for the loudness step of section 9.6: `ffmpeg -i impactWood_light_000.ogg -i impactWood_light_003.ogg -filter_complex "[1]adelay=160:all=1[b];[0][b]amix=inputs=2:normalize=0,apad=whole_dur=0.6" -ac 1 -ar 44100 -c:a pcm_s16le locked.wav` and `ffmpeg -i metalLatch.ogg -af "apad=whole_dur=0.5" -ac 1 -ar 44100 -c:a pcm_s16le unlock.wav`. The locked sound is soft: its true peak limits its level to −0.1 dB, about −24.5 LUFS.
 
 ### 9.4 Sea friend sounds
 
@@ -525,6 +536,8 @@ Source: [sounds.md](research/sounds.md) Download and preparation, [audio-design 
 | Bump | `wall.wav` |
 | Item collected | `item.wav` |
 | Goal arrival | `goal.wav` at its level |
+| Arrival at the locked chest | `locked.wav` |
+| The last Item arrives in its slot | `unlock.wav` |
 | Sea friend appears (1.4 s) | Its own sound, or `splash.wav`. The fanfare goes 12 dB down in 0.2 s (section 9.3) |
 | Area change | Music crossfade to the new Area track |
 
@@ -561,6 +574,10 @@ Effects
 "Bubble Pop" by YehawSnail - https://freesound.org/people/YehawSnail/sounds/683587/
 "Success Fanfare Trumpets.mp3" by FunWithSound - https://freesound.org/people/FunWithSound/sounds/456966/
 "Splash" by swordofkings128 - https://freesound.org/people/swordofkings128/sounds/398032/
+"Impact Sounds" by Kenney (www.kenney.nl) - https://kenney.nl/assets/impact-sounds
+  The locked chest: impactWood_light_000 and impactWood_light_003, mixed 0.16 s apart.
+"RPG Audio" by Kenney (www.kenney.nl) - https://kenney.nl/assets/rpg-audio
+  The padlock pops off: metalLatch.
 Sea friends
 "scissors;snips.wav" by Abir19 - https://freesound.org/people/Abir19/sounds/629513/
 "Cartoon - Smoochy Squeak + Plop" by Breviceps - https://freesound.org/people/Breviceps/sounds/444494/
@@ -703,6 +720,7 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 
 - After each collected Item.
 - At each Goal, before the celebration. After Labyrinths 1 to 19, this save has the new Sea friend in `collection`, `labyrinth` + 1, and an empty `collected_items`. A quit during the celebration keeps the Sea friend. After Labyrinth 20, this save has the new Voyage: `labyrinth` 1, new `seeds`, an empty `collected_items`, an empty `collection`, and the same `total_items` ([game-flow spec](../game-flow/spec.md) part 1).
+- Not at an arrival at the locked chest, because nothing changes ([game-flow spec](../game-flow/spec.md) part 2).
 - After a Parent reset, and before a quit.
 - The boat position is not saved. After a restart, the boat starts on the start square. The collected Items of the current Labyrinth stay collected, so one Item never counts two times.
 
@@ -858,7 +876,7 @@ Tests:
 9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`. A crossfade during a crossfade fades out the louder copy and does not cut it. After `sea_friend_appeared`, the Goal player reaches its level − 12 dB in 0.2 s. At the next `goal_reached`, it plays at its level (section 9.3).
 10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. The length of each imported WAV file is the length of its source file, ±20 ms. `credits.txt` has a line for each sound file.
 11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`. The `confirm` action holds Space and Enter (section 5.1).
-12. **Chest sparkle:** the closed chest shows the Item sparkle of section 8.2 at its cycle times. The open chest does not show it.
+12. **Chest sparkle and padlock:** the open chest shows the Item sparkle of section 8.2 at its cycle times. The locked chest and the chest of the Goal celebration do not show it. The padlock sits on the front of the locked chest, the shake has the offsets of section 8.5, the empty slots pulse two times, and the pop grows the padlock to 1.3× and fades it out in 300 ms. A main-scene test sails to the locked chest: no celebration, no Sea friend, the same progress, no save, the locked sound, and pulsing empty slots. After the last Item, the padlock pops with the unlock sound, and a visit to the chest starts the celebration. A load with all Items collected shows no padlock ([game-flow spec](../game-flow/spec.md) part 2).
 13. **Hold buttons:** a reset hold of 7.9 s does nothing, and a reset hold of 8 s resets. A quit hold of 3 s quits.
 14. **Opening screen** ([game-flow spec](../game-flow/spec.md) part 3): at launch the opening screen shows, and an arrow press does not move the boat. Each arrow key, Space, Enter, or a click on the button starts the current Labyrinth. While the settings are open, the button does nothing. A Parent reset shows the opening screen with a new Voyage. A launch from a version 1 save past Labyrinth 20 shows the opening screen, then Labyrinth 1 with an empty strip. The title letters have even gaps on the arc. The test helper `start_from_opening()` of `tests/scene_helpers.gd` goes through the opening screen, and `add_main()` uses it.
 
@@ -867,6 +885,7 @@ Tests:
 A headless run has no pixels [trace]. For a screenshot, run the game in a window: `godot --path . --write-movie shots/frame.png --quit-after <N>`, or save `get_viewport().get_texture().get_image()` after `await RenderingServer.frame_post_draw` ([godot4-facts §7](research/godot4-facts.md)).
 
 `tools/take_shots.gd` takes `shots/opening.png`, the opening screen at launch, at 1920 × 1200 ([game-flow spec](../game-flow/spec.md) part 3).
+`tools/take_motion_shots.gd` also takes `shots/motion-locked.png` (the locked chest 60 ms into its shake) and `shots/motion-unlocked.png` (the open chest 0.3 s after the unlock, when the padlock is gone) ([game-flow spec](../game-flow/spec.md) part 2).
 
 ### 14.3 Manual test checklist
 
@@ -876,7 +895,7 @@ The build does these checks on the Parent's Mac and reports each result:
 3. Sprite edges are smooth on light water (Area 1) and on dark water (Area 4). The dark outline of each sprite is complete ([ticket 14](issues/14-clean-sprite-edges.md)).
 4. The water and the foam do not move. The boat leaves a soft wake of white dots, and the boat rocks when it does not move.
 5. Each of the 7 motions of section 8 plays: idle, water, wake, Item collect, Goal hop and confetti, Sea friend reveal, fade and new-Area Item.
-6. The chest opens at the Goal.
+6. The chest has a padlock until the last Item. A visit to the locked chest shakes it, and the empty slots pulse. The last Item pops the padlock off. The chest opens at the Goal.
 7. Each Area shows its colours, Items, decoration, and music.
 8. The music loops with no audible jump, and the Area change crossfades.
 9. The volume buttons change music and effects separately. Step 0 is silent.
@@ -896,7 +915,7 @@ The build is complete when each criterion is true:
 6. Labyrinth 1 is 4 × 3 squares with 2 Items and is the same at each new start. Labyrinths 1 to 20 match the table of section 4.3. Each later Voyage has new Labyrinths with the same sizes and Item counts ([game-flow spec](../game-flow/spec.md) part 1).
 7. Each Labyrinth has at least one Item in a dead end. No Item is on the start square or the Goal square.
 8. The boat stops on each Item square. The Item pops, plays the pop sound, flies to its outline, and the outline fills.
-9. At the Goal of Labyrinth n (1 to 20): the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade.
+9. At the Goal of Labyrinth n (1 to 20), with all Items collected: the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade. With an Item left, the Goal gives only the locked chest of section 6.3.
 10. The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage at Labyrinth 1 with an empty Collection and the same total count. No Sea friend comes back ([game-flow spec](../game-flow/spec.md) part 1).
 11. The Area look and the music change at Labyrinths 6, 11, 16, 21, and every 5 Labyrinths after that, in the order Area 1, 2, 3, 4, 1. The first Item kind of the new Area pops up big in the centre, then fades.
 12. The islands are Kenney tiles with sand coasts. The water and the foam do not move, the boat leaves a wake, and the boat rocks when it does not move.
@@ -955,7 +974,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 22. Clip times: [ticket 12](issues/12-listen-to-the-sounds.md) "Check them against the original file before the cut" and gap-audit default 39 (cross-correlation). Ticket 19 Q6 removes the original files, so the preview times apply directly. Default 39 does not apply.
 23. Music loop: [ticket 10](issues/10-source-the-sounds.md) "music … with the Loop import option" against [ticket 12](issues/12-listen-to-the-sounds.md) "Every track uses the crossfade to its start". Ticket 12 wins: Loop off and a crossfade.
 24. Wall islands: gap-audit default 12 says "Wall islands get rocks and bushes". The tile list has one bush (tile 70) and a small plant (tile 72) that can look like a palm. The spec uses tile 70 only.
-25. Goal in a path: the recursive backtracker of section 4.2 (first text) against the Parent's report "Items are optional, but the Child must be able to reach each of them". The first generator put the Goal square in the middle of a path in 17 of the 20 fixed Labyrinths. The squares behind the Goal and their Items were lost, because the boat stops at the Goal. The Parent's report wins: the search does not continue from the Goal square (section 4.2). The Labyrinth shapes and Item squares changed, so section 12.3 removes old Item IDs on load.
+25. Goal in a path: the recursive backtracker of section 4.2 (first text) against the Parent's report "Items are optional, but the Child must be able to reach each of them". The first generator put the Goal square in the middle of a path in 17 of the 20 fixed Labyrinths. The squares behind the Goal and their Items were lost, because the boat stops at the Goal. The Parent's report wins: the search does not continue from the Goal square (section 4.2). The Labyrinth shapes and Item squares changed, so section 12.3 removes old Item IDs on load. The Items are not optional any more: the chest has a padlock until the last Item (section 6.2, [game-flow spec](../game-flow/spec.md) part 2).
 26. Island cells: section 7.1 (first text) "Scale the layer to the tile size of section 10", which gives one Kenney tile for each Labyrinth tile, against the Kenney coast tiles. The Kenney coast tiles need an island that is at least 2 tiles thick, and a wall island is only 1 Labyrinth tile thick ([ticket 24](issues/24-sea-look-areas-layout.md) notes). The Kenney tiles win: each Labyrinth tile is 3 × 3 Kenney cells (`IslandLook.CELLS_PER_TILE`), so each island has a sand coast around a grass top, like the Kenney sample.
 
 ## Open gaps

@@ -26,6 +26,10 @@ Effects
 "Bubble Pop" by YehawSnail - https://freesound.org/people/YehawSnail/sounds/683587/
 "Success Fanfare Trumpets.mp3" by FunWithSound - https://freesound.org/people/FunWithSound/sounds/456966/
 "Splash" by swordofkings128 - https://freesound.org/people/swordofkings128/sounds/398032/
+"Impact Sounds" by Kenney (www.kenney.nl) - https://kenney.nl/assets/impact-sounds
+  The locked chest: impactWood_light_000 and impactWood_light_003, mixed 0.16 s apart.
+"RPG Audio" by Kenney (www.kenney.nl) - https://kenney.nl/assets/rpg-audio
+  The padlock pops off: metalLatch.
 Sea friends
 "scissors;snips.wav" by Abir19 - https://freesound.org/people/Abir19/sounds/629513/
 "Cartoon - Smoochy Squeak + Plop" by Breviceps - https://freesound.org/people/Breviceps/sounds/444494/

@@ -21,6 +21,8 @@ const LEVELS := {
 	"res://assets/audio/effects/item.wav": {"lufs": -29.0, "true_peak": -6.5, "volume_db": 5.5},
 	"res://assets/audio/effects/goal.wav": {"lufs": -20.2, "true_peak": -6.6, "volume_db": 2.2},
 	"res://assets/audio/effects/splash.wav": {"lufs": -24.6, "true_peak": -0.1, "volume_db": -0.9},
+	"res://assets/audio/effects/locked.wav": {"lufs": -24.4, "true_peak": -0.9, "volume_db": -0.1},
+	"res://assets/audio/effects/unlock.wav": {"lufs": -20.2, "true_peak": 0.4, "volume_db": -1.4},
 	"res://assets/audio/friends/crab.wav": {"lufs": -33.0, "true_peak": -5.6, "volume_db": 4.6},
 	"res://assets/audio/friends/octopus.wav": {"lufs": -25.5, "true_peak": -5.6, "volume_db": 4.6},
 	"res://assets/audio/friends/whale.wav": {"lufs": -39.4, "true_peak": -26.2, "volume_db": 21.4},

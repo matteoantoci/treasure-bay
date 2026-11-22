@@ -69,6 +69,7 @@ func test_every_png_loads_as_texture_with_mipmaps(t) -> bool:
 const WAV_SECONDS := {
 	"effects/move.wav": 0.875, "effects/wall.wav": 1.133, "effects/item.wav": 0.471,
 	"effects/goal.wav": 3.700, "effects/splash.wav": 1.331,
+	"effects/locked.wav": 0.600, "effects/unlock.wav": 0.500,
 	"friends/crab.wav": 2.393, "friends/octopus.wav": 0.659, "friends/whale.wav": 2.500,
 	"friends/dolphin.wav": 2.580, "friends/fish.wav": 2.040, "friends/squid.wav": 0.959,
 	"friends/seal.wav": 2.250, "friends/jellyfish.wav": 2.500, "friends/otter.wav": 1.500,
@@ -78,7 +79,7 @@ const WAV_SECONDS := {
 
 
 func test_each_imported_wav_keeps_its_source_length(t) -> bool:
-	t.assert_eq(WAV_SECONDS.size(), 18, "WAV count of spec §9.3 and §9.4")
+	t.assert_eq(WAV_SECONDS.size(), 20, "WAV count of spec §9.3 and §9.4, and the 2 padlock sounds of game-flow spec Part 2")
 	for file in WAV_SECONDS:
 		var path: String = "res://assets/audio/" + file
 		var stream := load(path) as AudioStreamWAV
@@ -116,6 +117,8 @@ const CREDITS := {
 	"effects/item.wav": ["Bubble Pop", "YehawSnail", "https://freesound.org/people/YehawSnail/sounds/683587/"],
 	"effects/goal.wav": ["Success Fanfare Trumpets.mp3", "FunWithSound", "https://freesound.org/people/FunWithSound/sounds/456966/"],
 	"effects/splash.wav": ["Splash", "swordofkings128", "https://freesound.org/people/swordofkings128/sounds/398032/"],
+	"effects/locked.wav": ["Impact Sounds", "Kenney", "https://kenney.nl/assets/impact-sounds"],
+	"effects/unlock.wav": ["RPG Audio", "Kenney", "https://kenney.nl/assets/rpg-audio"],
 	"friends/crab.wav": ["scissors;snips.wav", "Abir19", "https://freesound.org/people/Abir19/sounds/629513/"],
 	"friends/octopus.wav": ["Cartoon - Smoochy Squeak + Plop", "Breviceps", "https://freesound.org/people/Breviceps/sounds/444494/"],
 	"friends/whale.wav": ["Whale.wav", "claretcanelon", "https://freesound.org/people/claretcanelon/sounds/458626/"],
@@ -133,7 +136,7 @@ const CREDITS := {
 
 
 func test_credits_has_a_line_for_each_sound_file(t) -> bool:
-	t.assert_eq(CREDITS.size(), 22, "sound file count of spec §9.2 to §9.4")
+	t.assert_eq(CREDITS.size(), 24, "sound file count of spec §9.2 to §9.4, and the 2 padlock sounds")
 	var text := FileAccess.get_file_as_string("res://credits.txt")
 	var lines := Array(text.split("\n"))
 	for file in CREDITS:

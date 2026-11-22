@@ -1,7 +1,8 @@
 ## The main scene: the opening screen, then one Labyrinth on the screen, the boat, the Items, the
 ## Item row, and the Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects
-## each Item that it stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth
-## fades in. The motion values of spec 8 are in Motion.
+## each Item that it stops on. The chest of the Goal is locked until the last Item. At the open
+## chest, a Sea friend comes to the strip, then the next Labyrinth fades in. The motion values of
+## spec 8 are in Motion.
 extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.
@@ -29,6 +30,11 @@ signal bumped
 signal opening_shown
 ## Emitted when the Child presses the start button of the opening screen.
 signal start_pressed
+## Emitted when the boat arrives on the Goal square while the chest is locked: an Item of the
+## Labyrinth is not collected. Nothing of the Goal happens (game-flow spec Part 2).
+signal locked_chest_reached
+## Emitted when the last Item of the Labyrinth arrives in its slot and the padlock pops off.
+signal chest_unlocked
 
 ## The progress of the Child. _ready() loads it from the save file. Tests and tools can replace it,
 ## then call show_labyrinth().
@@ -48,6 +54,8 @@ var _tile_px := 0.0
 var _celebration: Tween
 ## The slide or the bump of the boat while it runs. The boat is busy while this is not null.
 var _move_tween: Tween
+## The collected Items that fly to their slots now. The padlock pops off only when none flies.
+var _items_in_flight := 0
 
 @onready var _water: WaterView = $Water
 @onready var _area_decoration: AreaDecoration = $AreaDecoration
@@ -190,6 +198,8 @@ func _show_current_labyrinth() -> void:
 	_area_decoration.show_labyrinth(labyrinth, area)
 	_foam.show_labyrinth(labyrinth)
 	_labyrinth_view.labyrinth = labyrinth
+	_labyrinth_view.locked = not _all_items_collected()
+	_items_in_flight = 0
 	_items.show_items(labyrinth, progress)
 	_item_row.show_items(labyrinth, progress)
 	_collection_strip.show_progress(progress)
@@ -287,7 +297,8 @@ func _end_move(target: Vector2i) -> void:
 		_move(kept)
 
 
-## Collects the Item on the boat square, and starts the celebration on the Goal square (spec 5.2).
+## Collects the Item on the boat square. On the Goal square, the open chest starts the celebration,
+## and the locked chest only shakes (spec 5.2, game-flow spec Part 2).
 func _arrive() -> void:
 	for i in labyrinth.items.size():
 		var item := labyrinth.items[i]
@@ -295,7 +306,32 @@ func _arrive() -> void:
 			_collect(i)
 			item_collected.emit(item)
 	if boat_square == labyrinth.goal_square():
-		_reach_goal()
+		if _all_items_collected():
+			_reach_goal()
+		else:
+			_visit_locked_chest()
+
+
+func _all_items_collected() -> bool:
+	return labyrinth.items.all(func(item: Item) -> bool: return progress.is_collected(item.id))
+
+
+## The locked chest shakes and the empty slots pulse. The input stays free, the progress does not
+## change, and the game does not save (game-flow spec Part 2).
+func _visit_locked_chest() -> void:
+	_labyrinth_view.shake_chest()
+	_item_row.pulse_empty()
+	locked_chest_reached.emit()
+
+
+## The last Item is in its slot: the padlock pops off with 6 sparkles, and the open chest starts to
+## sparkle (game-flow spec Part 2).
+func _unlock_chest() -> void:
+	var centre := _labyrinth_view.position + _labyrinth_view.padlock.position
+	_labyrinth_view.pop_padlock()
+	var sparkles := Burst.stars(Motion.PADLOCK_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.PADLOCK_SPARKLE_SPEED_PX, Motion.PADLOCK_SPARKLE_LIFE)
+	_effects.burst(sparkles, centre, _labyrinth_scale())
+	chest_unlocked.emit()
 
 
 ## The Item splashes, pops, and flies to its outline, which fills when it arrives (spec 8.4). The
@@ -309,12 +345,16 @@ func _collect(index: int) -> void:
 	_items.remove_item(item.id)
 	_item_row.collect(index)
 	_collection_strip.set_count(progress.total_items)
+	_items_in_flight += 1
 
 
 func _show_item_in_outline(index: int) -> void:
 	_item_row.show_fill(index)
 	var sparkles := Burst.stars(Motion.OUTLINE_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.OUTLINE_SPARKLE_SPEED_PX, Motion.OUTLINE_SPARKLE_LIFE)
 	_effects.burst(sparkles, _item_row.outline_centre(index), _hud_scale())
+	_items_in_flight -= 1
+	if _items_in_flight == 0 and _labyrinth_view.locked and _all_items_collected():
+		_unlock_chest()
 
 
 ## Locks the input, moves the progress on, and plays the Goal celebration of spec 6.3 and 8.5 to

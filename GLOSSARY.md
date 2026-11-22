@@ -13,7 +13,7 @@ The square in a Labyrinth that the Child must reach.
 _Avoid_: exit, finish, end
 
 **Item**:
-A small thing on the path that the Child can collect, for example a shell or a fish. The Child does not need Items to finish a Labyrinth.
+A small thing on the path that the Child can collect, for example a shell or a fish. The chest on the Goal has a padlock until the Child collects all Items of the Labyrinth, so she must collect all Items to finish a Labyrinth.
 _Avoid_: pickup, coin, treasure, collectible
 
 **Sea friend**:
