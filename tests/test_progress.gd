@@ -50,7 +50,7 @@ func test_goals_of_labyrinths_1_to_19_fill_the_collection_in_order(t) -> bool:
 	var progress := Progress.new()
 	for n in range(1, 20):
 		progress.collect_item("0,1")
-		var friend := progress.reach_goal()
+		var friend := progress.reach_goal(START_VALUE)
 		t.assert_eq(friend, SeaFriends.IDS[n - 1], "Sea friend of Labyrinth %d" % n)
 		t.assert_eq(progress.labyrinth_number, n + 1, "Labyrinth after the Goal of %d" % n)
 		t.assert_eq(progress.collected_items, PackedStringArray(), "no collected Items in Labyrinth %d" % (n + 1))

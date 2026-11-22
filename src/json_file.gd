@@ -39,9 +39,10 @@ static func version_of(data: Variant) -> int:
 
 
 ## Runs `chain` on `data`, version by version, from `version` up to `target`. chain[i] turns a file
-## of version i + 1 into version i + 2. Each entry takes the dictionary and returns the new one.
-static func migrate(data: Dictionary, version: int, chain: Array[Callable], target: int) -> Dictionary:
+## of version i + 1 into version i + 2. Each entry takes the dictionary, then the values of `args`,
+## and returns the new dictionary.
+static func migrate(data: Dictionary, version: int, chain: Array[Callable], target: int, args: Array = []) -> Dictionary:
 	while version < target:
-		data = chain[version - 1].call(data)
+		data = chain[version - 1].callv([data] + args)
 		version += 1
 	return data

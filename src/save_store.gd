@@ -15,7 +15,8 @@ const BEFORE_RESET_FILE := "save.before-reset.json"
 const BEFORE_RESET_TMP_FILE := "save.before-reset.json.tmp"
 ## The migration chain of save.json (spec 12.3): migrations[i] turns a save of version i + 1 into
 ## version i + 2. A change to the save schema raises VERSION and appends its migration here: a
-## static function that takes the dictionary and returns the new one.
+## static function that takes the dictionary and the start value of a new Voyage, and returns the
+## new dictionary.
 static var migrations: Array[Callable] = [_version_1_to_2]
 
 ## The folder of the save files.
@@ -70,23 +71,24 @@ func copy_before_reset(progress: Progress) -> Error:
 	return JsonFile.write_text(text, before_reset_path(), dir.path_join(BEFORE_RESET_TMP_FILE))
 
 
-## Loads the progress. With no save.json, the game starts at Labyrinth 1. A broken file becomes
-## save.bak (it replaces an older save.bak), and the game starts at Labyrinth 1. A file with a
-## version above VERSION is from a newer build and is not broken. That file stays in place, the game
-## starts at Labyrinth 1, and the store goes into the no-write state. The Child gets no message.
-func load_progress() -> Progress:
+## Loads the progress. With no save.json, or with a broken file, the game starts Labyrinth 1 of a new
+## Voyage from `start_value` (game-flow spec Part 1). A broken file becomes save.bak (it replaces an
+## older save.bak). A file with a version above VERSION is from a newer build and is not broken. That
+## file stays in place, the game starts Labyrinth 1 of the fixed seed table, and the store goes into
+## the no-write state. The Child gets no message.
+func load_progress(start_value: int) -> Progress:
 	if not FileAccess.file_exists(save_path()):
-		return Progress.new()
+		return Progress.new_voyage(start_value)
 	var json := JSON.new()
 	var progress: Progress = null
 	if json.parse(FileAccess.get_file_as_string(save_path())) == OK:
 		if JsonFile.version_of(json.data) > VERSION:
 			no_write = true
 			return Progress.new()
-		progress = from_dictionary(json.data)
+		progress = from_dictionary(json.data, start_value)
 	if progress == null:
 		_keep_broken_file()
-		return Progress.new()
+		return Progress.new_voyage(start_value)
 	return progress
 
 
@@ -104,17 +106,18 @@ static func to_dictionary(progress: Progress) -> Dictionary:
 ## The progress of a parsed save.json, or null when the file is broken (spec 12.3). A file is broken
 ## when it is not a dictionary, or has a version of 0 or less, or a field that is absent or of the
 ## wrong type. It is also broken with a Labyrinth below 1 or above 20, or with a `seeds` list that
-## does not hold 20 seeds, or with a seed of 0 or less. An Item
-## ID that is not a square where an Item can be also breaks it, as does a Sea friend ID that is not
-## in spec 4.7. A version above VERSION also gives null: this build cannot read it, and
-## load_progress() keeps that file. An older version goes through `migrations` first. An Item ID of
-## a square with no Item now is dropped, because a save from before the Goal rule of spec 4.2 can
-## have one. JSON reads each number as a float, so the numbers become int here.
-static func from_dictionary(data: Variant) -> Progress:
+## does not hold 20 seeds, or with a seed of 0 or less, or with a seed whose Labyrinth has no free
+## dead end for its Items (spec 4.6 rule 7). An Item ID that is not a square where an Item can be
+## also breaks it, as does a Sea friend ID that is not in spec 4.7. A version above VERSION also
+## gives null: this build cannot read it, and load_progress() keeps that file. An older version goes
+## through `migrations` first, with `start_value` for a new Voyage. An Item ID of a square with no
+## Item now is dropped, because a save from before the Goal rule of spec 4.2 can have one. JSON
+## reads each number as a float, so the numbers become int here.
+static func from_dictionary(data: Variant, start_value: int) -> Progress:
 	var version := JsonFile.version_of(data)
 	if version < 1 or version > VERSION:
 		return null
-	data = JsonFile.migrate(data, version, migrations, VERSION)
+	data = JsonFile.migrate(data, version, migrations, VERSION, [start_value])
 	for field in ["labyrinth", "total_items"]:
 		if not JsonFile.is_whole_number(data.get(field)):
 			return null
@@ -124,8 +127,11 @@ static func from_dictionary(data: Variant) -> Progress:
 	var seeds: Variant = data.get("seeds")
 	if not seeds is Array or seeds.size() != LabyrinthPlan.FIXED_COUNT:
 		return null
-	for seed_value in seeds:
+	for i in seeds.size():
+		var seed_value: Variant = seeds[i]
 		if not JsonFile.is_whole_number(seed_value) or seed_value <= 0:
+			return null
+		if not LabyrinthPlan.can_hold_items(i + 1, int(seed_value)):
 			return null
 	var progress := Progress.new()
 	progress.labyrinth_number = int(data["labyrinth"])
@@ -155,21 +161,19 @@ static func from_dictionary(data: Variant) -> Progress:
 
 
 ## Migration 1 to 2 (game-flow spec Part 1). A save in Labyrinths 1 to 20 gets the fixed seed
-## table, so its Labyrinth and its Items stay the same. A save past Labyrinth 20 becomes a new
-## Voyage with the same total. `random_seed` and `last_returning_friend` go away. A broken field
-## stays broken: from_dictionary() checks the result.
-static func _version_1_to_2(data: Dictionary) -> Dictionary:
+## table, so its Labyrinth and its Items stay the same. `random_seed` and `last_returning_friend` go
+## away. A save past Labyrinth 20 becomes Progress.new_voyage() of `start_value` with the same
+## total. A broken field stays broken: from_dictionary() checks the result.
+static func _version_1_to_2(data: Dictionary, start_value: int) -> Dictionary:
+	var labyrinth: Variant = data.get("labyrinth")
+	var total: Variant = data.get("total_items")
+	if JsonFile.is_whole_number(labyrinth) and labyrinth > LabyrinthPlan.FIXED_COUNT and JsonFile.is_whole_number(total):
+		return to_dictionary(Progress.new_voyage(start_value, int(total)))
 	data = data.duplicate()
 	data.erase("random_seed")
 	data.erase("last_returning_friend")
 	data["version"] = 2
 	data["seeds"] = LabyrinthPlan.FIXED_SEEDS.duplicate()
-	var labyrinth: Variant = data.get("labyrinth")
-	if JsonFile.is_whole_number(labyrinth) and labyrinth > LabyrinthPlan.FIXED_COUNT:
-		data["labyrinth"] = 1
-		data["seeds"] = DifficultyCurve.new_voyage(randi())
-		data["collected_items"] = []
-		data["collection"] = []
 	return data
 
 

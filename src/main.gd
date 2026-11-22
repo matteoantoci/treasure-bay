@@ -54,6 +54,10 @@ signal hint_hopped(square: Vector2i)
 var progress := Progress.new()
 ## The save file (spec 12). Tests set a store with their own folder before the scene enters the tree.
 var save_store := SaveStore.new()
+## Gives the start value of each new Voyage: at a launch with no save or with a broken save, at the
+## save migration, at a Parent reset, and at the Goal of Labyrinth 20 (game-flow spec Part 1). Tests
+## set a fixed value before the scene enters the tree.
+var voyage_start_value: Callable = func() -> int: return randi()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
@@ -94,7 +98,7 @@ func _ready() -> void:
 	# Cmd+Q and window close do nothing. The quit button is the only quit path (spec 11.1).
 	get_tree().set_auto_accept_quit(false)
 	randomize()
-	progress = save_store.load_progress()
+	progress = save_store.load_progress(voyage_start_value.call())
 	# The game saves after each Item and at each Goal, before the celebration (spec 12.2).
 	item_collected.connect(save_progress.unbind(1))
 	goal_reached.connect(save_progress.unbind(1))
@@ -186,7 +190,7 @@ func _reset_progress() -> void:
 	var error := save_store.copy_before_reset(progress)
 	if error != OK:
 		push_warning("The copy before the reset was not made: %s" % error_string(error))
-	progress = Progress.new_voyage(randi())
+	progress = Progress.new_voyage(voyage_start_value.call())
 	save_progress()
 	show_opening()
 
@@ -394,7 +398,7 @@ func _reach_goal() -> void:
 	_kept_direction = Vector2i.ZERO
 	_boat.idle = false
 	var ends_voyage := progress.labyrinth_number == LabyrinthPlan.FIXED_COUNT
-	var friend := progress.reach_goal()
+	var friend := progress.reach_goal(voyage_start_value.call())
 	goal_reached.emit(friend)
 	_celebration = create_tween().set_parallel()
 	for step: Array in Motion.goal_steps():

@@ -86,7 +86,7 @@ func test_goal_of_labyrinth_20_adds_the_flamingo_shows_the_party_and_starts_a_ne
 	var shown := []
 	main.opening_shown.connect(func() -> void: shown.append(true))
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed Labyrinth 20 to the Goal")
-	var saved := SaveStore.new(dir).load_progress()
+	var saved := SaveStore.new(dir).load_progress(Scene.VOYAGE_START_VALUE)
 	t.assert_eq(saved.labyrinth_number, 1, "the save at the Goal holds Labyrinth 1 of the new Voyage")
 	t.assert_eq(saved.collection, PackedStringArray(), "the save holds an empty Collection")
 	var total: int = main.progress.total_items
@@ -113,7 +113,7 @@ func test_goal_of_labyrinth_20_adds_the_flamingo_shows_the_party_and_starts_a_ne
 	t.assert_true(await Scene.start_from_opening(t, main), "the start press starts the game")
 	t.assert_eq(started, [1], "Labyrinth 1 starts")
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
-	t.assert_true(main.progress.seeds != LabyrinthPlan.FIXED_SEEDS, "the new Voyage has new seeds")
+	t.assert_eq(main.progress.seeds, DifficultyCurve.new_voyage(Scene.VOYAGE_START_VALUE), "the new Voyage has the seeds of the start value")
 	t.assert_eq(main.labyrinth.seed_value, main.progress.seeds[0], "Labyrinth 1 uses the seed of slot 1")
 	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(4, 3), "Labyrinth 1 is 4 x 3")
 	t.assert_eq(strip.shown_friends(), PackedStringArray(), "an empty strip")

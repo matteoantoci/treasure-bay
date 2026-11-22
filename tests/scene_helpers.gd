@@ -16,11 +16,16 @@ const AUDIO_FREE_SECONDS := 0.1
 ## Labyrinth crosses at most 9 squares, 18 tiles, in 3.24 s (spec 5.2). The timer of the check runs
 ## at the test time scale, like the moves.
 const NO_MOVE_SECONDS := 3.5
+## The start value of each new Voyage of the main scene in the tests, so the Labyrinths of a new
+## Voyage are the same in each run.
+const VOYAGE_START_VALUE := 2026
 
 
 ## Adds the main scene, goes through the opening screen, and waits for the end of the fade-in of the
-## current Labyrinth, so the Child can sail. It loads and saves in `save_dir`, or in a new empty
-## folder in the OS temp folder, never in user://.
+## current Labyrinth, so the Child can sail. It loads and saves in `save_dir`, never in user://. With
+## no `save_dir`, it uses a new folder in the OS temp folder with a save of the fixed Labyrinth 1
+## (fixed_labyrinth_1_dir()), so the tests can name the squares of that Labyrinth. A test of a launch
+## with no save passes an empty folder of Fixtures.new_save_dir().
 static func add_main(t, save_dir: String = "") -> Node:
 	var main := await add_main_at_opening(t, save_dir)
 	t.assert_true(await start_from_opening(t, main), "the fade-in after the start press ends")
@@ -28,14 +33,23 @@ static func add_main(t, save_dir: String = "") -> Node:
 
 
 ## Adds the main scene with the opening screen on it, and sets the test time scale. It loads and
-## saves like add_main().
+## saves like add_main(). Each new Voyage of the scene uses VOYAGE_START_VALUE.
 static func add_main_at_opening(t, save_dir: String = "") -> Node:
 	var main: Node = load("res://main.tscn").instantiate()
-	main.save_store = SaveStore.new(save_dir if not save_dir.is_empty() else Fixtures.new_save_dir())
+	main.save_store = SaveStore.new(save_dir if not save_dir.is_empty() else fixed_labyrinth_1_dir())
+	main.voyage_start_value = func() -> int: return VOYAGE_START_VALUE
 	t.root.add_child(main)
 	await t.process_frame
 	Engine.time_scale = TIME_SCALE
 	return main
+
+
+## A new folder in the OS temp folder with a save of Labyrinth 1 of the fixed seed table, with no
+## collected Items: the Labyrinth of tests/test_items.gd, with its Items on (1, 1) and (0, 2).
+static func fixed_labyrinth_1_dir() -> String:
+	var dir := Fixtures.new_save_dir()
+	SaveStore.new(dir).save(Progress.new())
+	return dir
 
 
 ## Goes through the opening screen (game-flow spec part 3): presses Space, and waits for the end of

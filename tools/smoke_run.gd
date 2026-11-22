@@ -51,7 +51,7 @@ func _initialize() -> void:
 			return
 		print("Goal of Labyrinth %d: Labyrinth %d is ready, Collection %s, total Items %d" % [number,
 			_main.progress.labyrinth_number, _main.progress.collection, _main.progress.total_items])
-	var saved := SaveStore.new(_save_dir).load_progress()
+	var saved := SaveStore.new(_save_dir).load_progress(randi())
 	if saved.labyrinth_number != 1 + GOALS:
 		_end("the save holds Labyrinth %d" % saved.labyrinth_number)
 		return

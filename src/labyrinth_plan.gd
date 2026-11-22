@@ -34,8 +34,8 @@ static func build(number: int, seeds: Array[int] = FIXED_SEEDS) -> Labyrinth:
 	return build_from_seed(number, seeds[number - 1])
 
 
-## Generates Labyrinth `number` with its Items from `seed_value`. The W x H Labyrinth of the seed
-## must have a free dead end (spec 4.6 rule 7). tools/seed_search.gd tries seeds with it.
+## Generates Labyrinth `number` with its Items from `seed_value`. The seed must pass
+## can_hold_items(). tools/seed_search.gd tries seeds with it.
 static func build_from_seed(number: int, seed_value: int) -> Labyrinth:
 	var size := size_for(number)
 	var prng := Prng.new(seed_value)
@@ -44,3 +44,10 @@ static func build_from_seed(number: int, seed_value: int) -> Labyrinth:
 	var kinds := Area.item_kinds(Area.for_labyrinth(number))
 	labyrinth.items = ItemPlacement.place(labyrinth, prng, item_count(number), kinds)
 	return labyrinth
+
+
+## True if the W x H Labyrinth of `seed_value` in slot `number` has a free dead end, so it can hold
+## its Items (spec 4.6 rule 7).
+static func can_hold_items(number: int, seed_value: int) -> bool:
+	var size := size_for(number)
+	return ItemPlacement.has_free_dead_end(LabyrinthGenerator.generate(size.x, size.y, Prng.new(seed_value)))
