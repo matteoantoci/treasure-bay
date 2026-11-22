@@ -349,8 +349,11 @@ The look changes at the start of each Area, every 5 Labyrinths. The music also c
 | Area 1 Items and the second Spiral shell | `assets/sprites/items/{spiral_shell,starfish,pearl}.png` | `prototypes/art-PROTOTYPE/sprites/items/` |
 | New Items | `assets/sprites/items/{coral,sand_dollar,gem_stone,glowing_star,star}.png` | Generate (section 13.2) |
 | Chest | `assets/sprites/goal/{chest_closed,chest_open}.png` | Generate (section 13.2) |
+| Padlock | `assets/sprites/goal/padlock.png` (421 × 512 px) | `prototypes/art-PROTOTYPE/sprites/goal/padlock.png` ([game-flow spec](../game-flow/spec.md) part 6) |
 
-Known weak sprites: the crab faces the front; the shrimp antennae are thin; the navy whale has low contrast on dark water; the swan and the pearl are near-white ([ticket 13](issues/13-polished-sea-look.md)). The order in section 4.7 puts the whale in light Area 1 and the swan in dark Area 4.
+The crab is `prototypes/art-PROTOTYPE/sprites/friends/crab_front.png` (512 × 378 px): front view, symmetric, both claws at the same height ([game-flow spec](../game-flow/spec.md) part 6). It replaces the first crab, and the app icon uses it.
+
+Known weak sprites: the shrimp antennae are thin; the navy whale has low contrast on dark water; the swan and the pearl are near-white ([ticket 13](issues/13-polished-sea-look.md)). The order in section 4.7 puts the whale in light Area 1 and the swan in dark Area 4.
 
 ## 8. Motion
 
