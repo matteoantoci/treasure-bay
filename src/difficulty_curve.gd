@@ -13,8 +13,7 @@ const PRESSES: Array[int] = [3, 5, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 
 ## Labyrinth 2, an Item on the main path, a largest side branch of at most max(6, main path
 ## length), and a free dead end (spec 4.6 rule 7).
 static func meets_conditions(number: int, seed_value: int) -> bool:
-	var size := LabyrinthPlan.size_for(number)
-	if not ItemPlacement.has_free_dead_end(LabyrinthGenerator.generate(size.x, size.y, Prng.new(seed_value))):
+	if not LabyrinthPlan.can_hold_items(number, seed_value):
 		return false
 	var measure := LabyrinthMeasure.measure(LabyrinthPlan.build_from_seed(number, seed_value))
 	var d := 1 + (number - 1) / 5

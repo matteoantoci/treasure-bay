@@ -8,12 +8,8 @@ const Fixtures := preload("res://tests/fixtures.gd")
 # Saved Labyrinths whose music the scene test checks: one of each Area.
 const MUSIC_LABYRINTHS := [1, 6, 11, 16]
 
-# Spec 4.3 and 4.4: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, 16 to 20 Area 4,
-# then 21 to 25 Area 1 again, and so on.
-const AREA_RANGES := [
-	[1, 5, 1], [6, 10, 2], [11, 15, 3], [16, 20, 4],
-	[21, 25, 1], [26, 30, 2], [31, 35, 3], [36, 40, 4], [41, 45, 1],
-]
+# Spec 4.3 and 4.4: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, 16 to 20 Area 4.
+const AREA_RANGES := [[1, 5, 1], [6, 10, 2], [11, 15, 3], [16, 20, 4]]
 # Spec 9.2.
 const MUSIC := {
 	1: "res://assets/audio/music/lagoon.mp3",
@@ -37,7 +33,7 @@ const SEA_FRIENDS := [
 ]
 
 
-func test_area_of_labyrinths_1_to_45(t) -> bool:
+func test_area_of_labyrinths_1_to_20(t) -> bool:
 	for area_range in AREA_RANGES:
 		for n in range(area_range[0], area_range[1] + 1):
 			t.assert_eq(Area.for_labyrinth(n), area_range[2], "Area of Labyrinth %d" % n)
@@ -47,7 +43,6 @@ func test_area_of_labyrinths_1_to_45(t) -> bool:
 func test_music_track_matches_the_area(t) -> bool:
 	for area in MUSIC:
 		t.assert_eq(Area.music_path(area), MUSIC[area], "music of Area %d" % area)
-	t.assert_eq(Area.music_path(Area.for_labyrinth(26)), MUSIC[2], "music of Labyrinth 26")
 	return true
 
 

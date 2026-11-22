@@ -6,6 +6,8 @@
 ## test reads the lines and the save file.
 extends SceneTree
 
+const Scene := preload("res://tests/scene_helpers.gd")
+
 const FRAMES_AFTER_A_STEP := 10
 ## The quit comes 0.1 s after the hold (SettingsPanel.AUDIO_STOP_SECONDS). The probe waits longer.
 const QUIT_WAIT_SECONDS := 2.0
@@ -15,10 +17,11 @@ func _initialize() -> void:
 	await process_frame
 	var main: Node = load("res://main.tscn").instantiate()
 	main.save_store = SaveStore.new(OS.get_cmdline_user_args()[0])
+	main.voyage_start_value = func() -> int: return Scene.VOYAGE_START_VALUE
 	root.add_child(main)
 	await process_frame
-	# Labyrinth 1 has an Item on 0,2. The save gets it only from the quit.
-	main.progress.collect_item("0,2")
+	# The save gets the first Item of Labyrinth 1 only from the quit.
+	main.progress.collect_item(main.progress.build_labyrinth().items[0].id)
 	root.close_requested.emit()
 	await _frames()
 	print("RUNNING AFTER CLOSE REQUEST")

@@ -54,6 +54,10 @@ signal hint_hopped(square: Vector2i)
 var progress := Progress.new()
 ## The save file (spec 12). Tests set a store with their own folder before the scene enters the tree.
 var save_store := SaveStore.new()
+## Gives the start value of each new Voyage: at a launch with no save or with a broken save, at the
+## save migration, at a Parent reset, and at the Goal of Labyrinth 20 (game-flow spec Part 1). Tests
+## set a fixed value before the scene enters the tree.
+var voyage_start_value: Callable = func() -> int: return randi()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
@@ -94,7 +98,7 @@ func _ready() -> void:
 	# Cmd+Q and window close do nothing. The quit button is the only quit path (spec 11.1).
 	get_tree().set_auto_accept_quit(false)
 	randomize()
-	progress = save_store.load_progress()
+	progress = save_store.load_progress(voyage_start_value.call())
 	# The game saves after each Item and at each Goal, before the celebration (spec 12.2).
 	item_collected.connect(save_progress.unbind(1))
 	goal_reached.connect(save_progress.unbind(1))
@@ -125,14 +129,9 @@ func show_labyrinth() -> void:
 ## button starts the current Labyrinth.
 func show_opening() -> void:
 	_stop_celebration()
-	_stop_move()
+	_stop_play_views()
 	_locked = true
-	_kept_direction = Vector2i.ZERO
 	_fade.stop()
-	_sea_friend.stop()
-	_reveal.stop()
-	_effects.clear()
-	_wake.clear()
 	_party.close()
 	# The Collection strip draws above the reveal layer, so it is above the opening screen too. It
 	# hides while the opening screen shows. The gear stays above the opening screen.
@@ -191,7 +190,7 @@ func _reset_progress() -> void:
 	var error := save_store.copy_before_reset(progress)
 	if error != OK:
 		push_warning("The copy before the reset was not made: %s" % error_string(error))
-	progress = Progress.new_voyage(randi())
+	progress = Progress.new_voyage(voyage_start_value.call())
 	save_progress()
 	show_opening()
 
@@ -204,16 +203,11 @@ func _notification(what: int) -> void:
 
 
 func _show_current_labyrinth() -> void:
-	_stop_move()
+	_stop_play_views()
 	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
-	_kept_direction = Vector2i.ZERO
-	_sea_friend.stop()
-	_reveal.stop()
-	_effects.clear()
 	_party.close()
-	_wake.clear()
 	var area := Area.for_labyrinth(progress.labyrinth_number)
 	_water.show_area(area)
 	_area_decoration.show_labyrinth(labyrinth, area)
@@ -239,6 +233,17 @@ func _stop_move() -> void:
 	if _move_tween != null:
 		_move_tween.kill()
 		_move_tween = null
+
+
+## The shared stop of a screen change: a move stops and never ends, the kept press goes, and the
+## Sea friend, the reveal, the effects, and the wake clear.
+func _stop_play_views() -> void:
+	_stop_move()
+	_kept_direction = Vector2i.ZERO
+	_sea_friend.stop()
+	_reveal.stop()
+	_effects.clear()
+	_wake.clear()
 
 
 ## The input unlocks, the boat rocks, and the Child can sail the shown Labyrinth.
@@ -393,7 +398,7 @@ func _reach_goal() -> void:
 	_kept_direction = Vector2i.ZERO
 	_boat.idle = false
 	var ends_voyage := progress.labyrinth_number == LabyrinthPlan.FIXED_COUNT
-	var friend := progress.reach_goal()
+	var friend := progress.reach_goal(voyage_start_value.call())
 	goal_reached.emit(friend)
 	_celebration = create_tween().set_parallel()
 	for step: Array in Motion.goal_steps():
@@ -413,24 +418,21 @@ func _run_goal_step(step: Motion.GoalStep, friend: String, ends_voyage: bool) ->
 		Motion.GoalStep.FRIEND_APPEARS:
 			# The reveal: the screen gets darker, and the Sea friend flips in large in the middle of
 			# the Labyrinth area (game-flow spec part 6, fix 5).
-			if not friend.is_empty():
-				_reveal.show_reveal()
-				var full_px := Motion.FRIEND_HEIGHT_SHARE * _visible_size().y
-				_sea_friend.appear(load(SeaFriends.texture_path(friend)), _reveal.light_centre, full_px)
-				sea_friend_appeared.emit(friend)
+			_reveal.show_reveal()
+			var full_px := Motion.FRIEND_HEIGHT_SHARE * _visible_size().y
+			_sea_friend.appear(load(SeaFriends.texture_path(friend)), _reveal.light_centre, full_px)
+			sea_friend_appeared.emit(friend)
 		Motion.GoalStep.FRIEND_WIGGLES:
 			_sea_friend.wiggle()
 		Motion.GoalStep.FRIEND_FLIES:
-			if not friend.is_empty():
-				_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
-				_reveal.fade_out(Motion.FRIEND_FLY_SECONDS, Motion.FRIEND_FLY_CURVE)
+			_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
+			_reveal.fade_out(Motion.FRIEND_FLY_SECONDS, Motion.FRIEND_FLY_CURVE)
 		Motion.GoalStep.FRIEND_IN_SLOT:
 			_sea_friend.stop()
 			_reveal.stop()
-			if not friend.is_empty():
-				_collection_strip.show_friend(friend)
-				var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
-				_effects.burst(sparkles, _slot_centre(friend), _hud_scale())
+			_collection_strip.show_friend(friend)
+			var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
+			_effects.burst(sparkles, _slot_centre(friend), _hud_scale())
 		Motion.GoalStep.FADE_OUT:
 			if ends_voyage:
 				party_coming.emit()
@@ -442,17 +444,17 @@ func _run_goal_step(step: Motion.GoalStep, friend: String, ends_voyage: bool) ->
 				_open_party()
 				_fade.fade_in()
 				return
-			# The boat stays still until the input unlocks.
+			# The boat stays still until the input unlocks at the end of the fade-in. The UNLOCK step
+			# comes at the planned end of the fade-in, but the fade-in starts up to one frame after
+			# its planned time, so the step does not unlock.
 			_show_current_labyrinth()
-			_fade.fade_in()
+			_fade.fade_in().finished.connect(_unlock)
 			if Motion.starts_new_area(progress.labyrinth_number):
 				_fade.show_area_item(Area.item_kinds(Area.for_labyrinth(progress.labyrinth_number))[0], _items.item_px())
 		Motion.GoalStep.UNLOCK:
 			_celebration = null
 			if ends_voyage:
 				_start_party()
-			else:
-				_unlock()
 
 
 # The Party (game-flow spec part 4). It shows after the Goal celebration of Labyrinth 20, in place
@@ -475,13 +477,8 @@ func is_party_shown() -> bool:
 ## Shows the still picture of the Party. The input of the Labyrinth stays locked, and the Collection
 ## strip hides: the Party shows all 20 Sea friends.
 func _open_party() -> void:
-	_stop_move()
+	_stop_play_views()
 	_locked = true
-	_kept_direction = Vector2i.ZERO
-	_sea_friend.stop()
-	_reveal.stop()
-	_effects.clear()
-	_wake.clear()
 	_opening.hide()
 	_collection_strip.hide()
 	_party.open()

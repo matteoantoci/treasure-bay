@@ -35,10 +35,9 @@ const MUSIC_PATHS: PackedStringArray = [
 ]
 
 
-## Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, 16 to 20 Area 4, then the
-## order starts again from 21.
+## Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, and 16 to 20 Area 4.
 static func for_labyrinth(number: int) -> int:
-	return ((number - 1) / LABYRINTHS_PER_AREA) % COUNT + 1
+	return (number - 1) / LABYRINTHS_PER_AREA + 1
 
 
 static func item_kinds(area: int) -> PackedStringArray:

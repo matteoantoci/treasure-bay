@@ -130,9 +130,9 @@ def place(walls, w, h, prng, count, k=None):
 
 SIZES = [(4, 3), (5, 3), (5, 4), (6, 4), (7, 4), (7, 5), (8, 5), (8, 6), (9, 6), (9, 7)]
 # Play-improvements Part 3: the fixed seed table. Slot n (1 to 20) uses seed FIXED_SEEDS[n - 1].
-# check_seeds() checks that seed_search() gives this table. Game-flow Part 1: a new Voyage has its own
-# seeds, and the table stays for a slot with no seed within its tries, for the save migration, and
-# for the tests.
+# check_seeds() checks that seed_search() gives this table. The port also pins with it the Item IDs
+# and the decorations of the fixed Labyrinths. In the game, the save migration gives the table to a
+# version 1 save in Labyrinths 1 to 20, and the tests use it. A new Voyage never uses it.
 FIXED_SEEDS = [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30]
 
 

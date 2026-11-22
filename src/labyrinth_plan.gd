@@ -5,8 +5,9 @@ extends RefCounted
 ## A Voyage has 20 Labyrinths. Labyrinth n uses the seed of slot n of the Voyage.
 const FIXED_COUNT := 20
 ## The fixed seed table: one seed for each slot, by measured difficulty (play-improvements spec
-## Part 3). The tool tools/seed_search.gd selects them and prints this table. A slot of a new Voyage
-## with no seed within its tries uses it, and so does the save migration from version 1.
+## Part 3). The tool tools/seed_search.gd selects them and prints this table. The save migration
+## gives it to a version 1 save in Labyrinths 1 to 20, a save of a newer build plays it in memory, and
+## the tests use it.
 const FIXED_SEEDS: Array[int] = [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30]
 ## Sizes in squares of Labyrinths 1 and 2, 3 and 4, and so on to 19 and 20.
 const FIXED_SIZES: Array[Vector2i] = [
@@ -33,8 +34,8 @@ static func build(number: int, seeds: Array[int] = FIXED_SEEDS) -> Labyrinth:
 	return build_from_seed(number, seeds[number - 1])
 
 
-## Generates Labyrinth `number` with its Items from `seed_value`. The W x H Labyrinth of the seed
-## must have a free dead end (spec 4.6 rule 7). tools/seed_search.gd tries seeds with it.
+## Generates Labyrinth `number` with its Items from `seed_value`. The seed must pass
+## can_hold_items(). tools/seed_search.gd tries seeds with it.
 static func build_from_seed(number: int, seed_value: int) -> Labyrinth:
 	var size := size_for(number)
 	var prng := Prng.new(seed_value)
@@ -43,3 +44,10 @@ static func build_from_seed(number: int, seed_value: int) -> Labyrinth:
 	var kinds := Area.item_kinds(Area.for_labyrinth(number))
 	labyrinth.items = ItemPlacement.place(labyrinth, prng, item_count(number), kinds)
 	return labyrinth
+
+
+## True if the W x H Labyrinth of `seed_value` in slot `number` has a free dead end, so it can hold
+## its Items (spec 4.6 rule 7).
+static func can_hold_items(number: int, seed_value: int) -> bool:
+	var size := size_for(number)
+	return ItemPlacement.has_free_dead_end(LabyrinthGenerator.generate(size.x, size.y, Prng.new(seed_value)))

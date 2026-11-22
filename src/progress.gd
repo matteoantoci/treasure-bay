@@ -20,8 +20,8 @@ var total_items := 0
 ## collected Items, an empty Collection, and a total of `total`.
 static func new_voyage(start_value: int, total: int = 0) -> Progress:
 	var progress := Progress.new()
-	progress.seeds = DifficultyCurve.new_voyage(start_value)
 	progress.total_items = total
+	progress._start_voyage(start_value)
 	return progress
 
 
@@ -60,10 +60,9 @@ func item_states(labyrinth: Labyrinth) -> Dictionary:
 
 ## The Child reaches the Goal of the current Labyrinth. Labyrinth n adds its Sea friend to the
 ## Collection (spec 4.7). After Labyrinth 1 to 19, the progress moves to the next Labyrinth with no
-## collected Items. After Labyrinth 20, a new Voyage starts with the seeds of `start_value`:
-## Labyrinth 1, no collected Items, an empty Collection, and the same total (game-flow spec Part 1).
-## Returns the Sea friend.
-func reach_goal(start_value: int = randi()) -> String:
+## collected Items. After Labyrinth 20, a new Voyage starts with the seeds of `start_value` and the
+## same total (game-flow spec Part 1). Returns the Sea friend.
+func reach_goal(start_value: int) -> String:
 	var friend := SeaFriends.for_labyrinth(labyrinth_number)
 	if not collection.has(friend):
 		collection.append(friend)
@@ -71,7 +70,14 @@ func reach_goal(start_value: int = randi()) -> String:
 	if labyrinth_number < LabyrinthPlan.FIXED_COUNT:
 		labyrinth_number += 1
 	else:
-		labyrinth_number = 1
-		seeds = DifficultyCurve.new_voyage(start_value)
-		collection = PackedStringArray()
+		_start_voyage(start_value)
 	return friend
+
+
+## Starts a new Voyage from `start_value`: Labyrinth 1, new seeds, no collected Items, and an empty
+## Collection. The total stays. new_voyage() and reach_goal() share it.
+func _start_voyage(start_value: int) -> void:
+	labyrinth_number = 1
+	seeds = DifficultyCurve.new_voyage(start_value)
+	collected_items = PackedStringArray()
+	collection = PackedStringArray()

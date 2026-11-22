@@ -134,10 +134,10 @@ Sources: [ticket 01](issues/01-choose-tech-stack.md), [ticket 05](issues/05-leve
 
 - A **Voyage** is the 20 Labyrinths from Labyrinth 1 to the Goal of Labyrinth 20. Each Voyage has its own 20 seeds, one for each slot n, and Labyrinth n uses the seed of slot n ([game-flow spec](../game-flow/spec.md) part 1). The Goal of Labyrinth 20 starts a new Voyage (section 6.4). No Labyrinth 21 exists. This replaces the rule "Labyrinths 1 to 20 are fixed" of the [play-improvements spec](../play-improvements/spec.md) part 3 and the rule "Labyrinth n uses seed n" of gap-audit default 15.
 - **New Voyage:** the module `src/difficulty_curve.gd` holds `meets_conditions(n, seed)` (the conditions below), `layout_key(labyrinth)` and `new_voyage(start_value)`. The layout of a Labyrinth is its walls and its Item squares and IDs. Two Labyrinths of one size with the same layout look the same. `new_voyage` does no search. It picks the seed of each slot n from the seed pool `src/seed_pool.gd`. A pool row holds, from seed 1 upward to seed 50000, each seed that meets `meets_conditions` and gives a layout that no seed before it in the row gives, up to 100 layouts. A slot with fewer layouts has a shorter row: slot 1 has 3, slot 2 has 16, slots 3 and 4 have 26, and slot 5 has 68. The pool also holds a layout number for each seed. The two slots of a size share the numbers. The own PRNG with `start_value` gives the pick: index `prng.next() % (row size)`. The second slot of a size never gets the layout of the first slot of that size: on the same layout number, it takes the next seed of its row. Slots 3 and 4 have the same conditions, so their rows are the same 26 layouts. The game gives `randi()` as `start_value`. One new Voyage takes less than 0.1 ms. This replaces the search from a random start seed of the [game-flow spec](../game-flow/spec.md) part 1 (Parent decision of 2026-11-22: the search took about 1.1 s), and the pool of 100 seeds for each slot with a rule on seed numbers (follow-up 03b: different seeds can give the same layout). After a change of the curve, run `tools/seed_search.gd -- --pool` to write the pool again.
-- The seed table below stays: for the save migration (section 12.3), for a new game with no save, and for the tests. A new game with no save uses the seed table, so Labyrinth 1 of the first Voyage is always the same Labyrinth.
+- The seed table below stays for the save migration (section 12.3), for a save of a newer build (the game plays it in memory), and for the tests. A new game with no save, or with a broken save, starts a new Voyage with new seeds, as a reset does (code review fix of the game-flow build). The main scene takes the start value of each new Voyage from one seam, `voyage_start_value`: at a launch with no save or a broken save, at the save migration, at a reset, and at the Goal of Labyrinth 20. The tests set a fixed value.
 - The size grows by one column or one row after every 2 Labyrinths (gap-audit default 17).
 - Item count: `clamp(floor(W * H / 6), 2, 8)` (gap-audit default 18).
-- Area: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, and 16 to 20 Area 4. For every n: `area = ((n - 1) / 5) % 4 + 1`, with integer division ([ticket 15](issues/15-reward-after-labyrinth-20.md)).
+- Area: Labyrinths 1 to 5 are Area 1, 6 to 10 Area 2, 11 to 15 Area 3, and 16 to 20 Area 4: `area = (n - 1) / 5 + 1`, with integer division. No Labyrinth 21 exists, so the old wrap of [ticket 15](issues/15-reward-after-labyrinth-20.md) is gone.
 
 | Labyrinths | Squares W × H | Tiles (2W+1) × (2H+1) | Items |
 |---|---|---|---|
@@ -430,7 +430,7 @@ Source of the reveal: [game-flow spec](../game-flow/spec.md) part 6, fix 5. It r
 
 ### 8.7 Item slots
 
-An empty slot shows the Item sprite at 35 % opacity, drawn grey and light (greyscale, then brightness 2×), in its disc (section 10). A filled slot draws the normal sprite on top with alpha from 0 to 1 (motion prototype line 114). The Item sprite bounces into its slot. The disc does not bounce. At a visit to the locked chest, the disc and the Item sprite of each empty slot pulse together ([game-flow spec](../game-flow/spec.md) part 2).
+An empty slot shows the Item sprite at 35 % opacity, drawn grey and light (greyscale, then brightness 2×), in its disc (section 10). A thin dark edge goes around the shape of this ghost: `#0a1428` at 80 %, 12 pixels of the 512 px sprite wide (about 2 px on a disc of 120 px). Without it, a light Item such as the sand dollar or the pearl has a contrast of 1.3:1 to 1.4:1 on the light disc of Areas 1 and 2, and does not show. With it, the rim of each ghost has 3:1 or more in each Area: the edge against the disc, or the grey sprite against the edge on the dark disc of Area 4 (code review fix of the game-flow build, ticket 12 shot check). A filled slot draws the normal sprite on top with alpha from 0 to 1 (motion prototype line 114), and the ghost with its edge fades out in the same time. The Item sprite bounces into its slot. The disc does not bounce. At a visit to the locked chest, the disc and the Item sprite of each empty slot pulse together ([game-flow spec](../game-flow/spec.md) part 2).
 
 ### 8.8 Next Labyrinth and new Area
 
@@ -762,13 +762,13 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
 ### 12.3 Write and load
 
 - **Write:** write `user://save.json.tmp`, close it, then rename it to `user://save.json` with `DirAccess.rename_absolute()` ([save-systems skill](../../.claude/skills/save-systems/SKILL.md)). Do not keep a last good copy as `.bak`. In this game `save.bak` holds only a broken file (Resolved conflict 17).
-- **No file:** start at Labyrinth 1 with no message.
-- **Broken file:** rename it to `user://save.bak`. Replace an older `save.bak`. Then start at Labyrinth 1 with no message to the Child. A file is broken when:
+- **No file:** start at Labyrinth 1 of a new Voyage with no message ([game-flow spec](../game-flow/spec.md) part 1).
+- **Broken file:** rename it to `user://save.bak`. Replace an older `save.bak`. Then start at Labyrinth 1 of a new Voyage with no message to the Child. A file is broken when:
   - the JSON does not parse, or it is not a dictionary,
   - a field is absent or has the wrong type,
   - `version` is not a whole number, or it is 0 or less (not a real version),
   - `labyrinth` is below 1 or above 20,
-  - `seeds` does not hold exactly 20 entries, or an entry is not a whole number, or it is 0 or less ([game-flow spec](../game-flow/spec.md) part 1),
+  - `seeds` does not hold exactly 20 entries, or an entry is not a whole number, or it is 0 or less ([game-flow spec](../game-flow/spec.md) part 1), or the Labyrinth of an entry in its slot has no free dead end, so it cannot hold its Items (section 4.6 rule 7),
   - an Item ID is not `"x,y"` of a square of the current Labyrinth, or it is the start square or the Goal square,
   - a Sea friend ID is not in the list of section 4.7.
 - **Old Item ID:** an Item ID of a square with no Item does not make the file broken. The load removes this ID and keeps all other fields, also the total count. A save from before the Goal rule of section 4.2 can have such an ID (Resolved conflict 25).
@@ -777,9 +777,9 @@ Sources: [ticket 09](issues/09-saved-progress.md), [save-systems skill](../../.c
   - A collected Item ID that matches a new Item square counts that new Item as collected. The Item does not show.
   - `total_items` does not change on the load. An Item that comes back adds 1 again when the Child collects it.
   - No save becomes broken, because each ID is still a free square: the start and Goal squares do not move.
-- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain and the target version as inputs, so a test can run a chain of one migration. The chain holds one migration now, from version 1 to version 2 ([game-flow spec](../game-flow/spec.md) part 1):
+- **Older version:** migrate it with a chain of functions, version by version. Do not treat an older version as broken. The chain is a value that can hold entries: entry i turns version i + 1 into version i + 2. The migration runner takes the chain, the target version, and extra values for each entry as inputs, so a test can run a chain of one migration. The save chain gets one extra value: the start value of a new Voyage. The chain holds one migration now, from version 1 to version 2 ([game-flow spec](../game-flow/spec.md) part 1):
   - `labyrinth` 1 to 20: `seeds` becomes the seed table of section 4.3, so the Labyrinth and its Items stay the same. The other fields stay. `random_seed` and `last_returning_friend` go away.
-  - `labyrinth` above 20: a new Voyage. `labyrinth` becomes 1, `seeds` become a new Voyage, `collected_items` and `collection` become empty, and `total_items` stays.
+  - `labyrinth` above 20: a new Voyage from the start value of the load, with the rule of a new Voyage in Progress. `labyrinth` becomes 1, `seeds` become a new Voyage, `collected_items` and `collection` become empty, and `total_items` stays.
   - The result goes through the checks of the list above, so a broken version 1 field stays broken. A version of 0 or less is not an older version: the file is broken (see the list above).
 - **Newer version:** a file with a `version` above the current version is from a newer build. It is not broken. Do not rename it to `save.bak`: it stays in place with the same bytes. The game plays Labyrinth 1 in memory. The save store goes into a no-write state for the session: each save call returns without a write and logs one warning. A reset makes no copy (play-improvements spec, part 5).
 
@@ -894,8 +894,8 @@ Tests:
    - The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage: Labyrinth 1, new seeds, an empty Collection, and the same total ([game-flow spec](../game-flow/spec.md) part 1).
 7. **Save:**
    - A save and a load give the same state.
-   - No file gives Labyrinth 1.
-   - A broken file (each case of section 12.3) becomes `save.bak` and gives Labyrinth 1.
+   - No file gives Labyrinth 1 of a new Voyage.
+   - A broken file (each case of section 12.3) becomes `save.bak` and gives Labyrinth 1 of a new Voyage.
    - `version` 0 counts as broken.
    - A `version` 2 save stays in place with the same bytes, and no `save.bak` exists. The game is at Labyrinth 1. A collect and a Goal write nothing, and each save call logs one warning.
    - A chain of one test migration from version 1 to version 2 gives the migrated fields.
@@ -964,7 +964,7 @@ The build is complete when each criterion is true:
 17. A hold of 8 s on the reset button starts Labyrinth 1 with an empty Collection and a total of 0. The ring of the reset button fills in orange. A shorter hold does nothing.
 18. A hold of 3 s on the door button saves and quits. Cmd+Q and window close do not quit the game.
 19. After a quit, `./play` opens the same Labyrinth, with the same collected Items, Collection, and total count.
-20. If no save file exists, the game starts Labyrinth 1 with no message. A broken save becomes `save.bak` and the game starts Labyrinth 1 with no message.
+20. If no save file exists, the game starts Labyrinth 1 of a new Voyage with no message. A broken save becomes `save.bak` and the game starts Labyrinth 1 of a new Voyage with no message.
 21. The game sends no data over the network and runs with Wi-Fi off.
 22. All 22 audio files and the 7 new sprites are in the project. `credits.txt` lists every sound and the art, with the Otter credit.
 23. `godot --headless --path . --script res://tests/run.gd` exits with code 0, and all tests of section 14.1 pass.

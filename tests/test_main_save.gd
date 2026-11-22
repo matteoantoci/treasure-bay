@@ -32,13 +32,25 @@ func test_a_restart_continues_at_the_saved_labyrinth(t) -> bool:
 	return true
 
 
-func test_a_broken_file_starts_at_labyrinth_1(t) -> bool:
+## Game-flow spec Part 1: a launch with no save starts Labyrinth 1 of a new Voyage from the start
+## value of the scene, not the fixed seed table.
+func test_a_launch_with_no_save_starts_a_new_voyage(t) -> bool:
+	var main := await Scene.add_main(t, Fixtures.new_save_dir())
+	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(main.progress.seeds, DifficultyCurve.new_voyage(Scene.VOYAGE_START_VALUE), "the seeds of a new Voyage")
+	t.assert_eq(main.labyrinth.seed_value, main.progress.seeds[0], "Labyrinth 1 uses the seed of slot 1")
+	await Scene.remove(t, main)
+	return true
+
+
+func test_a_broken_file_starts_a_new_voyage(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
 	file.store_string("{broken")
 	file.close()
 	var main := await Scene.add_main(t, dir)
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
+	t.assert_eq(main.progress.seeds, DifficultyCurve.new_voyage(Scene.VOYAGE_START_VALUE), "the seeds of a new Voyage")
 	t.assert_eq(FileAccess.get_file_as_string(dir.path_join("save.bak")), "{broken", "save.bak holds the broken file")
 	await Scene.remove(t, main)
 	return true
@@ -94,11 +106,16 @@ func test_the_scene_saves_after_each_item(t) -> bool:
 	var main := await Scene.add_main(t, dir)
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.json")), "no save before an Item")
 	var saved := []
-	main.item_collected.connect(func(_item: Item) -> void: saved.append(SaveStore.new(dir).load_progress().collected_items))
-	# Labyrinth 1: down stops on the Item 0,2 (tests/test_main_rewards.gd).
-	await Scene.press(t, main, KEY_DOWN)
-	t.assert_eq(saved, [PackedStringArray(["0,2"])], "the save holds the Item when item_collected fires")
-	var loaded := SaveStore.new(dir).load_progress()
+	main.item_collected.connect(func(item: Item) -> void: saved.append([item.id, SaveStore.new(dir).load_progress(Scene.VOYAGE_START_VALUE).collected_items]))
+	# The press path to the nearest Item stops on it.
+	while saved.is_empty():
+		var direction := Scene.first_press(main.labyrinth, main.boat_square, main.progress.item_states(main.labyrinth))
+		if direction == Vector2i.ZERO or not await Scene.press(t, main, Scene.key_for(direction)):
+			break
+	t.assert_eq(saved.size(), 1, "the boat collects one Item")
+	if saved.size() == 1:
+		t.assert_eq(saved[0][1], PackedStringArray([saved[0][0]]), "the save holds the Item when item_collected fires")
+	var loaded := SaveStore.new(dir).load_progress(Scene.VOYAGE_START_VALUE)
 	t.assert_eq(loaded.labyrinth_number, 1, "saved Labyrinth")
 	t.assert_eq(loaded.total_items, 1, "saved total Items")
 	await Scene.remove(t, main)
@@ -109,7 +126,7 @@ func test_the_scene_saves_at_the_goal_before_the_celebration(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var main := await Scene.add_main(t, dir)
 	var saved := []
-	main.goal_reached.connect(func(_friend: String) -> void: saved.append(SaveStore.to_dictionary(SaveStore.new(dir).load_progress())))
+	main.goal_reached.connect(func(_friend: String) -> void: saved.append(SaveStore.to_dictionary(SaveStore.new(dir).load_progress(Scene.VOYAGE_START_VALUE))))
 	t.assert_true(await Scene.sail_to_goal(t, main), "sailed to the Goal")
 	t.assert_eq(saved.size(), 1, "one Goal")
 	t.assert_eq(saved[0]["labyrinth"], 2, "the save holds Labyrinth 2 when the celebration starts")
@@ -175,6 +192,7 @@ func test_a_version_1_save_past_labyrinth_20_shows_the_opening_screen_then_a_new
 	t.assert_true(await Scene.start_from_opening(t, main), "the start press fades in the Labyrinth")
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
 	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(4, 3), "Labyrinth 1 is 4 x 3")
+	t.assert_eq(main.progress.seeds, DifficultyCurve.new_voyage(Scene.VOYAGE_START_VALUE), "the seeds of a new Voyage from the start value")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "an empty strip")
 	t.assert_eq(main.get_node("CollectionStrip").count_text(), "260", "the same total count")
 	t.assert_true(not FileAccess.file_exists(dir.path_join("save.bak")), "the old save is not broken")

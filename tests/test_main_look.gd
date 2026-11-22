@@ -175,18 +175,24 @@ func test_each_area_has_its_decoration(t) -> bool:
 	return true
 
 
+## An empty slot shows the ghost of its Item: the sprite grey and light at 35 % (spec 8.7), with the
+## thin dark edge of the code review fix. When the Item arrives, the ghost with its edge goes.
 func test_empty_item_outlines_are_grey_and_light(t) -> bool:
 	var main := await Scene.add_main(t)
 	var row: ItemRow = main.get_node("ItemRow")
 	t.assert_eq(row.outlines.size(), 2, "2 outlines in Labyrinth 1")
 	for i in row.outlines.size():
-		t.assert_eq(row.outlines[i].material.shader.resource_path, "res://src/item_outline.gdshader", "outline %d shader" % i)
-		t.assert_true(is_equal_approx(row.outlines[i].modulate.a, 0.35), "outline %d at 35 %% opacity" % i)
+		var material: ShaderMaterial = row.outlines[i].material
+		t.assert_eq(material.shader.resource_path, "res://src/item_outline.gdshader", "outline %d shader" % i)
+		t.assert_true(is_equal_approx(material.get_shader_parameter("body_opacity"), 0.35), "outline %d at 35 %% opacity" % i)
+		t.assert_eq(material.get_shader_parameter("edge_colour"), ItemRow.GHOST_EDGE_COLOUR, "outline %d has the dark edge" % i)
+		t.assert_eq(row.outlines[i].modulate.a, 1.0, "outline %d shows" % i)
 		t.assert_eq(row.fills[i].modulate.a, 0.0, "outline %d is empty" % i)
 	row.collect(1)
 	t.assert_eq(row.fills[1].modulate.a, 0.0, "the outline stays empty until the Item arrives")
 	t.assert_true(await t.wait_for(row.show_fill(1).finished, Scene.MOVE_TIMEOUT), "the outline fills")
 	t.assert_eq(row.fills[1].modulate.a, 1.0, "a filled outline shows the normal sprite")
+	t.assert_eq(row.outlines[1].modulate.a, 0.0, "the ghost and its edge go, so no edge shows around the Item")
 	await Scene.remove(t, main)
 	return true
 

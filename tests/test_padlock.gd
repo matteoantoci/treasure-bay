@@ -150,7 +150,7 @@ func test_the_empty_item_slots_pulse_two_times(t) -> bool:
 		_near(t, row.outlines[0].scale.x / empty_size.x, expected[i], "empty slot at %d ms" % [(i + 1) * 300])
 		_near(t, row.fills[0].scale.x / empty_size.x, expected[i], "the fill of the empty slot at %d ms" % [(i + 1) * 300])
 		t.assert_eq(row.outlines[1].scale, filled_size, "the filled slot does not pulse")
-		t.assert_true(is_equal_approx(row.outlines[0].modulate.a, ItemRow.EMPTY_OPACITY), "the empty slot does not flash")
+		t.assert_eq(row.outlines[0].modulate.a, 1.0, "the empty slot does not flash")
 	row.free()
 	return true
 

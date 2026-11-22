@@ -10,7 +10,8 @@
 ##   godot --path . --windowed --script res://tools/take_motion_shots.gd
 ## It writes the PNG files to shots/ and quits with code 0, or prints "MOTION SHOTS FAIL ..." and
 ## quits with code 1. The game saves into a new folder in the OS temp folder, which the tool removes
-## at the end: it never reads or changes the real save.
+## at the end: it never reads or changes the real save. That folder starts with a save of Labyrinth 1
+## of the fixed seed table, so each run shows the same Labyrinths.
 extends SceneTree
 
 const Scene := preload("res://tests/scene_helpers.gd")
@@ -28,6 +29,7 @@ func _initialize() -> void:
 	await process_frame
 	_remove_save_dir()
 	DirAccess.make_dir_recursive_absolute(_save_dir)
+	SaveStore.new(_save_dir).save(Progress.new())
 	_viewport.size = SIZE
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(_viewport)
