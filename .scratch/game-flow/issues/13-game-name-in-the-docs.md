@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 (Name and opening screen)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] `GLOSSARY.md`: the title and the first sentence name the game Treasure Bay.
 - [x] The build spec `.scratch/labyrinth-game/spec.md`: the title, the overview, and each other mention of the game name use Treasure Bay, for example the app name and the log file name of `tools/make_app.sh`. Each change that is not only a name change gets an erratum.
