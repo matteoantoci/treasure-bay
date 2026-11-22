@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Voyage)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The project name, the window title, and the app of `tools/make_app.sh` (app name and folder name) are "Treasure Bay".
 - [ ] ~~A custom user folder keeps the old name "Labyrinth", so the save does not move. A test checks that the user folder name stays "Labyrinth".~~ Dropped by Parent decision, 2026-11-22: the rename may start a fresh save.
