@@ -271,8 +271,8 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 ### 6.1 Items
 
 - Each Labyrinth has 2 to 8 Items (section 4.3). The chest on the Goal has a padlock until the Child collects all Items of the Labyrinth, so she must collect all Items to finish it (section 6.2, [game-flow spec](../game-flow/spec.md) part 2).
-- The boat stops on each Item square that it reaches. The Item makes a pop sound and a sparkle, then flies to its outline at the top (section 8.4).
-- The Item row at the top shows one outline for each Item of this Labyrinth. Each collected Item fills its outline. The row never gets smaller.
+- The boat stops on each Item square that it reaches. The Item makes a pop sound and a sparkle, then flies to its slot in the Item column at the left (section 8.4).
+- The Item column at the left shows one slot for each Item of this Labyrinth. Each collected Item fills its slot. The column never gets shorter.
 - The total count of all collected Items goes up by 1 for each new Item. It never goes down, except after a Parent reset. It stays at the start of a new Voyage ([game-flow spec](../game-flow/spec.md) part 1).
 - The game saves after each Item (section 12).
 
@@ -304,8 +304,8 @@ Source: [game-flow spec](../game-flow/spec.md) part 1. This replaces the Sea fri
 Source: [ticket 19](issues/19-gaps-before-the-spec.md) Q4.
 
 - The Collection is the strip at the bottom of the play screen. The game has no separate Collection screen.
-- The strip has 20 slots in the order of section 4.7. A slot shows its Sea friend after the Child gets it. An empty slot shows nothing.
-- The total count of collected Items shows as a number at the left end of the strip.
+- The strip has 20 slots in the order of section 4.7. Each slot is a light disc. A slot shows its Sea friend in its disc after the Child gets it. An empty slot shows only its disc ([game-flow spec](../game-flow/spec.md) part 5, fix 6).
+- The total count of collected Items shows as a number at the left end of the strip, in the rounded font, with a spiral shell icon on its left.
 
 ## 7. Areas and look
 
@@ -324,7 +324,7 @@ Sources: [ticket 08](issues/08-visual-change-between-labyrinths.md), [ticket 13]
   - Bush: 70. Palm: 71. Small plant: 72. Grass details: 87, 88.
 - Wall islands: place a rock or the bush (tile 70) on some island tiles. Use a second PRNG with seed `labyrinth_seed + 1`, so the Labyrinth data stays the same. Wall islands never get tile 71 or tile 72.
 - The Goal island gets the palm (tile 71) and the chest. It is 2 tiles wide (section 6.2).
-- The boat and each Item on the water have a still shadow: a black ellipse at 20 % opacity, 80 % of the sprite size wide and 22 % high. Its centre is 28 % of the sprite size below the sprite centre and 5 % to the right, because the light comes from the top left. The sprite size is the longer side: 110 px for the boat, 90 px for an Item. The shadow of the boat moves with the boat, but it does not turn, rock, bob, or hop. The shadow of an Item does not bob. The Item row and the Collection strip have no shadows ([game-flow spec](../game-flow/spec.md) part 5, fix 8).
+- The boat and each Item on the water have a still shadow: a black ellipse at 20 % opacity, 80 % of the sprite size wide and 22 % high. Its centre is 28 % of the sprite size below the sprite centre and 5 % to the right, because the light comes from the top left. The sprite size is the longer side: 110 px for the boat, 90 px for an Item. The shadow of the boat moves with the boat, but it does not turn, rock, bob, or hop. The shadow of an Item does not bob. The Item column and the Collection strip have no shadows ([game-flow spec](../game-flow/spec.md) part 5, fix 8).
 - The boat (`boat_white_sail.png`) and the islands are the same in all Areas ([ticket 08](issues/08-visual-change-between-labyrinths.md)).
 
 ### 7.2 Areas
@@ -401,8 +401,8 @@ Section 5.2 and section 5.3 give the values: 180 ms for each tile with the `out`
 At the arrival on the Item square:
 1. 8 splash dots in `#ffffff` and `#bbddff`, speed 90 px/s, life 400 ms.
 2. The Item scales to 1.4× in 120 ms (`out`).
-3. Then it flies to its outline in 450 ms (`inout`) and shrinks to 0.55×.
-4. At the outline: the outline fills in 150 ms. It bounces from 1.5× to 1× in 350 ms (`back`). 10 sparkles in `#ffffff` and `#ffe07a`, speed 120 px/s, life 500 ms.
+3. Then it flies to its slot in 450 ms (`inout`) and shrinks to 0.55×.
+4. At the slot: the Item fills the slot in 150 ms. It bounces from 1.5× to 1× in 350 ms (`back`). 10 sparkles in `#ffffff` and `#ffe07a`, speed 120 px/s, life 500 ms.
 
 ### 8.5 Goal
 
@@ -412,7 +412,7 @@ The times start at the arrival on the Goal square (0 ms):
 - 0 ms: 40 confetti pieces start 40 px above the Goal island centre. They are rectangles of 10 × 6 px that turn, in `#ff5a5a`, `#ffd54a`, `#5ad1ff`, `#7cff7a`, and `#ff8ad8`. Start speed is 320 px/s times a random factor from 0.4 to 1.2, in all directions, with an upward push. Gravity is 380 px/s². Life is 2.6 s.
 
 **Padlock** ([game-flow spec](../game-flow/spec.md) part 2), values in `Motion`:
-- Arrival at the locked chest: the chest and its padlock move sideways by 0, −10, 8, −6, 4, −2, 0 px, linear, in 360 ms in all (60 ms for each step). Each empty Item slot (the outline and its fill sprite) pulses two times: scale 1.0 to 1.15 in 300 ms and back in 300 ms (`inout`). The opacity of the slot does not change. When an Item arrives in a pulsing slot, the pulse of that slot stops and the bounce of section 8.4 plays.
+- Arrival at the locked chest: the chest and its padlock move sideways by 0, −10, 8, −6, 4, −2, 0 px, linear, in 360 ms in all (60 ms for each step). Each empty Item slot (its disc, the grey sprite, and its fill sprite) pulses two times: scale 1.0 to 1.15 in 300 ms and back in 300 ms (`inout`). The opacity of the slot does not change. When an Item arrives in a pulsing slot, the pulse of that slot stops and the bounce of section 8.4 plays.
 - The last Item arrives in its slot (no other Item in flight): the padlock grows to 1.3× and fades out in 300 ms (`out`). 6 sparkles in `#ffffff` and `#ffe07a` burst at the padlock centre, speed 100 px/s, life 500 ms. The unlock sound plays.
 - If the boat reaches the open chest before the pop, the chest opens and the padlock goes at once.
 
@@ -420,15 +420,15 @@ The times start at the arrival on the Goal square (0 ms):
 
 Source of the reveal: [game-flow spec](../game-flow/spec.md) part 6, fix 5. It replaces the Sea friend that grew next to the Goal island (ticket 28).
 
-- 1.4 s: the reveal starts. The screen gets darker: a dark layer of black at 55 % over the whole visible rectangle, from 0 to full in 250 ms (`out`). A soft light disc shows in the middle of the Labyrinth area (section 10): `#fff0b4` at 55 % in its centre, to 0 at its edge, with a radius of 280 px at a height of 1200 px (the polish mockup). The disc fades in with the dark layer. The Labyrinth, the Items, the boat, the Item row, and the gear are under the dark layer. The Collection strip, the Sea friend, and the bursts are above it, so the slot stays clear.
+- 1.4 s: the reveal starts. The screen gets darker: a dark layer of black at 55 % over the whole visible rectangle, from 0 to full in 250 ms (`out`). A soft light disc shows in the middle of the Labyrinth area (section 10): `#fff0b4` at 55 % in its centre, to 0 at its edge, with a radius of 280 px at a height of 1200 px (the polish mockup). The disc fades in with the dark layer. The Labyrinth, the Items, the boat, the Item column, and the gear are under the dark layer. The Collection strip, the Sea friend, and the bursts are above it, so the slot stays clear.
 - 1.4 s: the Sea friend flips in at the middle of the Labyrinth area. Its full size, the longer side of its picture, is 35 % of the visible height (420 px at 1200). The flip has two halves of 140 ms (`out`). In the first half the horizontal scale goes from 0 to full and the size from 50 % to 108 %. In the second half the size settles at 100 %. Its sound plays at the start of the flip.
 - 1.9 s: it wiggles. Its rotation goes from −0.08 rad to +0.08 rad in 250 ms (`inout`), then to 0 in 250 ms (`inout`).
 - 3.0 s: it flies to its strip slot in 700 ms (`inout`) and shrinks to the strip icon size. The dark layer and the light disc fade out in the same 700 ms (`inout`).
 - 3.7 s: 10 sparkles in `#ffffff` and `#ffe07a`, speed 100 px/s, life 500 ms. The slot now shows the Sea friend.
 
-### 8.7 Item outlines
+### 8.7 Item slots
 
-An empty outline is the Item sprite at 35 % opacity, drawn grey and light (greyscale, then brightness 2×). A filled outline draws the normal sprite on top with alpha from 0 to 1 (motion prototype line 114).
+An empty slot shows the Item sprite at 35 % opacity, drawn grey and light (greyscale, then brightness 2×), in its disc (section 10). A filled slot draws the normal sprite on top with alpha from 0 to 1 (motion prototype line 114). The Item sprite bounces into its slot. The disc does not bounce. At a visit to the locked chest, the disc and the Item sprite of each empty slot pulse together ([game-flow spec](../game-flow/spec.md) part 2).
 
 ### 8.8 Next Labyrinth and new Area
 
@@ -608,18 +608,21 @@ Kenney Pirate Pack. Their rights follow the xAI terms of that subscription.
 
 ## 10. Screen layout and HUD
 
-Sources: [ticket 18](issues/18-screen-layout.md), [ticket 19](issues/19-gaps-before-the-spec.md) Q4, the [motion prototype](prototypes/motion-PROTOTYPE/index.html) lines 36, 73, 112 to 116, gap-audit defaults 27 to 29.
+Sources: [ticket 18](issues/18-screen-layout.md), [ticket 19](issues/19-gaps-before-the-spec.md) Q4, the [motion prototype](prototypes/motion-PROTOTYPE/index.html) lines 36, 73, 112 to 116, gap-audit defaults 27 to 29, [game-flow spec](../game-flow/spec.md) part 5 (fixes 1, 3, 6, 7 and the outline rule of fix 8), the [polish mockup](../game-flow/prototypes/polish-MOCKUP/index.html).
 
 Read the visible size from `get_viewport().get_visible_rect().size`. With the aspect `expand`, it is 1920 × 1200 on a 16:10 screen and 1920 × 1247 on a 1512 × 982 screen. Do the layout again on each size change.
 
-- **Top band:** height `round(Hv * 150 / 760)`, 237 px at 1200. It holds the Item row and the gear.
+The play screen has no top band. The HUD values use `h = Hv / 760`. The values in px are px at a visible height of 1200 px, and they scale with `Hv / 1200` (`ScreenLayout.scaled_px`).
+
+- **Item column:** `100 * h` wide (158 px at 1200), at the left, from the top edge to the strip.
 - **Bottom strip:** height `round(Hv * 70 / 760)`, 111 px at 1200, colour black at 25 % opacity (`Color(0, 0, 0, 0.25)`). It is the Collection.
-- **Labyrinth:** `tile_px = floor(min((Hv - top - bottom) / (2H + 1), Wv / (2W + 1)))`. The Labyrinth is in the middle of the space between the top band and the strip. A 4 × 3 Labyrinth has 121 px tiles, and a 10 × 7 Labyrinth has 56 px tiles at 1920 × 1200. The water fills the whole screen.
-- **Labyrinth area:** the space between the top band and the strip, the full width of the screen (`ScreenLayout.labyrinth_area`). The Labyrinth sits in its middle, and the Sea friend reveal too (section 8.6).
-- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px. These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2. The chest is 115 % of a tile wide ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4). The Sea friend of the reveal does not use `s`: it is 35 % of the visible height (section 8.6, [game-flow spec](../game-flow/spec.md) part 6, fix 5).
-- **Item row:** the outlines sit in a row at the centre of the top band, at `y = 60 * h`. The distance between outline centres is `90 * h`, and each outline is `56 * h` px. The row is centred left to right.
-- **Gear:** 64 px, in the top-right corner. Its centre has the same height as the Item row and the same distance from the right edge.
-- **Collection strip:** the total Item count at the left end as a number, in the Godot default font at `64 * h / (1200 / 760)` px (64 px at 1200). The 20 slots fill the rest of the strip with the same distance between their centres. Each slot icon is `44 * h` px (69 px at 1200).
+- **Labyrinth area:** the space right of the Item column and above the strip, less a margin of `12 * h` on each side (`ScreenLayout.labyrinth_area`). At 1920 × 1200 it is 1724 × 1051 px from (176.8, 18.9). The Labyrinth sits in its middle, and the Sea friend reveal too (section 8.6).
+- **Labyrinth:** `tile_px = floor(min(area height / (2H + 1), area width / (2W + 2), 121 * Hv / 1200))`. The width counts one tile more for the outer Goal island tile (section 6.2, [game-flow spec](../game-flow/spec.md) part 5, fix 4). The cap of 121 px at 1200 is the Area 1 tile, so small Labyrinths keep their size. The Labyrinth and the outer Goal island tile are in the middle of the Labyrinth area, on whole px. At 1920 × 1200: 4 × 3 and 5 × 3 Labyrinths have 121 px tiles, 8 × 6 (Labyrinth 18) has 80 px, and 10 × 7 has 70 px. The water fills the whole screen.
+- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px. So the boat is 85 % of a tile long, and an Item is 69 % of a tile. These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2. The chest is 115 % of a tile wide ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4). The Sea friend of the reveal does not use `s`: it is 35 % of the visible height (section 8.6, [game-flow spec](../game-flow/spec.md) part 6, fix 5).
+- **Item slots:** one disc for each Item, in a column with its centre `50 * h` from the left edge. The disc diameter is `min(120 px, (free height − (count − 1) × 16 px) / count)`. The free height is the height of the Labyrinth area. The gap between two discs is 16 px, and the discs are centred as a group in the free height. With 8 Items the disc is 117.4 px at 1200. A disc has a fill of white at 22 %, a dark edge of 1.5 px of `#0a1428` at 60 % on its rim, and an outline of 3 px of white at 85 % inside the edge. The edge and the outline are inside the diameter. The Item sprite is 70 % of the disc diameter, in its middle.
+  - Contrast (beat-pals rule C7, 3:1 or more against the colours next to it): white at 85 % on the deep water has only 2.12:1 in Area 1 and 2.56:1 in Area 2. The dark edge gives the outline 7.46:1 to 12.90:1 against the edge in all 4 Areas. The edge has 3.42:1 and 3.11:1 against the water of Areas 1 and 2, where the outline has less. The outline has 4.47:1 and 11.62:1 against the water of Areas 3 and 4.
+- **Gear:** 48 px at 40 % opacity, a white gear with a hole and no outline. Its centre is 40 px from the top and the right edges. It does not overlap the Labyrinth or the Goal island in Labyrinths 1 to 20.
+- **Collection strip:** the spiral shell icon (58 px, 24 px from the left edge), then the total Item count, left aligned, in `GameFont.bold()` at 64 px with an outline of `#0a1428` of 1/8 of the font size. The count area ends 300 px from the left edge. The 20 slots share the rest of the strip, less 24 px at the right edge, the same distance apart. Each slot is a disc of `min(68 px, (that width − 19 × 12 px) / 20)`, so the gap is 12 px or more (12.4 px at 1200). A disc has a fill of white at 14 % and an outline of 2 px of white at 45 %. A Sea friend is 90 % of the disc diameter.
 - The game shows no other text and no other numbers in play.
 - **Opening screen** ([game-flow spec](../game-flow/spec.md) part 3, prototype round 2, variant B). `src/opening_screen.gd` and `src/start_button.gd`. The values are px at a visible height of 1200 px. The logo scales with `Hv / 1200` and stays in the centre of the visible width. y is from the top of the screen:
   - The still water of Area 1 covers the screen.
@@ -653,7 +656,12 @@ Sources: [ticket 09](issues/09-saved-progress.md), [ticket 16](issues/16-parent-
 - **Volume:** each bus has 5 steps, 0 to 4. The value is `step / 4`. Set the bus with `AudioServer.set_bus_volume_linear(bus, value * value)` ([sounds.md](research/sounds.md)). At step 0, call `AudioServer.set_bus_mute(bus, true)` in place of a volume of 0, because `linear_to_db(0)` is `-inf` ([godot-audio skill](../../.claude/skills/godot-audio/SKILL.md)). The default steps are music 2 (0.5) and effects 3 (0.75). The game saves the steps in `user://settings.json` (section 12.4).
 - **Hold buttons (reset and quit):** use `Button.button_down` and `Button.button_up`. The hold time and the full ring colour are values of each hold button. A ring around the button fills in the hold time of the button. If the Parent lets go before the hold time, the ring goes back to empty and nothing happens (play-improvements spec, part 5).
   - Reset: a hold of 8 s, so the Child cannot reset the game by accident. The ring fills in `#ff7a59`.
-  - Quit: a hold of 3 s. The ring fills in `#ffd447`.
+  - Quit: a hold of 3 s. The ring fills in `#5a3416`. Yellow (`#ffd447`) has only 1.12:1 contrast on the light brown ring of the cream-and-wood style.
+- **Look** ([game-flow spec](../game-flow/spec.md) part 5, fix 7, the polish mockup): the screen behind the panel is black at 50 %. This layer takes no clicks, so a click on the gear still closes the panel. The panel fill is `#fff3d6`, with a border of 10 px of `#7a4a24`, a corner radius of 40 px, and a padding of 40 px at the top and the bottom and 56 px at the sides. The rows are 28 px apart.
+  - Pictures: flat shapes of 56 px in `#5a3416`. The door knob is `#fff3d6`.
+  - Minus and plus: round buttons of 72 px in `#e9c98f`, with a bottom edge of 6 px of `#b58a4a`. While a button is down, its face moves down onto the edge.
+  - Level display: 4 bars of 34 px with gaps of 10 px, 24, 36, 50 and 64 px tall, corner radius 8 px. A filled bar is `#5a3416`, an empty bar `#d8b98a`.
+  - Hold buttons: a ring of 120 px, 14 px thick, empty in `#e9c98f`, that fills clockwise from the top. A disc of `#fff3d6` with the picture is in the ring.
 - **Reset after 8 s:** the panel closes and the game unpauses. The reset starts a new Voyage: new seeds, Labyrinth 1, an empty Collection, and a total of 0 ([game-flow spec](../game-flow/spec.md) part 1). Before the reset writes the new save, the save store copies the current `user://save.json` to `user://save.before-reset.json`. The copy uses the write rule of section 12.3: `user://save.before-reset.json.tmp`, then a rename.
   - The game makes the copy only when the progress in memory is not fresh. Progress is fresh when the Labyrinth is 1, the Collection is empty, and `total_items` is 0. So a reset of fresh progress keeps the older copy, and a second reset after a reset by mistake does not replace the real Collection. A reset of progress that is not fresh replaces the older copy.
   - With no save file, or in the no-write state of section 12.3, the game makes no copy.
@@ -873,7 +881,7 @@ Tests:
    - A Goal save holds the new Sea friend and `labyrinth` + 1.
    - A reset keeps `settings.json`.
    - After a reset, `save.before-reset.json` holds the old progress. Two resets in a row keep the first copy. A reset after new play replaces the copy. With no save file, no copy exists.
-8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth fits between the top band and the strip. At 1920 × 1200, in Labyrinths 1 and 20, the Item, the boat, and the chest have the sizes of section 10.
+8. **Layout:** the tile size for each size of section 4.3 at 1920 × 1200 and at 1920 × 1247 matches the formula of section 10. The Labyrinth and the outer Goal island tile are centred in the Labyrinth area. The Item slots have gaps of 16 px with 8 Items, the Collection slots have gaps of 12 px or more and are 24 px or more from the screen edges, and the gear is outside the Labyrinth in Labyrinths 1 to 20. At 1920 × 1200, in Labyrinths 1 and 20, the Item, the boat, and the chest have the sizes of section 10.
 9. **Sound calls:** each event of section 9.7 calls the right stream on the right bus. Each sound file has a level in `src/sound_levels.gd`. A crossfade during a crossfade fades out the louder copy and does not cut it. After `sea_friend_appeared`, the Goal player reaches its level − 12 dB in 0.2 s. At the next `goal_reached`, it plays at its level (section 9.3).
 10. **Assets:** each path of section 7.3 and section 9 exists and loads. Each PNG `.import` file has `mipmaps/generate=true`. The length of each imported WAV file is the length of its source file, ±20 ms. `credits.txt` has a line for each sound file.
 11. **Project settings:** the values of section 3.4 load from `ProjectSettings.get_setting()`. The `confirm` action holds Space and Enter (section 5.1).
@@ -917,14 +925,14 @@ The build is complete when each criterion is true:
 5. A press toward a wall makes a bump of 0.12 tile (70 ms, then 110 ms), plays the wall sound, and does not move the boat.
 6. Labyrinth 1 is 4 × 3 squares with 2 Items and is the same at each new start. Labyrinths 1 to 20 match the table of section 4.3. Each later Voyage has new Labyrinths with the same sizes and Item counts ([game-flow spec](../game-flow/spec.md) part 1).
 7. Each Labyrinth has at least one Item in a dead end. No Item is on the start square or the Goal square.
-8. The boat stops on each Item square. The Item pops, plays the pop sound, flies to its outline, and the outline fills.
+8. The boat stops on each Item square. The Item pops, plays the pop sound, flies to its slot, and the slot fills.
 9. At the Goal of Labyrinth n (1 to 20), with all Items collected: the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade. With an Item left, the Goal gives only the locked chest of section 6.3.
 10. The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage at Labyrinth 1 with an empty Collection and the same total count. No Sea friend comes back ([game-flow spec](../game-flow/spec.md) part 1).
 11. The Area look and the music change at Labyrinths 6, 11, 16, 21, and every 5 Labyrinths after that, in the order Area 1, 2, 3, 4, 1. The first Item kind of the new Area pops up big in the centre, then fades.
 12. The islands are Kenney tiles with sand coasts. The water and the foam do not move, the boat leaves a wake, and the boat rocks when it does not move.
 13. The Goal island has a palm and a chest. No wall island has a palm.
 14. Every PNG `.import` file has `mipmaps/generate=true`, the top-level canvas items use `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`, and the stretch mode is `canvas_items` with aspect `expand` at 1920 × 1200.
-15. The Item row is at the top in the middle, the gear is in the top-right corner, and the Collection strip with the total count is at the bottom.
+15. The Item column is at the left, the quiet gear is in the top-right corner, and the Collection strip with the shell and the total count is at the bottom.
 16. A click on the gear opens the settings and pauses play. Music and effects each have 5 volume steps, and step 0 mutes the bus. The volume steps stay after a restart and after a reset.
 17. A hold of 8 s on the reset button starts Labyrinth 1 with an empty Collection and a total of 0. The ring of the reset button fills in orange. A shorter hold does nothing.
 18. A hold of 3 s on the door button saves and quits. Cmd+Q and window close do not quit the game.
@@ -984,7 +992,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 
 No source decides these facts. The build uses the stated value. The Parent can change each value later.
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
-2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
+2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes). Since the game-flow polish, they have the cream-and-wood style of section 11.2, and the gear is a quiet white gear (section 10).
 3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 are spec values. The chest is 115 % of a tile wide on the seam of the 2 Goal island tiles, and the palm is on the outer tile ([game-flow spec](../game-flow/spec.md) part 5, fix 4). This replaces the chest of 100 px × `s` at the side next to the Goal square, which covered a part of the foam line ([play-improvements spec](../play-improvements/spec.md) part 2). A test checks that the opaque pixels of the chest and of the palm are over the land of the Kenney tiles in Labyrinths 1 to 20.
 4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. The seed search of section 4.3 and `meets_conditions` of a new Voyage take only seeds with a free dead end, so the 20 seeds of the seed table are valid. A test checks them.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
@@ -995,4 +1003,4 @@ No source decides these facts. The build uses the stated value. The Parent can c
    - Area 4 stars: 12 stars, 6 to 10 px, each with its own alpha from 0.2 to 0.9.
    The decorations are drawn under the islands, the Items, and the boat, so they never hide them. The water has no light patterns.
 7. **The end point of each music track.** No source gives the point where the fade-out of each Pixabay track starts. The spec value: read the momentary loudness with `ffmpeg -i f.mp3 -af ebur128 -f null -`. In the last 20 s of the track, find the first time from which the momentary loudness stays more than 6 dB below the integrated loudness. Cut the track there.
-8. **The size of the total count number.** The spec value: the Godot default font at 64 px (at 1200 px height), white with a dark outline.
+8. **The size of the total count number.** The spec value: `GameFont.bold()` at 64 px (at 1200 px height), white with a dark outline (section 10).

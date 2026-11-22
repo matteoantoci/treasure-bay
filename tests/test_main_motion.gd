@@ -8,6 +8,13 @@ const Scene := preload("res://tests/scene_helpers.gd")
 const TIME_SLACK := 0.2
 
 
+## The middle of the Labyrinth area: right of the Item column (100 h) and above the strip (70 h),
+## less a margin of 12 h on each side (game-flow spec part 5, fix 1).
+func _area_middle(visible: Vector2) -> Vector2:
+	var h := visible.y / 760.0
+	return Vector2((112.0 * h + visible.x - 12.0 * h) / 2.0, (visible.y - roundf(70.0 * h)) / 2.0)
+
+
 ## Game seconds since `start_usec`, at the test time scale.
 func _seconds_since(start_usec: int) -> float:
 	return (Time.get_ticks_usec() - start_usec) / 1e6 * Engine.time_scale
@@ -127,9 +134,7 @@ func test_the_sea_friend_flips_in_large_in_the_middle_of_the_labyrinth_area(t) -
 	t.assert_true(at_start.size() == 1 and is_equal_approx(at_start[0].y, 0.5), "the flip starts at 50 % of the full size")
 	t.assert_true(biggest > 1.06 and biggest < 1.081, "it grows to 108 %% (%.3f)" % biggest)
 	t.assert_true(end.is_equal_approx(Vector2.ONE), "it settles at 35 %% of the visible height (%s)" % end)
-	var top := ScreenLayout.top_band_height(visible)
-	var bottom := visible.y - ScreenLayout.bottom_strip_height(visible)
-	t.assert_true(friend.position.is_equal_approx(Vector2(visible.x / 2.0, (top + bottom) / 2.0)), "in the middle of the Labyrinth area (%s)" % friend.position)
+	t.assert_true(friend.position.is_equal_approx(_area_middle(visible)), "in the middle of the Labyrinth area (%s)" % friend.position)
 	await Scene.remove(t, main)
 	return true
 
@@ -154,9 +159,7 @@ func test_the_screen_gets_darker_behind_the_sea_friend_until_it_flies_to_its_slo
 	t.assert_true(reveal.dark_colour().is_equal_approx(Color(0, 0, 0, 0.55)), "the screen is black at 55 %% (%s)" % reveal.dark_colour())
 	t.assert_true(reveal.dark_rect.encloses(Rect2(Vector2.ZERO, visible)), "the dark layer covers the screen")
 	t.assert_true(reveal.light_colour().a > 0.5, "the light disc shows")
-	var top := ScreenLayout.top_band_height(visible)
-	var bottom := visible.y - ScreenLayout.bottom_strip_height(visible)
-	t.assert_true(reveal.light_centre.is_equal_approx(Vector2(visible.x / 2.0, (top + bottom) / 2.0)), "the light disc is in the middle of the Labyrinth area")
+	t.assert_true(reveal.light_centre.is_equal_approx(_area_middle(visible)), "the light disc is in the middle of the Labyrinth area")
 	for under in ["LabyrinthView", "Boat", "Items", "ItemRow"]:
 		t.assert_true(main.get_node(under).get_index() < reveal.get_index(), "%s is under the dark layer" % under)
 	t.assert_true(strip.get_index() > reveal.get_index(), "the Collection strip is above the dark layer")
