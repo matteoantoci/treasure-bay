@@ -34,7 +34,7 @@ The play screen gets a polish: a larger maze with an Item column at its left, a 
 6. As the Parent, I want the game name "Treasure Bay" on the opening screen, in the window title and on the app, so that the game has a name that we can say.
 7. As the Parent, I want the opening screen at each launch, so that the game does not start the play before my daughter is ready.
 8. As the Parent, I want the gear on the opening screen too, so that I can quit or change the volume before she plays.
-9. As the Parent, I want my daughter's progress to stay after the rename, so that the new name does not lose her save.
+9. As the Parent, I want my daughter's progress to stay after the rename, so that the new name does not lose her save. (Dropped by the Parent on 2026-11-22: the rename starts a fresh save. See ticket 05.)
 
 ### Voyage: 20 Labyrinths with an end
 
@@ -151,7 +151,7 @@ The play screen gets a polish: a larger maze with an Item column at its left, a 
 ### Part 3: Name and opening screen
 
 - **Name:** "Treasure Bay". It goes into the project name, the window title, and the app that the app tool builds (the app name and the folder name).
-- **Keep the save:** the save folder depends on the project name. Set a custom user folder with the old name "Labyrinth", so that the rename does not move the save. A test checks that the user folder name stays "Labyrinth".
+- **Keep the save:** the save folder depends on the project name. Set a custom user folder with the old name "Labyrinth", so that the rename does not move the save. A test checks that the user folder name stays "Labyrinth". (Dropped by the Parent on 2026-11-22: the rename starts a fresh save. See ticket 05.)
 - **Font:** one rounded font with the SIL Open Font License, for example Fredoka. Put its licence file in the repo and its line in the credits. Use it for the title, the total count, and the star number of the Party.
 - **The opening screen** is variant B of the second prototype round (ticket 01). From the top to the bottom:
   - The water of Area 1, still.
@@ -244,7 +244,7 @@ The play screen gets a polish: a larger maze with an Item column at its left, a 
    - Progress: the Goal of Labyrinth 20 gives a new Voyage with an empty Collection and the same total. A reset gives fresh progress.
    - The save: version 2 writes and loads. A version 1 save in Labyrinths 1 to 20 keeps its Labyrinth, its Items and its Collection. A version 1 save past Labyrinth 20 becomes a new Voyage. A `seeds` list of the wrong length is broken.
    - The screen layout: the tile cap, the Item column, the slot gaps (16 px in the column with 8 Items, 12 px in the strip, 24 px from the edges), and the gear outside the Labyrinth, at 1920 × 1200 and at 1512 × 982.
-   - The project settings: the user folder name stays "Labyrinth".
+   - The project settings: the user folder name stays "Labyrinth". (Dropped by the Parent on 2026-11-22: the rename starts a fresh save. See ticket 05.)
 3. **The Python port** keeps pinning the fixed seed table and the Item IDs of Labyrinths 1 to 20. It is still the source for the migration and the fallback seeds.
 
 ### Tests to delete
