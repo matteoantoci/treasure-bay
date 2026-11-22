@@ -23,7 +23,7 @@ const PALM_TILES := 0.6
 ## the Goal island tile and the outer tile, fully on land. The palm sits on the outer tile, up and
 ## to the right of the chest, inside the coast.
 const CHEST_PLACE := Vector2(1.0, 0.5)
-const PALM_PLACE := Vector2(1.62, 0.38)
+const PALM_PLACE := Vector2(1.66, 0.32)
 ## The palm is darker than the grass, so the Child sees the Goal island.
 const PALM_COLOUR := Color(0.7, 0.85, 0.7)
 
