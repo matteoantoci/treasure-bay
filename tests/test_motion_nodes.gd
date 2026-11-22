@@ -1,5 +1,5 @@
 ## The motion nodes with the values of spec 8: the bursts of spec 8.1 and 8.4 to 8.6, and the wake
-## rings of spec 8.2. No frame waits: the tests call the nodes directly.
+## dots of the game-flow spec part 5, fix 9. No frame waits: the tests call the nodes directly.
 extends RefCounted
 
 
@@ -37,7 +37,7 @@ func test_the_confetti_burst(t) -> bool:
 	return true
 
 
-func test_the_wake_starts_36_rings_each_second_behind_the_boat(t) -> bool:
+func test_the_wake_starts_a_dot_every_40_ms_behind_the_stern(t) -> bool:
 	var wake := WakeView.new()
 	var boat := Node2D.new()
 	boat.position = Vector2(100, 100)
@@ -46,15 +46,17 @@ func test_the_wake_starts_36_rings_each_second_behind_the_boat(t) -> bool:
 	wake.start(Vector2i.RIGHT)
 	wake._process(0.25)
 	wake._process(0.25)
-	t.assert_eq(wake.rings.size(), 18, "18 rings in 0.5 s")
-	t.assert_true(wake.rings[0].centre.is_equal_approx(Vector2(70, 94)), "the first ring starts 30 px behind the boat, to one side: %s" % wake.rings[0].centre)
-	t.assert_true(wake.rings[1].centre.is_equal_approx(Vector2(70, 106)), "the next ring starts to the other side: %s" % wake.rings[1].centre)
-	t.assert_true(is_equal_approx(wake.rings[0].rotation, -PI / 2), "the ring turns to the boat direction")
+	t.assert_eq(wake.dots.size(), 12, "12 dots in 0.5 s")
+	for dot in wake.dots:
+		t.assert_true(dot.centre.x <= 100.0 - BoatView.LENGTH_PX / 2.0, "the dot starts behind the stern: %s" % dot.centre)
+		t.assert_true(absf(dot.centre.y - 100.0) <= 0.1 * 130.0, "the dot starts near the move line: %s" % dot.centre)
 	wake.stop()
-	wake._process(0.85)
-	t.assert_eq(wake.rings.size(), 9, "the rings of the last 0.25 s are 0.85 s old")
+	wake._process(0.3)
+	t.assert_eq(wake.dots.size(), 12, "no new dot after the stop, and no dot is 0.6 s old")
 	wake._process(0.1)
-	t.assert_eq(wake.rings.size(), 0, "each ring fades out in 900 ms")
+	t.assert_eq(wake.dots.size(), 6, "the dots of the first 0.25 s are gone after 0.6 s")
+	wake._process(0.2)
+	t.assert_eq(wake.dots.size(), 0, "each dot lives 0.6 s")
 	wake.free()
 	boat.free()
 	return true

@@ -9,3 +9,5 @@ batch08-duck: 52s
 batch10-chest: 70s
 batch09-items: 125s
 batch11-glowing-star: 37s
+batch12-crab-padlock: 100s
+batch13-padlock: 74s

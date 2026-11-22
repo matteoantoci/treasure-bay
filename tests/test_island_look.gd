@@ -1,5 +1,6 @@
 ## The Kenney island look of spec 7.1: the coast tile of each Kenney cell, the rocks and bushes
-## on the wall islands, and the Goal island. Each Labyrinth tile is 3 x 3 Kenney cells (Open gap 1).
+## on the wall islands, and the Goal island of 2 tiles (game-flow spec part 5, fix 4). Each
+## Labyrinth tile is 3 x 3 Kenney cells (Open gap 1).
 extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
@@ -37,17 +38,42 @@ func test_two_squares_with_a_wall_between_them(t) -> bool:
 		"#####",
 	])
 	var look := IslandLook.build(labyrinth)
-	t.assert_eq(_shape_picture(look, Vector2i(15, 9)), [
-		"AnnnnnnnnnnnnnB",
-		"wggggggggggggge",
-		"wgdssscgdssscge",
-		"wge...wge...wge",
-		"wge...wge...wge",
-		"wge...wge...wge",
-		"wgbnnnagbnnnage",
-		"wggggggggggggge",
-		"CsssssssssssssD",
-	], "Kenney cells of a 2 x 1 Labyrinth")
+	# The Goal island tile (4, 1) and the tile (5, 1) right of it, outside the Labyrinth, make the
+	# Goal island: 2 tiles wide, with a sand coast all around.
+	t.assert_eq(_shape_picture(look, Vector2i(18, 9)), [
+		"AnnnnnnnnnnnnnB...",
+		"wggggggggggggge...",
+		"wgdssscgdssscge...",
+		"wge...wge...wgbnnB",
+		"wge...wge...wgggge",
+		"wge...wge...wgdssD",
+		"wgbnnnagbnnnage...",
+		"wggggggggggggge...",
+		"CsssssssssssssD...",
+	], "Kenney cells of a 2 x 1 Labyrinth with its Goal island")
+	return true
+
+
+func test_the_goal_island_is_2_tiles_wide_with_no_rock_and_no_bush(t) -> bool:
+	for number in range(1, 21):
+		var labyrinth := LabyrinthPlan.build(number)
+		var look := IslandLook.build(labyrinth)
+		var tiles := IslandLook.goal_island_tiles(labyrinth)
+		var label := "Labyrinth %d: " % number
+		t.assert_eq(tiles.size(), 2, label + "2 tiles")
+		t.assert_eq(tiles[0], labyrinth.goal_island_tile(), label + "the Goal island tile")
+		t.assert_eq(tiles[1], labyrinth.goal_island_tile() + Vector2i.RIGHT, label + "the tile right of the Goal island tile")
+		t.assert_eq(tiles[1].x, labyrinth.tile_count().x, label + "the outer tile is outside the Labyrinth")
+		var outer := tiles[1] * IslandLook.CELLS_PER_TILE
+		var cells := []
+		for cy in IslandLook.CELLS_PER_TILE:
+			var row := ""
+			for cx in IslandLook.CELLS_PER_TILE:
+				row += SHAPES.get(look.cells.get(outer + Vector2i(cx, cy), -1), ".")
+			cells.append(row)
+		t.assert_eq(cells, ["nnB", "gge", "ssD"], label + "the outer tile has a sand coast at the top, the right and the bottom")
+		for tile in tiles:
+			t.assert_true(not look.decorations.has(tile), label + "no rock and no bush on the Goal island tile %s" % tile)
 	return true
 
 
@@ -100,13 +126,17 @@ func test_every_cell_has_a_kenney_tile_of_its_shape(t) -> bool:
 	for number in [1, 9, 20]:
 		var labyrinth := LabyrinthPlan.build(number)
 		var look := IslandLook.build(labyrinth)
-		var count := labyrinth.tile_count() * IslandLook.CELLS_PER_TILE
+		var count := (labyrinth.tile_count() + Vector2i(1, 0)) * IslandLook.CELLS_PER_TILE
 		var picture := _shape_picture(look, count)
 		t.assert_true(not "".join(picture).contains("?"), "Labyrinth %d: every cell has a known Kenney tile" % number)
-		var island_cells := 0
+		# The outer tile of the Goal island is island too.
+		var island_cells := IslandLook.CELLS_PER_TILE * IslandLook.CELLS_PER_TILE
 		for y in labyrinth.tile_count().y:
 			for x in labyrinth.tile_count().x:
 				if not labyrinth.is_water_tile(Vector2i(x, y)):
 					island_cells += IslandLook.CELLS_PER_TILE * IslandLook.CELLS_PER_TILE
 		t.assert_eq(look.cells.size(), island_cells, "Labyrinth %d: one Kenney tile for each island cell" % number)
+		var tiles: Array = look.cells.values()
+		t.assert_true(tiles.has(24) or tiles.has(39) or tiles.has(40), "Labyrinth %d: the grass keeps its dots" % number)
+		t.assert_true(tiles.has(8) or tiles.has(41) or tiles.has(56) or tiles.has(38), "Labyrinth %d: the sand keeps its bumps" % number)
 	return true

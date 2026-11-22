@@ -1,5 +1,6 @@
 ## All motion values of spec 8 (and the boat timings of spec 5.2 and 5.3) at the medium amount, in
-## one place, with the pure functions of the idle, water, and decoration motion.
+## one place, with the pure functions of the idle and wake motion. The water, the foam and the Area
+## decoration do not move (game-flow spec part 5, fix 2).
 ##
 ## Times are in seconds. A value in `_PX` is px of the prototype: in the Labyrinth, px of its tile
 ## of 130 px (multiply by s = tile_px / 130); in the HUD, px at a height of 760 px (multiply by
@@ -54,53 +55,19 @@ const SPARKLE_COLOUR := Color.WHITE
 const PALM_SWAY_RAD := 0.08
 const PALM_SWAY_RATE := 1.5
 
-# Water (spec 8.2, Open gap 6). The wave lines move 8 sin(1.2 t + 0.02 x + 0.05 y) px; the water
-# shader holds the size values and gets the phase 1.2 t.
-const WAVE_RATE := 1.2
-## The soft light shapes move at 10 px/s.
-const LIGHT_SPEED_PX := 10.0
-## A white line at 55 % opacity, 4 px wide, along each island coast, in dashes of 10 px with gaps
-## of 9 px that move at 20 px/s.
-const FOAM_ALPHA := 0.55
-const FOAM_WIDTH_PX := 4.0
-const FOAM_DASH_PX := 10.0
-const FOAM_GAP_PX := 9.0
-const FOAM_SPEED_PX := 20.0
-## The line distance from the coast changes by 2 sin(2 t) px around 4 px. The 4 px are the
-## prototype gap between the sand and the foam ring (an ellipse of 62 px around one of 58 px).
-const FOAM_DISTANCE_PX := 4.0
-const FOAM_SWAY_PX := 2.0
-const FOAM_SWAY_RATE := 2.0
-
-# Wake (spec 8.2): rings in 60 % of the frames at 60 fps.
-const WAKE_RINGS_PER_SECOND := 0.6 * 60.0
-## Each ring starts 30 px behind the boat centre, on the move line, a little to the left or to the
-## right in turn, so the rings make a V.
-const WAKE_BEHIND_PX := 30.0
-const WAKE_SIDE_PX := 6.0
-## A white ellipse line, 2 px wide, turned to the boat direction. Its radii grow from 4 x 2 px to
-## 30 x 16 px (the radii of the prototype ellipse) while it fades out in 900 ms.
-const WAKE_WIDTH_PX := 2.0
-const WAKE_START_RADII := Vector2(4, 2)
-const WAKE_END_RADII := Vector2(30, 16)
-const WAKE_LIFE := 0.9
-
-# Area decoration motion (Open gap 6).
-## Wave crests drift at 15 px/s. Each crest drifts along a path of 80 px, fades in and out on it,
-## then starts again, so it stays on its water tile.
-const CREST_DRIFT_PX := 15.0
-const CREST_PATH_PX := 80.0
-## 1 bubble each second, rising at 30 px/s for 3 s.
-const BUBBLE_INTERVAL := 1.0
-const BUBBLE_RISE_PX := 30.0
-const BUBBLE_LIFE := 3.0
-## 1 drop each second, falling at 40 px/s for 1.5 s.
-const DROPLET_INTERVAL := 1.0
-const DROPLET_FALL_PX := 40.0
-const DROPLET_LIFE := 1.5
-## Star alpha goes from 0.2 to 0.9 and back in 2 s.
-const STAR_CYCLE := 2.0
-const STAR_ALPHA := Vector2(0.2, 0.9)
+# Wake (game-flow spec part 5, fix 9): soft white dots behind the stern, a new dot every 40 ms
+# while the boat moves.
+const WAKE_DOTS_PER_SECOND := 1.0 / 0.04
+## Each dot starts 58 px behind the boat centre, just behind the stern of the 110 px boat, on the
+## move line. The dots start a little to the left and to the right in turn.
+const WAKE_BEHIND_PX := 58.0
+const WAKE_SIDE_PX := 4.0
+## The radius starts at 9 % of the 130 px tile and gets smaller to 40 % of that with age. The
+## opacity starts at 42 % and goes to 0 at the end of the life of 0.6 s.
+const WAKE_START_RADIUS_PX := 0.09 * 130.0
+const WAKE_END_RADIUS_SCALE := 0.4
+const WAKE_START_ALPHA := 0.42
+const WAKE_LIFE := 0.6
 
 # Bursts (spec 8.1): one-shot CPUParticles2D. Each piece starts at the burst speed times a random
 # factor from 0.4 to 1.2, in all directions, and fades out over its life (the prototype burst()).
@@ -155,9 +122,10 @@ const CONFETTI_SPIN_RAD := 0.2 * 60.0
 const FRIEND_APPEARS_AT := 1.4
 ## Spec 8.6 says (-60, +60) px from the Goal island centre. In the prototype the Goal island was
 ## below the boat; here it is right of the Goal square, so at x = -60 the Sea friend covered the
-## chest (Open gap 3: at the side next to the Goal square) and the boat. At x = +60 it grows at the
-## far side of the Goal island, over the palm, and the open chest and the boat stay in view.
-const FRIEND_START_PX := Vector2(60, 60)
+## chest and the boat. The chest of 115 % of a tile sits on the seam of the Goal island tile and
+## the outer tile (game-flow spec part 5, fix 4), so the Sea friend grows at x = +175, right of the
+## chest, over the outer tile. The open chest and the boat stay in view.
+const FRIEND_START_PX := Vector2(175, 60)
 const FRIEND_PX := 110.0
 const FRIEND_SCALE := 1.3
 const FRIEND_GROW_SECONDS := 0.45
@@ -258,42 +226,9 @@ static func palm_sway(t: float) -> float:
 	return PALM_SWAY_RAD * sin(PALM_SWAY_RATE * t)
 
 
-static func wave_phase(t: float) -> float:
-	return WAVE_RATE * t
+static func wake_dot_radius(age: float) -> float:
+	return WAKE_START_RADIUS_PX * lerpf(1.0, WAKE_END_RADIUS_SCALE, clampf(age / WAKE_LIFE, 0.0, 1.0))
 
 
-static func light_shift(t: float) -> float:
-	return LIGHT_SPEED_PX * t
-
-
-static func foam_shift(t: float) -> float:
-	return FOAM_SPEED_PX * t
-
-
-static func foam_distance(t: float) -> float:
-	return FOAM_DISTANCE_PX + FOAM_SWAY_PX * sin(FOAM_SWAY_RATE * t)
-
-
-static func wake_ring_radii(age: float) -> Vector2:
-	return WAKE_START_RADII.lerp(WAKE_END_RADII, clampf(age / WAKE_LIFE, 0.0, 1.0))
-
-
-static func wake_ring_alpha(age: float) -> float:
-	return clampf(1.0 - age / WAKE_LIFE, 0.0, 1.0)
-
-
-## The age of the piece of place `index` of `count` places that take turns, one piece each
-## `interval` seconds. Each place starts a new piece every `count * interval` seconds.
-static func piece_age(t: float, index: int, count: int, interval: float) -> float:
-	return fposmod(t - index * interval, count * interval)
-
-
-## The star alpha, from 0.2 to 0.9 and back in a cycle of 2 s. `phase` is a part of the cycle.
-static func star_alpha(t: float, phase: float) -> float:
-	var wave := sin(TAU * (t / STAR_CYCLE + phase))
-	return lerpf(STAR_ALPHA.x, STAR_ALPHA.y, 0.5 + 0.5 * wave)
-
-
-## Where a wave crest is on its drift path, from 0 to 1. `phase` is a part of the path.
-static func crest_progress(t: float, phase: float) -> float:
-	return fposmod(phase + CREST_DRIFT_PX * t / CREST_PATH_PX, 1.0)
+static func wake_dot_alpha(age: float) -> float:
+	return WAKE_START_ALPHA * clampf(1.0 - age / WAKE_LIFE, 0.0, 1.0)

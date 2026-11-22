@@ -1,6 +1,6 @@
 ## Draws the Items that are still on the water, one Sprite2D for each Item (spec 6.1). Each Item
-## bobs, and a small white sparkle shows next to it from time to time (spec 8.2). The tile (0, 0)
-## is at the node position.
+## bobs, and a small white sparkle shows next to it from time to time (spec 8.2). Each Item has a
+## still shadow (FloatShadow) that does not bob. The tile (0, 0) is at the node position.
 class_name ItemsView
 extends Node2D
 
@@ -57,6 +57,8 @@ func remove_item(item_id: String) -> void:
 	_sprites.erase(item_id)
 	_items.erase(item_id)
 	_indexes.erase(item_id)
+	_centres.erase(item_id)
+	queue_redraw()
 
 
 ## The IDs of the Items on the water, in placement order.
@@ -67,6 +69,14 @@ func shown_ids() -> PackedStringArray:
 ## The Item sprite on the water, or null.
 func sprite_of(item_id: String) -> Sprite2D:
 	return _sprites.get(item_id)
+
+
+## Item ID -> the shadow ellipse box of the Item on the water, in node px.
+func shadow_rects() -> Dictionary:
+	var rects := {}
+	for item_id: String in _sprites:
+		rects[item_id] = FloatShadow.rect(_centres[item_id], item_px())
+	return rects
 
 
 func item_px() -> float:
@@ -93,12 +103,19 @@ func _place() -> void:
 		_centres[item_id] = rect.get_center()
 		sprite.scale = rect.size / sprite.texture.get_size()
 	_bob()
+	queue_redraw()
 
 
 func _bob() -> void:
 	var s := ScreenLayout.labyrinth_scale(_tile_px)
 	for item_id: String in _sprites:
 		_sprites[item_id].position = _centres[item_id] + Vector2(0, Motion.item_bob(time, _indexes[item_id]) * s)
+
+
+## The shadows draw under the Item sprites, the children of this node.
+func _draw() -> void:
+	for box: Rect2 in shadow_rects().values():
+		FloatShadow.draw(self, box)
 
 
 ## A white 8-point sparkle at (+18, -18) px from each Item centre, while it shows.

@@ -6,7 +6,7 @@ const FRIENDS := ["blowfish", "crab", "dolphin", "duck", "fish", "flamingo", "je
 	"octopus", "otter", "oyster", "penguin", "seal", "shark", "shrimp", "spouting_whale", "squid",
 	"swan", "turtle", "whale"]
 const ITEMS := ["spiral_shell", "starfish", "pearl", "coral", "sand_dollar", "gem_stone", "glowing_star", "star"]
-const GOAL := ["chest_closed", "chest_open"]
+const GOAL := ["chest_closed", "chest_open", "padlock"]
 const TILES := [6, 7, 8, 9, 22, 23, 24, 25, 36, 37, 38, 39, 40, 41, 49, 50, 51, 52, 53, 54, 55, 56, 57,
 	65, 66, 67, 70, 71, 72, 87, 88]
 
@@ -24,8 +24,8 @@ static func png_paths() -> Array[String]:
 	return paths
 
 
-func test_asset_list_has_62_pngs(t) -> bool:
-	t.assert_eq(png_paths().size(), 1 + 31 + 20 + 8 + 2, "PNG count of spec §7.3")
+func test_asset_list_has_63_pngs(t) -> bool:
+	t.assert_eq(png_paths().size(), 1 + 31 + 20 + 8 + 3, "PNG count of spec §7.3")
 	return true
 
 

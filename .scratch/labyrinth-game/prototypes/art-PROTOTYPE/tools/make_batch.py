@@ -18,6 +18,8 @@ ITEM_TAIL = " A collectable treasure object for a children's game. It is an obje
 SUBJECTS: dict[str, tuple[str, str]] = {
     # friends
     "crab": ("friend", "A cute friendly red crab with a big happy smile, two big round eyes on short stalks, two raised claws as if waving hello, small legs."),
+    # game-flow ticket 04: the old crab leans and its claws are at different heights. The new crab stands straight.
+    "crab_front": ("friend", "A cute friendly red crab seen straight from the front, perfectly symmetric left and right. Both big claws are raised to exactly the same height, one on each side, mirror images of each other. Two big round eyes on short stalks, small legs on both sides. The crab is wider than tall: a wide flat oval body."),
     "octopus": ("friend", "A cute friendly purple octopus in three-quarter view, round head, eight short curly tentacles."),
     "spouting_whale": ("friend", "A cute friendly light blue whale seen from the side, round chubby body, white belly, tail fin raised, with a small fountain of water spouting up from the top of its head."),
     "whale": ("friend", "A cute friendly dark navy-blue humpback whale seen from the side, long round body with a pale striped throat, long side flipper, tail fin raised. No water spout."),
@@ -53,6 +55,10 @@ SUBJECTS: dict[str, tuple[str, str]] = {
     # goal chest: kind "item" (an object, no face)
     "chest_closed": ("item", "A small wooden treasure chest with gold metal bands and a gold lock, lid closed, seen in three-quarter view."),
     "chest_open": ("item", "The same small wooden treasure chest with gold metal bands, lid open, gold coins inside, seen in three-quarter view."),
+    # game-flow ticket 04: the padlock shows on the locked chest. Kind "item" (an object, no face).
+    # Attempt 1 ("A small golden padlock seen straight from the front: a rounded gold body with a dark keyhole in the
+    # middle and a gold shackle arc on top, closed.") drew an open padlock with a grey shackle, turned a little sideways.
+    "padlock": ("item", "A small golden padlock, LOCKED, seen straight from the front, perfectly symmetric left and right. A wide rounded square gold body with one dark keyhole in the middle. On top, a thick gold shackle shaped like an upside-down U: BOTH ends of the shackle go down into the top of the body, the shackle is fully closed and the same gold colour as the body (not grey, not silver)."),
 }
 
 HEADER = """Generate {n} image(s) with the generate_image tool. Make exactly one tool call per image, one after the other. Use the exact wording below; do not shorten it.

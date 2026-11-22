@@ -49,13 +49,14 @@ func test_the_goal_island_has_the_palm_and_the_closed_chest(t) -> bool:
 		_show(main, number)
 		var view: LabyrinthView = main.get_node("LabyrinthView")
 		var tile_px: float = view.tile_px
-		var island := Rect2(Vector2(main.labyrinth.goal_island_tile()) * tile_px, Vector2.ONE * tile_px)
+		# The Goal island tile and the tile right of it (game-flow spec part 5, fix 4).
+		var island := Rect2(Vector2(main.labyrinth.goal_island_tile()) * tile_px, Vector2(2, 1) * tile_px)
 		var label := "Labyrinth %d: " % number
 		t.assert_eq(view.palm.texture.resource_path, "res://assets/kenney/tiles/tile_71.png", label + "palm tile")
 		t.assert_eq(view.chest.texture.resource_path, "res://assets/sprites/goal/chest_closed.png", label + "closed chest")
 		t.assert_true(view.palm.visible and view.chest.visible, label + "palm and chest show")
-		t.assert_true(island.has_point(view.palm.position) and view.palm.position.x > island.get_center().x, label + "palm at the far side of the Goal island")
-		t.assert_true(island.has_point(view.chest.position) and view.chest.position.x < island.get_center().x, label + "chest at the side next to the Goal square")
+		t.assert_true(island.has_point(view.palm.position) and view.palm.position.x > island.get_center().x, label + "palm on the outer tile of the Goal island")
+		t.assert_true(island.has_point(view.chest.position) and is_equal_approx(view.chest.position.x, island.get_center().x), label + "chest on the seam of the 2 tiles")
 		var grass: Color = view.get_node("Islands").modulate
 		t.assert_true(view.palm.modulate.get_luminance() < grass.get_luminance(), label + "the palm is darker than the grass")
 		t.assert_true(not view.decorations().values().has(IslandLook.PALM), label + "no palm on a wall island")
@@ -111,8 +112,9 @@ func _at(view: LabyrinthView, seconds: float) -> void:
 	view._process(0.0)
 
 
-## At 1920 x 1200, in the small Labyrinth 1 and the large Labyrinth 20, the Item is 90 px, the
-## boat 69 x 110 px, and the chest 100 px of the 130 px tile (play-improvements spec, part 2).
+## At 1920 x 1200, in the small Labyrinth 1 and the large Labyrinth 20, the Item is 90 px and the
+## boat 69 x 110 px of the 130 px tile (play-improvements spec, part 2). The chest is 115 % of a
+## tile wide (game-flow spec part 5, fix 4).
 func test_items_boat_and_chest_have_their_sizes_in_labyrinths_1_and_20(t) -> bool:
 	var main := await Scene.add_main(t)
 	# The headless window is square. The window size of a 16:10 screen gives the visible rect of
@@ -141,7 +143,7 @@ func test_items_boat_and_chest_have_their_sizes_in_labyrinths_1_and_20(t) -> boo
 		var picture := BoatView.TEXTURE.get_size()
 		t.assert_true(absf(hull.x / hull.y - picture.x / picture.y) < 0.001, label + "the boat keeps the aspect of its picture")
 		var chest: Vector2 = view.chest.texture.get_size() * view.chest.global_scale
-		t.assert_true(absf(maxf(chest.x, chest.y) - 100.0 * s) < 0.01, label + "the chest is 100 px")
+		t.assert_true(absf(chest.x - 1.15 * view.tile_px) < 0.01, label + "the chest is 115 % of a tile wide")
 	t.root.size = window_size
 	await Scene.remove(t, main)
 	return true

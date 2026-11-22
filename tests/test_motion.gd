@@ -60,69 +60,19 @@ func test_palm_sway(t) -> bool:
 	return true
 
 
-func test_water_waves_light_and_foam(t) -> bool:
-	# Spec 8.2: each wave line moves 8 sin(1.2 t + 0.02 x + 0.05 y) px; the shader gets 1.2 t.
-	_near(t, Motion.wave_phase(2.0), 2.4, "wave phase at 2 s")
-	# Open gap 6: the light shapes move at 10 px/s.
-	_near(t, Motion.light_shift(3.0), 30.0, "light shapes after 3 s")
-	# Foam: 55 % white, 4 px wide, dashes of 10 px with gaps of 9 px that move at 20 px/s, at a
-	# distance from the coast that changes by 2 sin(2 t) px.
-	_near(t, Motion.FOAM_ALPHA, 0.55, "foam opacity")
-	_near(t, Motion.FOAM_WIDTH_PX, 4.0, "foam width")
-	_near(t, Motion.FOAM_DASH_PX, 10.0, "dash")
-	_near(t, Motion.FOAM_GAP_PX, 9.0, "gap")
-	_near(t, Motion.foam_shift(0.5), 10.0, "dashes after 0.5 s")
-	_near(t, Motion.foam_distance(PI / 4) - Motion.foam_distance(0.0), 2.0, "foam distance at its top")
-	_near(t, Motion.foam_distance(3 * PI / 4) - Motion.foam_distance(0.0), -2.0, "foam distance at its bottom")
-	return true
-
-
-func test_wake_rings(t) -> bool:
-	# Spec 8.2: a ring in 60 % of the frames at 60 fps, 30 px behind the boat centre, a white 2 px
-	# ellipse from 4 x 2 px to 30 x 16 px that fades out in 900 ms.
-	_near(t, Motion.WAKE_RINGS_PER_SECOND, 36.0, "rings each second")
-	_near(t, Motion.WAKE_BEHIND_PX, 30.0, "ring start behind the boat centre")
-	_near(t, Motion.WAKE_WIDTH_PX, 2.0, "ring line width")
-	_near(t, Motion.WAKE_LIFE, 0.9, "ring life")
-	t.assert_eq(Motion.wake_ring_radii(0.0), Vector2(4, 2), "new ring")
-	t.assert_eq(Motion.wake_ring_radii(0.45), Vector2(17, 9), "ring at half its life")
-	t.assert_eq(Motion.wake_ring_radii(0.9), Vector2(30, 16), "ring at the end of its life")
-	_near(t, Motion.wake_ring_alpha(0.0), 1.0, "new ring alpha")
-	_near(t, Motion.wake_ring_alpha(0.45), 0.5, "ring alpha at half its life")
-	_near(t, Motion.wake_ring_alpha(0.9), 0.0, "ring alpha at the end")
-	return true
-
-
-func test_area_decoration_motion(t) -> bool:
-	# Open gap 6: crests drift at 15 px/s; 1 bubble each second rises at 30 px/s for 3 s; 1 drop
-	# each second falls at 40 px/s for 1.5 s; the stars go from alpha 0.2 to 0.9 in a cycle of 2 s.
-	_near(t, Motion.CREST_DRIFT_PX, 15.0, "crest drift")
-	# A crest drifts along a path of 80 px: 15 px/s takes it 3/16 of the path in 1 s.
-	_near(t, Motion.crest_progress(1.0, 0.0), 15.0 / 80.0, "crest after 1 s")
-	_near(t, Motion.crest_progress(1.0, 0.9), 0.9 + 15.0 / 80.0 - 1.0, "a crest starts its path again")
-	_near(t, Motion.BUBBLE_INTERVAL, 1.0, "a bubble each second")
-	_near(t, Motion.BUBBLE_RISE_PX, 30.0, "bubble rise")
-	_near(t, Motion.BUBBLE_LIFE, 3.0, "bubble life")
-	_near(t, Motion.DROPLET_INTERVAL, 1.0, "a drop each second")
-	_near(t, Motion.DROPLET_FALL_PX, 40.0, "drop fall")
-	_near(t, Motion.DROPLET_LIFE, 1.5, "drop life")
-	_near(t, Motion.STAR_CYCLE, 2.0, "star cycle")
-	_near(t, Motion.star_alpha(0.0, 0.0), 0.55, "star alpha in the middle at 0 s")
-	_near(t, Motion.star_alpha(0.5, 0.0), 0.9, "star alpha at its top after a quarter cycle")
-	_near(t, Motion.star_alpha(1.5, 0.0), 0.2, "star alpha at its bottom after 3 quarters")
-	_near(t, Motion.star_alpha(0.0, 0.25), 0.9, "a star a quarter cycle ahead")
-	return true
-
-
-func test_piece_ages_repeat_with_one_piece_each_interval(t) -> bool:
-	# 3 bubble places, a bubble each second, a life of 3 s: place k starts a bubble at k s, k + 3 s,
-	# and so on.
-	_near(t, Motion.piece_age(0.25, 0, 3, 1.0), 0.25, "place 0 at 0.25 s")
-	_near(t, Motion.piece_age(0.25, 1, 3, 1.0), 2.25, "place 1 started its bubble at -2 s")
-	_near(t, Motion.piece_age(0.25, 2, 3, 1.0), 1.25, "place 2 started its bubble at -1 s")
-	_near(t, Motion.piece_age(3.5, 0, 3, 1.0), 0.5, "place 0 starts again after 3 s")
-	# 2 drop places, a drop each second: each place starts a drop every 2 s.
-	_near(t, Motion.piece_age(2.75, 1, 2, 1.0), 1.75, "drop place 1")
+func test_wake_dots(t) -> bool:
+	# Game-flow spec part 5, fix 9: a soft white dot every 40 ms while the boat moves, behind the
+	# stern. Its radius starts at 9 % of the 130 px tile and gets smaller with age. Its opacity
+	# starts at 42 % and gets lower with age. It lives 0.6 s.
+	_near(t, Motion.WAKE_DOTS_PER_SECOND, 1.0 / 0.04, "a dot every 40 ms")
+	_near(t, Motion.WAKE_LIFE, 0.6, "dot life")
+	_near(t, Motion.wake_dot_radius(0.0), 0.09 * 130.0, "new dot radius: 9 % of a tile")
+	_near(t, Motion.wake_dot_alpha(0.0), 0.42, "new dot opacity")
+	t.assert_true(Motion.wake_dot_radius(0.3) < Motion.wake_dot_radius(0.0), "an older dot is smaller")
+	t.assert_true(Motion.wake_dot_radius(0.6) < Motion.wake_dot_radius(0.3), "the oldest dot is the smallest")
+	t.assert_true(Motion.wake_dot_alpha(0.3) < 0.42, "an older dot is fainter")
+	_near(t, Motion.wake_dot_alpha(0.6), 0.0, "a dot fades out at the end of its life")
+	t.assert_true(Motion.WAKE_BEHIND_PX >= BoatView.LENGTH_PX / 2.0, "the dots start at the stern or behind it")
 	return true
 
 
@@ -170,9 +120,10 @@ func test_goal_hop_and_confetti(t) -> bool:
 
 
 func test_sea_friend_arrival(t) -> bool:
-	# Spec 8.6. The x of the start place is +60, at the far side of the Goal island, not -60: at -60
-	# the Sea friend covers the chest and the boat (ticket 28).
-	t.assert_eq(Motion.FRIEND_START_PX, Vector2(60, 60), "start place from the Goal island centre")
+	# Spec 8.6. The x of the start place is +175, right of the chest on the seam of the 2 Goal island
+	# tiles, not -60: at -60 the Sea friend covers the chest and the boat (ticket 28, game-flow spec
+	# part 5, fix 4).
+	t.assert_eq(Motion.FRIEND_START_PX, Vector2(175, 60), "start place from the Goal island centre")
 	_near(t, Motion.FRIEND_PX, 110.0, "Sea friend size")
 	_near(t, Motion.FRIEND_SCALE, 1.3, "Sea friend scale next to the island")
 	_near(t, Motion.FRIEND_GROW_SECONDS, 0.45, "grow time")

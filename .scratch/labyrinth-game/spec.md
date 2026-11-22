@@ -275,8 +275,8 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 
 ### 6.2 Goal
 
-- The Goal square is the bottom-right square. The Goal island is the border tile to the right of the Goal square, tile (2W, 2H − 1).
-- The Goal island has a palm and a treasure chest. The chest is closed while the Child sails. The closed chest shows the Item sparkle of section 8.2, with `i` equal to the Item count of the Labyrinth. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png`, and the sparkle stops (ticket 19 Q5, [play-improvements spec](../play-improvements/spec.md) part 2).
+- The Goal square is the bottom-right square. The Goal island tile is the border tile to the right of the Goal square, tile (2W, 2H − 1). The tile right of it, tile (2W + 1, 2H − 1) outside the Labyrinth, is island too. So the Goal island is 2 tiles wide, with a sand coast all around. These 2 tiles get no rock and no bush ([game-flow spec](../game-flow/spec.md) part 5, fix 4).
+- The Goal island has a palm and a treasure chest. The chest is 115 % of a tile wide and sits on the seam of the 2 tiles, fully on land. The palm (tile 71, 0.6 tile) sits on the outer tile, up and to the right of the chest, inside the coast ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The chest is closed while the Child sails. The closed chest shows the Item sparkle of section 8.2, with `i` equal to the Item count of the Labyrinth. The chest opens at the start of the Goal celebration: the game shows `chest_open.png` in place of `chest_closed.png`, and the sparkle stops (ticket 19 Q5, [play-improvements spec](../play-improvements/spec.md) part 2).
 - The palm has the modulate colour `Color(0.7, 0.85, 0.7)`, so it is darker than the grass ([play-improvements spec](../play-improvements/spec.md) part 2).
 - Wall islands have rocks and bushes and no palm (ticket 19 Q5).
 
@@ -317,7 +317,8 @@ Sources: [ticket 08](issues/08-visual-change-between-labyrinths.md), [ticket 13]
   - Rocks: 49, 50, 51, 65, 66, 67.
   - Bush: 70. Palm: 71. Small plant: 72. Grass details: 87, 88.
 - Wall islands: place a rock or the bush (tile 70) on some island tiles. Use a second PRNG with seed `labyrinth_seed + 1`, so the Labyrinth data stays the same. Wall islands never get tile 71 or tile 72.
-- The Goal island gets the palm (tile 71) and the chest.
+- The Goal island gets the palm (tile 71) and the chest. It is 2 tiles wide (section 6.2).
+- The boat and each Item on the water have a still shadow: a black ellipse at 20 % opacity, 80 % of the sprite size wide and 22 % high. Its centre is 28 % of the sprite size below the sprite centre and 5 % to the right, because the light comes from the top left. The sprite size is the longer side: 110 px for the boat, 90 px for an Item. The shadow of the boat moves with the boat, but it does not turn, rock, bob, or hop. The shadow of an Item does not bob. The Item row and the Collection strip have no shadows ([game-flow spec](../game-flow/spec.md) part 5, fix 8).
 - The boat (`boat_white_sail.png`) and the islands are the same in all Areas ([ticket 08](issues/08-visual-change-between-labyrinths.md)).
 
 ### 7.2 Areas
@@ -346,8 +347,11 @@ The look changes at the start of each Area, every 5 Labyrinths. The music also c
 | Area 1 Items and the second Spiral shell | `assets/sprites/items/{spiral_shell,starfish,pearl}.png` | `prototypes/art-PROTOTYPE/sprites/items/` |
 | New Items | `assets/sprites/items/{coral,sand_dollar,gem_stone,glowing_star,star}.png` | Generate (section 13.2) |
 | Chest | `assets/sprites/goal/{chest_closed,chest_open}.png` | Generate (section 13.2) |
+| Padlock | `assets/sprites/goal/padlock.png` (421 × 512 px) | `prototypes/art-PROTOTYPE/sprites/goal/padlock.png` ([game-flow spec](../game-flow/spec.md) part 6) |
 
-Known weak sprites: the crab faces the front; the shrimp antennae are thin; the navy whale has low contrast on dark water; the swan and the pearl are near-white ([ticket 13](issues/13-polished-sea-look.md)). The order in section 4.7 puts the whale in light Area 1 and the swan in dark Area 4.
+The crab is `prototypes/art-PROTOTYPE/sprites/friends/crab_front.png` (512 × 378 px): front view, symmetric, both claws at the same height ([game-flow spec](../game-flow/spec.md) part 6). It replaces the first crab, and the app icon uses it.
+
+Known weak sprites: the shrimp antennae are thin; the navy whale has low contrast on dark water; the swan and the pearl are near-white ([ticket 13](issues/13-polished-sea-look.md)). The order in section 4.7 puts the whale in light Area 1 and the swan in dark Area 4.
 
 ## 8. Motion
 
@@ -372,13 +376,13 @@ All 7 motions stay, at the medium amount. The values below are the spec values. 
 | Boat idle | Rock `0.06 * sin(1.6 t)` rad and bob `2 * sin(1.6 t + 1)` px. Only while the boat does not move. |
 | Item idle | Bob `4 * sin(2 t + i)` px, where i is the Item index. A white 8-point sparkle of radius 7 px at (+18, −18) px from the Item centre. It shows while `fract(0.7 t + 0.33 i) < 0.15`, with alpha `1 - fract / 0.15` (a cycle of 1.4 s). |
 | Goal island idle | The palm sways `0.08 * sin(1.5 t)` rad. The closed chest shows the Item sparkle at (+18, −18) px from the chest centre, with `i` equal to the Item count of the Labyrinth. The open chest has no sparkle. |
-| Water waves | Short curved lines in the Area light colour, at 18 % opacity, 3 px wide. The rows are 34 px apart. In a row, a line starts every 90 px. Each line moves `8 * sin(1.2 t + 0.02 x + 0.05 y)` px. The shader also moves soft light patterns on the water (Open gap 6). |
-| Foam | A white line at 55 % opacity, 4 px wide, along each island coast. Dashes are 10 px on and 9 px off. The dashes move at 20 px/s. The line distance from the coast changes by `2 * sin(2 t)` px. |
-| Wake | While the boat moves, a new ring starts in 60 % of the frames at 60 fps (about 36 rings each second). Each ring starts 30 px behind the boat centre, on the move line. The rings start alternately a little to the left and to the right of the move line, so they make a V shape. Each ring is a white 2 px ellipse that grows from 4 × 2 px to 30 × 16 px, turned to the boat direction, and fades out in 900 ms. |
-| Area 1 decoration: waves | Small white wave crests drift on the water. Values: Open gap 6. |
-| Area 2 decoration: bubbles | Small white circles that rise and fade out. Values: Open gap 6. |
-| Area 3 decoration: droplets | Small light-blue drops that fall and fade out. Values: Open gap 6. |
-| Area 4 decoration: stars | Small white 4-point stars on the water. Their alpha goes up and down. Values: Open gap 6. |
+| Water waves | Short curved lines in the Area light colour, at 18 % opacity, 3 px wide. The rows are 34 px apart. In a row, a line starts every 90 px. Each line is `8 * sin(0.02 x + 0.05 y)` px from its grid place. The lines do not move, and the water has no light patterns. Nothing in the background moves ([game-flow spec](../game-flow/spec.md) part 5, fix 2). |
+| Foam | A still white line at 35 % opacity, 6 px wide, with soft edges, along each island coast and under the islands. Its centre is 3 px from the coast, so it starts at the sand. It goes round the round island corners and round the Goal island ([game-flow spec](../game-flow/spec.md) part 5, fix 2). |
+| Wake | While the boat moves, a soft white dot starts every 40 ms, 58 px behind the boat centre (just behind the stern), on the move line, 4 px to the left and to the right in turn. Its radius starts at 9 % of the tile (11.7 px) and gets smaller to 40 % of that. Its opacity starts at 42 % and goes to 0. It lives 0.6 s. The dots are under the islands ([game-flow spec](../game-flow/spec.md) part 5, fix 9). |
+| Area 1 decoration: waves | Small white wave crests on the water. They do not move. Values: Open gap 6. |
+| Area 2 decoration: bubbles | Small white circles. They do not move. Values: Open gap 6. |
+| Area 3 decoration: droplets | Small light-blue drops. They do not move. Values: Open gap 6. |
+| Area 4 decoration: stars | Small white 4-point stars on the water. Each star has its own alpha, and it does not change. Values: Open gap 6. |
 
 ### 8.3 Boat move and bump
 
@@ -401,7 +405,7 @@ The times start at the arrival on the Goal square (0 ms):
 
 ### 8.6 Sea friend
 
-- 1.4 s: the Sea friend appears at (−60, +60) px from the Goal island centre. It grows from 0 to 1.3× of 110 px in 450 ms (`back`), and it moves up to 30 px above the island centre in the same 450 ms (`back`).
+- 1.4 s: the Sea friend appears at (+175, +60) px from the Goal island tile centre, right of the chest of section 6.2 (ticket 28, [game-flow spec](../game-flow/spec.md) part 5, fix 4). This place is temporary: the reveal of the game-flow spec part 6 replaces it. It grows from 0 to 1.3× of 110 px in 450 ms (`back`), and it moves up to 30 px above the island centre in the same 450 ms (`back`).
 - 1.9 s: it wiggles. Its rotation goes from −0.15 rad to +0.15 rad in 250 ms (`inout`), then to 0 in 250 ms (`inout`).
 - 3.0 s: it flies to its strip slot in 700 ms (`inout`) and shrinks to the strip icon size.
 - 3.7 s: 10 sparkles in `#ffffff` and `#ffe07a`, speed 100 px/s, life 500 ms. The slot now shows the Sea friend.
@@ -577,7 +581,7 @@ Read the visible size from `get_viewport().get_visible_rect().size`. With the as
 - **Top band:** height `round(Hv * 150 / 760)`, 237 px at 1200. It holds the Item row and the gear.
 - **Bottom strip:** height `round(Hv * 70 / 760)`, 111 px at 1200, colour black at 25 % opacity (`Color(0, 0, 0, 0.25)`). It is the Collection.
 - **Labyrinth:** `tile_px = floor(min((Hv - top - bottom) / (2H + 1), Wv / (2W + 1)))`. The Labyrinth is in the middle of the space between the top band and the strip. A 4 × 3 Labyrinth has 121 px tiles, and a 10 × 7 Labyrinth has 56 px tiles at 1920 × 1200. The water fills the whole screen.
-- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px, Sea friend 110 px, chest 100 px (Open gap 3). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4). These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2.
+- **Sizes in the Labyrinth** (multiply by `s`): boat 69 × 110 px (the aspect of the boat picture stays the same), Item 90 px, Sea friend 110 px. These sizes come from the [play-improvements spec](../play-improvements/spec.md) part 2. The chest is 115 % of a tile wide ([game-flow spec](../game-flow/spec.md) part 5, fix 4). The new-Area Item is 2× the Item size (section 8.8). The Item flight shrinks the Item to 0.55× of this size (section 8.4).
 - **Item row:** the outlines sit in a row at the centre of the top band, at `y = 60 * h`. The distance between outline centres is `90 * h`, and each outline is `56 * h` px. The row is centred left to right.
 - **Gear:** 64 px, in the top-right corner. Its centre has the same height as the Item row and the same distance from the right edge.
 - **Collection strip:** the total Item count at the left end as a number, in the Godot default font at `64 * h / (1200 / 760)` px (64 px at 1200). The 20 slots fill the rest of the strip with the same distance between their centres. Each slot icon is `44 * h` px (69 px at 1200).
@@ -842,7 +846,7 @@ The build does these checks on the Parent's Mac and reports each result:
 1. `./play` opens the game in fullscreen at the saved Labyrinth, with no start screen and no words.
 2. The key test of section 11.4, for each key.
 3. Sprite edges are smooth on light water (Area 1) and on dark water (Area 4). The dark outline of each sprite is complete ([ticket 14](issues/14-clean-sprite-edges.md)).
-4. The water moves, foam moves along the coasts, the boat leaves a V-shaped wake, and the boat rocks when it does not move.
+4. The water and the foam do not move. The boat leaves a soft wake of white dots, and the boat rocks when it does not move.
 5. Each of the 7 motions of section 8 plays: idle, water, wake, Item collect, Goal hop and confetti, Sea friend arrival, fade and new-Area Item.
 6. The chest opens at the Goal.
 7. Each Area shows its colours, Items, decoration, and music.
@@ -867,7 +871,7 @@ The build is complete when each criterion is true:
 9. At the Goal of Labyrinth n (1 to 20): the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade.
 10. The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage at Labyrinth 1 with an empty Collection and the same total count. No Sea friend comes back ([game-flow spec](../game-flow/spec.md) part 1).
 11. The Area look and the music change at Labyrinths 6, 11, 16, 21, and every 5 Labyrinths after that, in the order Area 1, 2, 3, 4, 1. The first Item kind of the new Area pops up big in the centre, then fades.
-12. The islands are Kenney tiles with sand coasts. The water moves, the foam moves, the boat leaves a wake, and the boat rocks when it does not move.
+12. The islands are Kenney tiles with sand coasts. The water and the foam do not move, the boat leaves a wake, and the boat rocks when it does not move.
 13. The Goal island has a palm and a chest. No wall island has a palm.
 14. Every PNG `.import` file has `mipmaps/generate=true`, the top-level canvas items use `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`, and the stretch mode is `canvas_items` with aspect `expand` at 1920 × 1200.
 15. The Item row is at the top in the middle, the gear is in the top-right corner, and the Collection strip with the total count is at the bottom.
@@ -908,7 +912,7 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 7. Area Items and colours: [ticket 08](issues/08-visual-change-between-labyrinths.md) (emoji Items and colours) against [ticket 13](issues/13-polished-sea-look.md) and [ticket 19](issues/19-gaps-before-the-spec.md). Tickets 13 and 19 win (section 7.2).
 8. Goal and boat art: [ticket 08](issues/08-visual-change-between-labyrinths.md) "sailboat… desert island" against [ticket 13](issues/13-polished-sea-look.md) "No emoji remain" and `boat_white_sail.png`. Ticket 13 wins.
 9. Collection: [ticket 04](issues/04-encouragement-without-losing.md) "a screen with pictures only" against [ticket 11](issues/11-motion-and-animation.md) "the Collection strip at the bottom". Ticket 11 and ticket 19 Q4 win: the strip is the Collection.
-10. Wake and water: [ticket 13](issues/13-polished-sea-look.md) "V-shaped wake and small ripples", "light patterns" against [ticket 11](issues/11-motion-and-animation.md) rings and waves. Both apply: ticket 13 gives the shape, and ticket 11 gives the amounts.
+10. Wake and water: [ticket 13](issues/13-polished-sea-look.md) "V-shaped wake and small ripples", "light patterns" against [ticket 11](issues/11-motion-and-animation.md) rings and waves. Both applied. The [game-flow spec](../game-flow/spec.md) part 5 (fixes 2 and 9) then replaced both: the water is still, with no light patterns, and the wake is soft white dots.
 11. Palms: [ticket 13](issues/13-polished-sea-look.md) "some palms" on the wall islands against [ticket 19](issues/19-gaps-before-the-spec.md) Q5. Ticket 19 wins: the palm and the chest are on the Goal island only.
 12. Bump: the [movement prototype](prototypes/movement-PROTOTYPE/index.html) (14 px of a 110 px square, 90 ms, then 120 ms) against the [motion prototype](prototypes/motion-PROTOTYPE/index.html) (0.12 tile, 70 ms, then 110 ms). The motion prototype (ticket 11) wins. Neither prototype has the "shake" of [ticket 03](issues/03-arrow-key-movement.md), so the spec has no shake.
 13. Move tween: the movement prototype (one 180 ms tween for each square) against the motion prototype (one tween of 180 ms × n). The motion prototype wins.
@@ -931,15 +935,14 @@ Each line names the sources and the winner. "Later" means the later ticket or de
 No source decides these facts. The build uses the stated value. The Parent can change each value later.
 1. **Coast tile rules.** No source maps the 31 Kenney tiles to the water neighbours of an island tile, and the repo has only 31 of the 97 Pirate Pack tiles. The build picks the tiles by eye and checks the result against the Kenney sample. If a coast case has no tile in the repo, download the full pack from https://kenney.nl/assets/pirate-pack (CC0) and copy only the needed tiles.
 2. **Settings pictures.** No source gives the art for the gear, the door, the circular arrow, the music note, the speaker, minus, plus, the level bars, and the hold ring. The build draws them in code (`_draw()` on `Control` nodes) as simple white shapes with a dark outline, 64 px.
-3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 and the chest size (100 px × `s`, [play-improvements spec](../play-improvements/spec.md) part 2) are spec values. The palm (tile 71) is at the far side of the Goal island tile, and the chest is at the side next to the Goal square. At 100 px, the left edge of the chest is 0.085 tile (about 11 px of the prototype tile) past the left edge of the Goal island tile. So the chest covers a part of the foam line next to the Goal square. The chest stays at this place. This overlap is a known look item for the Parent check.
+3. **New sprite text and sizes.** The 7 subject sentences of section 13.2 are spec values. The chest is 115 % of a tile wide on the seam of the 2 Goal island tiles, and the palm is on the outer tile ([game-flow spec](../game-flow/spec.md) part 5, fix 4). This replaces the chest of 100 px × `s` at the side next to the Goal square, which covered a part of the foam line ([play-improvements spec](../play-improvements/spec.md) part 2). A test checks that the opaque pixels of the chest and of the palm are over the land of the Kenney tiles in Labyrinths 1 to 20.
 4. **A Labyrinth with no free dead end.** A perfect Labyrinth can have only 2 dead ends: the start and the Goal. Then the rule "one Item in a dead end" cannot work. The spec value: such a seed is not valid. The seed search of section 4.3 and `meets_conditions` of a new Voyage take only seeds with a free dead end, so the 20 seeds of the seed table are valid. A test checks them.
 5. **The API to go back to fullscreen.** No ticket names it. The spec value: on `get_window().size_changed`, if `DisplayServer.window_get_mode()` is not `DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN`, call `DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)`.
-6. **Decoration and light-pattern values.** Ticket 19 Q3 names the decorations, but no source gives their counts, sizes, or speeds, and no source gives values for the light patterns on the water. The spec values, in prototype px (multiply by `s`):
-   - Area 1 waves: 6 crests, 24 × 8 px, drift at 15 px/s.
-   - Area 2 bubbles: 1 bubble each second, 6 to 12 px, rise at 30 px/s, life 3 s.
-   - Area 3 droplets: 1 drop each second, 6 × 9 px, fall at 40 px/s, life 1.5 s.
-   - Area 4 stars: 12 stars, 6 to 10 px, alpha from 0.2 to 0.9 with a cycle of 2 s.
-   - Light patterns: soft light shapes at 8 % opacity that move at 10 px/s.
-   The decorations and the light patterns are drawn under the islands, the Items, and the boat, so they never hide them.
+6. **Decoration values.** Ticket 19 Q3 names the decorations, but no source gives their counts or sizes. The spec values, in prototype px (multiply by `s`). The decorations do not move ([game-flow spec](../game-flow/spec.md) part 5, fix 2):
+   - Area 1 waves: 6 crests, 24 × 8 px, at 85 % opacity.
+   - Area 2 bubbles: 3 bubbles, 6 to 12 px, at 70 % opacity.
+   - Area 3 droplets: 2 drops, 6 × 9 px, at 80 % opacity.
+   - Area 4 stars: 12 stars, 6 to 10 px, each with its own alpha from 0.2 to 0.9.
+   The decorations are drawn under the islands, the Items, and the boat, so they never hide them. The water has no light patterns.
 7. **The end point of each music track.** No source gives the point where the fade-out of each Pixabay track starts. The spec value: read the momentary loudness with `ffmpeg -i f.mp3 -af ebur128 -f null -`. In the last 20 s of the track, find the first time from which the momentary loudness stays more than 6 dB below the integrated loudness. Cut the track there.
 8. **The size of the total count number.** The spec value: the Godot default font at 64 px (at 1200 px height), white with a dark outline.

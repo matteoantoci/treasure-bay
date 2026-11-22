@@ -1,32 +1,35 @@
-## The decoration of the Area on the water (spec 7.2, 8.2, Open gap 6): wave crests that drift,
-## bubbles that rise, droplets that fall, or stars that twinkle. They are water effects drawn in
-## code, not sprites. This node is above the water and under the islands, the Items, and the boat.
-## The tile (0, 0) is at the node position.
+## The decoration of the Area on the water (spec 7.2, Open gap 6): wave crests, bubbles, droplets,
+## or stars. They are water effects drawn in code, not sprites. They do not move: nothing in the
+## background moves (game-flow spec part 5, fix 2). This node is above the water and under the
+## islands, the Items, and the boat. The tile (0, 0) is at the node position.
 ##
 ## A PRNG with seed `labyrinth.seed_value + 2` puts the pieces on water tiles with no Item, start,
-## or Goal. The motion values are in Motion.
+## or Goal.
 class_name AreaDecoration
 extends Node2D
 
 ## Sizes in px of the prototype tile (spec 8.1).
 const CREST_COUNT := 6
 const CREST_SIZE := Vector2(24, 8)
-## 1 bubble each second with a life of 3 s: 3 places take turns, 6 to 12 px.
+const CREST_ALPHA := 0.85
+## 3 bubbles of 6 to 12 px, at 70 % opacity.
 const BUBBLE_COUNT := 3
 const BUBBLE_PX: Array[float] = [6.0, 12.0]
-## 1 drop each second with a life of 1.5 s: 2 places take turns.
+const BUBBLE_ALPHA := 0.7
+## 2 drops at 80 % opacity.
 const DROPLET_COUNT := 2
 const DROPLET_SIZE := Vector2(6, 9)
 const DROPLET_COLOUR := Color("#c8ecff")
+const DROPLET_ALPHA := 0.8
+## 12 stars of 6 to 10 px. Each star has its own opacity from 0.2 to 0.9.
 const STAR_COUNT := 12
 const STAR_PX: Array[float] = [6.0, 10.0]
+const STAR_ALPHA: Array[float] = [0.2, 0.9]
 const LINE_WIDTH := 2.0
 
 var decoration := Area.Decoration.WAVES
-## Each piece: its place in tiles, and a value from 0 to 1 that sets its size or its phase.
+## Each piece: its place in tiles, and a value from 0 to 1 that sets its size or its opacity.
 var pieces: Array[Vector3] = []
-## Seconds of decoration motion.
-var time := 0.0
 var _tile_px := 0.0
 
 
@@ -45,11 +48,6 @@ func show_labyrinth(labyrinth: Labyrinth, area: int) -> void:
 
 func set_tile_px(tile_px: float) -> void:
 	_tile_px = tile_px
-	queue_redraw()
-
-
-func _process(delta: float) -> void:
-	time += delta
 	queue_redraw()
 
 
@@ -81,41 +79,32 @@ func _free_water_tiles(labyrinth: Labyrinth) -> Array[Vector2i]:
 
 func _draw() -> void:
 	var s := ScreenLayout.labyrinth_scale(_tile_px)
-	for i in pieces.size():
-		var centre := Vector2(pieces[i].x, pieces[i].y) * _tile_px
-		var value := pieces[i].z
+	for piece in pieces:
+		var centre := Vector2(piece.x, piece.y) * _tile_px
+		var value := piece.z
 		match decoration:
 			Area.Decoration.WAVES:
-				# The crest drifts along its path and fades in and out on it.
-				var progress := Motion.crest_progress(time, value)
-				var drift := Vector2((progress - 0.5) * Motion.CREST_PATH_PX * s, 0)
-				_draw_crest(centre + drift, CREST_SIZE * s, LINE_WIDTH * s, sin(PI * progress))
+				_draw_crest(centre, CREST_SIZE * s, LINE_WIDTH * s)
 			Area.Decoration.BUBBLES:
-				var age := Motion.piece_age(time, i, BUBBLE_COUNT, Motion.BUBBLE_INTERVAL)
-				var alpha := 1.0 - age / Motion.BUBBLE_LIFE
-				var bubble := centre + Vector2(0, -Motion.BUBBLE_RISE_PX * age * s)
 				var radius := lerpf(BUBBLE_PX[0], BUBBLE_PX[1], value) * s / 2.0
-				draw_arc(bubble, radius, 0.0, TAU, 24, Color(1, 1, 1, alpha), LINE_WIDTH * s * 0.75, true)
-				draw_circle(bubble + Vector2(-0.35, -0.35) * radius, radius * 0.25, Color(1, 1, 1, alpha))
+				draw_arc(centre, radius, 0.0, TAU, 24, Color(1, 1, 1, BUBBLE_ALPHA), LINE_WIDTH * s * 0.75, true)
+				draw_circle(centre + Vector2(-0.35, -0.35) * radius, radius * 0.25, Color(1, 1, 1, BUBBLE_ALPHA))
 			Area.Decoration.DROPLETS:
-				var age := Motion.piece_age(time, i, DROPLET_COUNT, Motion.DROPLET_INTERVAL)
-				if age < Motion.DROPLET_LIFE:
-					var drop := centre + Vector2(0, Motion.DROPLET_FALL_PX * age * s)
-					_draw_droplet(drop, DROPLET_SIZE * s, Color(DROPLET_COLOUR, 1.0 - age / Motion.DROPLET_LIFE))
+				_draw_droplet(centre, DROPLET_SIZE * s, Color(DROPLET_COLOUR, DROPLET_ALPHA))
 			Area.Decoration.STARS:
-				var colour := Color(1, 1, 1, Motion.star_alpha(time, value))
+				var colour := Color(1, 1, 1, lerpf(STAR_ALPHA[0], STAR_ALPHA[1], value))
 				draw_colored_polygon(Burst.star_points(centre, lerpf(STAR_PX[0], STAR_PX[1], value) * s / 2.0), colour)
 
 
 ## A small white wave crest: an arch with a curl at its front tip.
-func _draw_crest(centre: Vector2, size: Vector2, width: float, alpha: float) -> void:
+func _draw_crest(centre: Vector2, size: Vector2, width: float) -> void:
 	var points := PackedVector2Array()
 	for k in 13:
 		var u := k / 12.0
 		points.append(centre + Vector2((u - 0.5) * size.x, size.y * (0.5 - sin(u * PI))))
 	var tip := points[points.size() - 1]
 	points.append(tip + Vector2(-0.12 * size.x, -0.35 * size.y))
-	draw_polyline(points, Color(1, 1, 1, 0.85 * alpha), width, true)
+	draw_polyline(points, Color(1, 1, 1, CREST_ALPHA), width, true)
 
 
 ## A drop: round at the bottom, pointed at the top.

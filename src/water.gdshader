@@ -1,6 +1,6 @@
-// The water of spec 7.1 and 7.2: the deep colour of the Area, short wave lines in its light colour,
-// and soft light patterns (spec 8.2, Open gap 6). WaterView moves them: it sets wave_phase and
-// light_shift from the time (Motion).
+// The water of spec 7.1 and 7.2: the deep colour of the Area and short wave lines in its light
+// colour. The water is still: the wave lines do not move, and the water has no light patterns
+// (game-flow spec part 5, fix 2).
 // All sizes are px of the prototype tile of 130 px (spec 8.1), relative to the Labyrinth.
 shader_type canvas_item;
 
@@ -9,9 +9,6 @@ uniform vec4 light_colour : source_color = vec4(0.498, 0.847, 0.937, 1.0);
 // Canvas px of the Labyrinth tile (0, 0), and s = tile px / 130 of spec 8.1.
 uniform vec2 labyrinth_origin = vec2(0.0);
 uniform float s = 1.0;
-// 1.2 t of the wave motion, and how far the light shapes moved, in prototype px.
-uniform float wave_phase = 0.0;
-uniform float light_shift = 0.0;
 
 // Wave lines: 18 % opacity, 3 px wide, rows 34 px apart, one line every 90 px in a row. Each line
 // is the quadratic curve of the motion prototype: 44 px long, 3 px high in the middle.
@@ -23,11 +20,9 @@ const float LINE_LENGTH = 44.0;
 // The first row and line of the prototype, relative to its Labyrinth origin (90, 150).
 const vec2 GRID_START = vec2(-130.0, -40.0);
 const vec2 PROTOTYPE_ORIGIN = vec2(90.0, 150.0);
-// Each line moves 8 * sin(1.2 t + 0.02 x + 0.05 y) px, with x and y in prototype canvas px.
+// Each line is 8 * sin(0.02 x + 0.05 y) px from its grid place, with x and y in prototype canvas
+// px: the wave of spec 8.2 at t = 0. So the lines are not in a strict grid.
 const float WAVE_SHIFT = 8.0;
-// Light patterns: soft light shapes at 8 % opacity. They drift down and to the right.
-const float LIGHT_ALPHA = 0.08;
-const vec2 LIGHT_DRIFT = vec2(0.8, 0.6);
 
 varying vec2 canvas_px;
 
@@ -40,7 +35,7 @@ float wave_distance(vec2 p, float j, float k) {
 	float row_y = GRID_START.y + j * ROW_DISTANCE;
 	float line_x = GRID_START.x + k * LINE_DISTANCE;
 	vec2 prototype_px = vec2(line_x, row_y) + PROTOTYPE_ORIGIN;
-	line_x += WAVE_SHIFT * sin(wave_phase + 0.02 * prototype_px.x + 0.05 * prototype_px.y);
+	line_x += WAVE_SHIFT * sin(0.02 * prototype_px.x + 0.05 * prototype_px.y);
 	float u = (p.x - line_x) / LINE_LENGTH;
 	if (u < 0.0 || u > 1.0) {
 		return 1e6;
@@ -48,26 +43,6 @@ float wave_distance(vec2 p, float j, float k) {
 	float curve_y = row_y - 12.0 * u * (1.0 - u);
 	float slope = -12.0 * (1.0 - 2.0 * u) / LINE_LENGTH;
 	return abs(p.y - curve_y) / sqrt(1.0 + slope * slope);
-}
-
-float hash(vec2 cell) {
-	return fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-// Smooth value noise from 0 to 1, with one value for each cell of size 1.
-float value_noise(vec2 p) {
-	vec2 cell = floor(p);
-	vec2 f = fract(p);
-	vec2 u = f * f * (3.0 - 2.0 * f);
-	float top = mix(hash(cell), hash(cell + vec2(1.0, 0.0)), u.x);
-	float bottom = mix(hash(cell + vec2(0.0, 1.0)), hash(cell + vec2(1.0, 1.0)), u.x);
-	return mix(top, bottom, u.y);
-}
-
-// Soft round light shapes, a few hundred px across, on part of the water.
-float light_pattern(vec2 p) {
-	float n = 0.75 * value_noise(p / 170.0) + 0.25 * value_noise(p / 80.0 + vec2(17.3, 5.1));
-	return smoothstep(0.5, 0.8, n);
 }
 
 void fragment() {
@@ -83,7 +58,5 @@ void fragment() {
 	// Distance in canvas px, with a soft edge of 1 px.
 	float half_width = 0.5 * WAVE_WIDTH * s;
 	float line = 1.0 - smoothstep(half_width - 0.5, half_width + 0.5, d * s);
-	vec3 colour = mix(deep_colour.rgb, light_colour.rgb, WAVE_ALPHA * line);
-	colour = mix(colour, vec3(1.0), LIGHT_ALPHA * light_pattern(p - light_shift * LIGHT_DRIFT));
-	COLOR = vec4(colour, 1.0);
+	COLOR = vec4(mix(deep_colour.rgb, light_colour.rgb, WAVE_ALPHA * line), 1.0);
 }
