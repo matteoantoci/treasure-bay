@@ -4,7 +4,7 @@
 
 **Blocked by:** 06 (Padlock on the chest)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] If no key is pressed for 6 s while the play is free (no move, no lock, settings closed), the target hops one time: up by 12 % of a tile, with a small squash, in 350 ms.
 - [x] The target is the open chest, or else the uncollected Item with the shortest path from the boat.

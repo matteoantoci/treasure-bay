@@ -4,7 +4,7 @@
 
 **Blocked by:** 03, 04, 05, 06, 07, 08, 09, 10, 11
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] The full headless test suite passes, with exit code 0. `python3 tests/spec_port.py` exits with code 0.
 - [x] The windowed smoke run prints `SMOKE OK`.
