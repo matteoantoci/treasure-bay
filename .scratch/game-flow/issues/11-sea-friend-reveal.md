@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Voyage)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] At 1.4 s of the Goal celebration, the screen gets darker (black at 55 % in 250 ms). The Collection strip stays above the dark layer.
 - [x] A soft light disc appears in the middle of the Labyrinth area.
