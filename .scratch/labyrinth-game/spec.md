@@ -263,6 +263,7 @@ When the Child presses an arrow key and the boat is free:
 - While the boat moves or bumps, it is busy. The game keeps one early key press. A newer press replaces it. When the boat is free again, the game runs the kept press.
 - An Item that flies to the top does not make the boat busy (motion prototype lines 60 to 64).
 - The input is locked from the arrival at the Goal to the end of the fade-in of the next Labyrinth (section 8.8). The input is also locked while the opening screen shows, from the start press to the end of the fade-in of the Labyrinth (section 8.8, [game-flow spec](../game-flow/spec.md) part 3), and while the settings are open. The game drops presses while the input is locked. It does not keep them. When the settings open, the game also drops the press that it kept while the boat was busy.
+- After the Goal of Labyrinth 20, the Party shows in place of the next Labyrinth (section 6.4). The arrow keys do not sail on the Party. In the first 3.0 s of the Party, the game drops each press. After that, an arrow key, Space, or Enter ends the Party ([game-flow spec](../game-flow/spec.md) part 4).
 
 ## 6. Items, Goal, rewards, Collection
 
@@ -290,7 +291,7 @@ Sources: [ticket 04](issues/04-encouragement-without-losing.md), [ticket 05](iss
 - When the boat arrives on the Goal square and the chest is open, the game saves first (section 12). Then the celebration plays: the boat hops, confetti falls, the fanfare plays, and the chest opens (section 8.5).
 - **Arrival at the locked chest** ([game-flow spec](../game-flow/spec.md) part 2): the chest shakes, the locked sound plays, and each empty Item slot pulses two times (section 8.5). No celebration, no Sea friend, no change to the progress, and no save. The input stays free: one press in an open direction of the Goal square takes the boat away.
 - At 1.4 s, the screen gets darker and the Sea friend of this Labyrinth flips in large in the middle of the Labyrinth area. Its sound plays. At 3.0 s it flies to its slot in the Collection strip, and it arrives at 3.7 s (section 8.6, [game-flow spec](../game-flow/spec.md) part 6, fix 5).
-- At 4.2 s the next Labyrinth starts by itself with the fade (section 8.8). The Child does not choose.
+- At 4.2 s the next Labyrinth starts by itself with the fade (section 8.8). The Child does not choose. After Labyrinth 20, the Party shows in place of the next Labyrinth (section 6.4).
 
 ### 6.4 The end of a Voyage
 
@@ -298,6 +299,7 @@ Source: [game-flow spec](../game-flow/spec.md) part 1. This replaces the Sea fri
 
 - The Goal of Labyrinth 20 adds the flamingo to the Collection, then starts a new Voyage: Labyrinth 1, new seeds, no collected Items, and an empty Collection. The total count of collected Items stays. The game saves this new progress before the celebration (section 12.2).
 - No Sea friend comes back. The Child never gets a Sea friend that she already has.
+- **Party** ([game-flow spec](../game-flow/spec.md) part 4, prototype round 1, variant B): the end screen of a Voyage. After the Goal celebration of Labyrinth 20, the flamingo arrives in its slot as usual, then the screen fades to the Party (section 8.8). All 20 Sea friends make a ring around the open chest, do a wave, and confetti falls (section 8.9). The picture is in section 10. The Party loops until a press. In its first 3.0 s, the game drops each press. After that, an arrow key, Space, or Enter fades to the opening screen. The game does not save on the Party: the save already holds the new Voyage, so a launch during the Party shows the opening screen and Labyrinth 1, and the Party does not play again. The gear works on the Party (section 11.2). While the settings are open, the Party stops.
 
 ### 6.5 Collection
 
@@ -436,6 +438,19 @@ An empty slot shows the Item sprite at 35 % opacity, drawn grey and light (greys
 - The input is locked from the Goal to the end of the fade-in.
 - At the start of a new Area, the first Item kind of that Area pops up big in the centre of the screen. It scales from 0 to 2× of the Labyrinth Item size in 400 ms (`back`). It stays for 600 ms, then it fades out in 400 ms. It starts with the fade-in. It does not fly and does not fill an outline. The input unlocks at the end of the fade-in, before the Item fades out (gap-audit default 25).
 - At launch and after a Parent reset, the opening screen shows ([game-flow spec](../game-flow/spec.md) part 3). An arrow key, Space, Enter, or a click on the start button starts the game: the button scales to 0.86 and back in 140 ms, `item.wav` plays, and the screen fades to dark in 0.8 s (`inout`). Then the current Labyrinth shows, and the screen fades in from dark in 500 ms. No Area Item shows (gap-audit default 26). The input is locked from the start press until the end of this fade-in, so a press while the screen is dark does not move the boat. While the settings are open, the start button does nothing.
+- After the Goal of Labyrinth 20 ([game-flow spec](../game-flow/spec.md) part 4): at 4.2 s the screen fades to dark in 500 ms, the Party shows in place of the next Labyrinth, and the screen fades in in 500 ms. The timeline of the Party (section 8.9) starts at the end of this fade-in. A press that ends the Party fades the screen to dark in 500 ms. Then the opening screen shows, and the screen fades in in 500 ms.
+
+### 8.9 Party
+
+Source: [game-flow spec](../game-flow/spec.md) part 4. `src/party_view.gd` (`PartyView`). Times are from the start of the Party timeline (section 8.8). px values are px at a visible size of 1920 × 1200 (section 10), except the HUD values, which are px of the 760 px HUD scale (multiply by `h`).
+
+- 0 to 2.28 s: the 20 Sea friends pop in one by one, every 120 ms, in Labyrinth order, each on its ring place (section 10). A pop scales from 0 to 1.25 of the Sea friend size in 350 ms (`out`), then to 1 in 150 ms (`inout`) (the prototype `popin`). Each Sea friend plays its own sound, or `splash.wav` (section 9.7).
+- 0.4 s: the chest opens (`chest_open.png`) with `goal.wav`. The confetti of section 8.5 bursts 40 px (HUD) over the chest centre. 8 Items (spiral shell, coral, gem stone, glowing star, pearl, starfish, sand dollar, star) fly from (0, 528) px out of the chest in 0.7 s (`back`) onto the island: Item i lands at angle 200° + 20° i on an ellipse with the radii (252, 180) px around (0, 588) px.
+- 3.0 s: the star of the Items folder (`star.png`, 228 px) pops in over the chest like a Sea friend. 150 ms later the number 20 shows on it: `GameFont.bold()` at 73 px, colour `#7a4a00`, a white shadow at 53 % 2 px below.
+- From 3.0 s: the wave. Sea friend k (from 0) hops `max(0, sin(4 t − 0.45 k)) * 40` px (HUD) up, where t is the time from 3.0 s. The wave loops.
+- From 2.0 s: one confetti burst of section 8.5 every 1.5 s, at a random place in the rectangle x −600 to +600 px, y 240 to 720 px.
+- The boat rocks and bobs (section 8.2). Nothing else moves. The water is still.
+- One frame moves the Party time by at most 1/30 s (times the time scale). The first show of the Party loads the 20 Sea friend pictures, and the slow frame after it does not skip the first pops. A launch does not load them.
 
 ## 9. Sound
 
@@ -540,6 +555,9 @@ Source: [sounds.md](research/sounds.md) Download and preparation, [audio-design 
 | Arrival at the locked chest | `locked.wav` |
 | The last Item arrives in its slot | `unlock.wav` |
 | Sea friend appears (1.4 s) | Its own sound, or `splash.wav`. The fanfare goes 12 dB down in 0.2 s (section 9.3) |
+| Fade to the Party (4.2 s of the Goal of Labyrinth 20) | Music crossfade to the music of Area 1 ([game-flow spec](../game-flow/spec.md) part 4) |
+| A Sea friend pops in on the Party | Its own sound, or `splash.wav`. Each sound file has its own player with a polyphony of 4, so the sounds overlap |
+| The chest opens on the Party (0.4 s) | `goal.wav` at its level |
 | Area change | Music crossfade to the new Area track |
 
 ### 9.8 `credits.txt`
@@ -632,6 +650,14 @@ The play screen has no top band. The HUD values use `h = Hv / 760`. The values i
   - Four Items on the island, 84 px: spiral shell and starfish at (∓235, +84) px, pearl and coral at (∓195, −110) px from the island centre. Each Item bobs `2 sin(2 t + i)` px.
   - The start button: a pill of 560 × 160 px with its centre at y 1010 px, fill `#5ccf6a`, a white border of 8 px, a bottom edge of `#2f8f3c` 7 % of its height below the face, a soft shadow, and a white play triangle. It pulses: scale `1 + 0.03 (1 − cos(2π t / 1.6))`, from 1.0 to 1.06 and back in 1.6 s.
   - The gear of the main scene stays above the opening screen. The Collection strip draws above the reveal layer (section 8.6), so it hides while the opening screen shows.
+- **Party** ([game-flow spec](../game-flow/spec.md) part 4, prototype round 1, variant B). `src/party_view.gd`. The values are px at a visible size of 1920 × 1200 (the prototype values of 1600 × 1000 times 1.2). The picture scales with `min(Hv / 1200, Wv / 1920)` and stays in the centre of the visible rectangle. x is from the centre, y from the top of the 1200 px:
+  - The still water of Area 1 covers the screen.
+  - The island: `IslandLook.block()`, an all-land block of 4 × 3 Labyrinth tiles of 150 px, centre y 576 px. It has no rock and no bush.
+  - The chest, 228 px wide, centre y 546 px: closed at the start, open from 0.4 s (section 8.9).
+  - The boat, 180 px long, centre y 912 px, below the island with its bow up.
+  - The ring: Sea friend k (from 0) at the angle `110° + k * 320° / 19`, clockwise from the right on the screen, on an ellipse with the radii (780, 480) px around the island centre. So the ring goes in Labyrinth order from the bottom left round to the bottom right, with a gap of 40° at the bottom for the boat. Each Sea friend is 120 px (the longer side).
+  - The star with the number 20, centre y 276 px (section 8.9).
+  - The gear of the main scene stays above the Party. The Collection strip hides while the Party shows. On the Party, the only text is the number 20.
 
 ## 11. Settings and Parent controls
 
@@ -889,12 +915,13 @@ Tests:
 13. **Hold buttons:** a reset hold of 7.9 s does nothing, and a reset hold of 8 s resets. A quit hold of 3 s quits.
 14. **Opening screen** ([game-flow spec](../game-flow/spec.md) part 3): at launch the opening screen shows, and an arrow press does not move the boat. Each arrow key, Space, Enter, or a click on the button starts the current Labyrinth. While the settings are open, the button does nothing. A Parent reset shows the opening screen with a new Voyage. A launch from a version 1 save past Labyrinth 20 shows the opening screen, then Labyrinth 1 with an empty strip. The title letters have even gaps on the arc. The test helper `start_from_opening()` of `tests/scene_helpers.gd` goes through the opening screen, and `add_main()` uses it.
 15. **Idle hint** ([game-flow spec](../game-flow/spec.md) part 5, fix 10): the chest and an Item hop up by 12 % of a tile with a landing squash of 108 % × 92 % in 350 ms. In the main scene, after 6 s with no key press, the Item with the shortest press path hops, and the open chest hops when all Items are collected. The hop repeats every 6 s, at most 3 times. A key press starts the count again. No hop on the opening screen or while the settings are open, and the count starts again from 0 when they close.
+16. **Party** ([game-flow spec](../game-flow/spec.md) part 4): a main-scene test sails Labyrinth 20 to the open chest. The flamingo joins the strip, then the Party shows. Presses in its first 3 s do nothing, a press after that shows the opening screen, and the next start shows Labyrinth 1 with an empty strip and the same total count. Other tests check with `show_party()`: the picture of section 10, the timeline of section 8.9 (the pop times in Labyrinth order with their sounds, the ring with the gap at the bottom, the chest at 0.4 s with the Goal sound, the confetti and the 8 Items, the star with 20 at 3.0 s, the wave height and its phase delay, the bursts every 1.5 s), the loop, each key that ends it, the gear, the only text 20, and a launch after a Party.
 
 ### 14.2 Screenshots
 
 A headless run has no pixels [trace]. For a screenshot, run the game in a window: `godot --path . --write-movie shots/frame.png --quit-after <N>`, or save `get_viewport().get_texture().get_image()` after `await RenderingServer.frame_post_draw` ([godot4-facts §7](research/godot4-facts.md)).
 
-`tools/take_shots.gd` takes `shots/opening.png`, the opening screen at launch, at 1920 × 1200 ([game-flow spec](../game-flow/spec.md) part 3).
+`tools/take_shots.gd` takes `shots/opening.png`, the opening screen at launch, at 1920 × 1200 ([game-flow spec](../game-flow/spec.md) part 3), and `shots/party.png`, the Party 4 s after its start, at 1920 × 1200 ([game-flow spec](../game-flow/spec.md) part 4).
 `tools/take_motion_shots.gd` also takes `shots/motion-locked.png` (the locked chest 60 ms into its shake) and `shots/motion-unlocked.png` (the open chest 0.3 s after the unlock, when the padlock is gone) ([game-flow spec](../game-flow/spec.md) part 2).
 
 ### 14.3 Manual test checklist
@@ -919,15 +946,15 @@ The build does these checks on the Parent's Mac and reports each result:
 
 The build is complete when each criterion is true:
 1. `./play` on the Parent's Mac starts the game in exclusive fullscreen on the opening screen. The start press shows the saved Labyrinth ([game-flow spec](../game-flow/spec.md) part 3).
-2. The game shows no words. In play, the only text is the total Item count number in the Collection strip. On the opening screen, the only text is the game name.
+2. The game shows no words. In play, the only text is the total Item count number in the Collection strip. On the opening screen, the only text is the game name. On the Party, the only text is the number 20.
 3. The arrow keys are the only keys that act in play. A held arrow key moves the boat one time. On the opening screen, the arrow keys, Space, and Enter press the start button.
 4. One arrow press moves the boat in a straight line to the next junction, bend, dead end, Item, or Goal, at 180 ms for each tile, with the `out` curve.
 5. A press toward a wall makes a bump of 0.12 tile (70 ms, then 110 ms), plays the wall sound, and does not move the boat.
 6. Labyrinth 1 is 4 × 3 squares with 2 Items and is the same at each new start. Labyrinths 1 to 20 match the table of section 4.3. Each later Voyage has new Labyrinths with the same sizes and Item counts ([game-flow spec](../game-flow/spec.md) part 1).
 7. Each Labyrinth has at least one Item in a dead end. No Item is on the start square or the Goal square.
 8. The boat stops on each Item square. The Item pops, plays the pop sound, flies to its slot, and the slot fills.
-9. At the Goal of Labyrinth n (1 to 20), with all Items collected: the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade. With an Item left, the Goal gives only the locked chest of section 6.3.
-10. The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage at Labyrinth 1 with an empty Collection and the same total count. No Sea friend comes back ([game-flow spec](../game-flow/spec.md) part 1).
+9. At the Goal of Labyrinth n (1 to 20), with all Items collected: the chest opens, the boat hops 2 times, confetti falls, the fanfare plays and fades out by 3.7 s, Sea friend n of section 4.7 arrives with its sound and flies to its slot, and the next Labyrinth starts by itself after the fade. After Labyrinth 20, the Party shows in place of the next Labyrinth. With an Item left, the Goal gives only the locked chest of section 6.3.
+10. The Goal of Labyrinth 20 adds the flamingo and starts a new Voyage at Labyrinth 1 with an empty Collection and the same total count. No Sea friend comes back ([game-flow spec](../game-flow/spec.md) part 1). The Party shows all 20 Sea friends around the open chest, loops until a press after its first 3 s, and then shows the opening screen ([game-flow spec](../game-flow/spec.md) part 4).
 11. The Area look and the music change at Labyrinths 6, 11, 16, 21, and every 5 Labyrinths after that, in the order Area 1, 2, 3, 4, 1. The first Item kind of the new Area pops up big in the centre, then fades.
 12. The islands are Kenney tiles with sand coasts. The water and the foam do not move, the boat leaves a wake, and the boat rocks when it does not move.
 13. The Goal island has a palm and a chest. No wall island has a palm.

@@ -36,6 +36,15 @@ signal start_pressed
 signal locked_chest_reached
 ## Emitted when the last Item of the Labyrinth arrives in its slot and the padlock pops off.
 signal chest_unlocked
+## Emitted when the fade to the Party starts, after the flamingo of Labyrinth 20 is in its slot
+## (game-flow spec part 4).
+signal party_coming
+## Emitted when the timeline of the Party starts, at the end of its fade-in.
+signal party_started
+## Emitted when a Sea friend pops in on the Party.
+signal party_friend_popped(sea_friend: String)
+## Emitted when the chest of the Party opens.
+signal party_chest_opened
 ## Emitted when the idle hint target hops (game-flow spec part 5, fix 10): the Goal square for the
 ## open chest, or the square of the Item.
 signal hint_hopped(square: Vector2i)
@@ -77,6 +86,7 @@ var _items_in_flight := 0
 @onready var _fade: FadeView = $Fade
 @onready var _settings: SettingsPanel = $Settings
 @onready var _opening: OpeningScreen = $Opening
+@onready var _party: PartyView = $Party
 @onready var _idle_hint: IdleHint = $IdleHint
 
 
@@ -92,6 +102,8 @@ func _ready() -> void:
 	_wake.boat = _boat
 	_settings.reset_requested.connect(_reset_progress)
 	_opening.button.clicked.connect(_press_start)
+	_party.friend_popped.connect(party_friend_popped.emit)
+	_party.chest_opened.connect(party_chest_opened.emit)
 	_idle_hint.is_play_free = _is_play_free
 	_idle_hint.hop_due.connect(_hop_hint)
 	show_opening()
@@ -121,6 +133,7 @@ func show_opening() -> void:
 	_reveal.stop()
 	_effects.clear()
 	_wake.clear()
+	_party.close()
 	# The Collection strip draws above the reveal layer, so it is above the opening screen too. It
 	# hides while the opening screen shows. The gear stays above the opening screen.
 	_collection_strip.hide()
@@ -199,6 +212,7 @@ func _show_current_labyrinth() -> void:
 	_sea_friend.stop()
 	_reveal.stop()
 	_effects.clear()
+	_party.close()
 	_wake.clear()
 	var area := Area.for_labyrinth(progress.labyrinth_number)
 	_water.show_area(area)
@@ -236,6 +250,13 @@ func _unlock() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo():
+		return
+	# On the Party, after the first 3.0 s, an arrow key, Space, or Enter goes to the opening screen.
+	if _party.visible:
+		if _direction_of(event) != Vector2i.ZERO or event.is_action_pressed("confirm"):
+			get_viewport().set_input_as_handled()
+			if _party.accepts_press():
+				_leave_party()
 		return
 	# On the opening screen, an arrow key, Space, or Enter presses the start button.
 	if _opening.visible:
@@ -365,19 +386,21 @@ func _show_item_in_outline(index: int) -> void:
 
 
 ## Locks the input, moves the progress on, and plays the Goal celebration of spec 6.3 and 8.5 to
-## 8.8: the steps and their times are in Motion.goal_steps().
+## 8.8: the steps and their times are in Motion.goal_steps(). After Labyrinth 20, the Party
+## follows in place of the next Labyrinth (game-flow spec part 4).
 func _reach_goal() -> void:
 	_locked = true
 	_kept_direction = Vector2i.ZERO
 	_boat.idle = false
+	var ends_voyage := progress.labyrinth_number == LabyrinthPlan.FIXED_COUNT
 	var friend := progress.reach_goal()
 	goal_reached.emit(friend)
 	_celebration = create_tween().set_parallel()
 	for step: Array in Motion.goal_steps():
-		_celebration.tween_callback(_run_goal_step.bind(step[1], friend)).set_delay(step[0])
+		_celebration.tween_callback(_run_goal_step.bind(step[1], friend, ends_voyage)).set_delay(step[0])
 
 
-func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
+func _run_goal_step(step: Motion.GoalStep, friend: String, ends_voyage: bool) -> void:
 	var s := _labyrinth_scale()
 	var island := _tile_centre(labyrinth.goal_island_tile())
 	match step:
@@ -409,9 +432,16 @@ func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
 				var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
 				_effects.burst(sparkles, _slot_centre(friend), _hud_scale())
 		Motion.GoalStep.FADE_OUT:
-			next_labyrinth_coming.emit(progress.labyrinth_number)
+			if ends_voyage:
+				party_coming.emit()
+			else:
+				next_labyrinth_coming.emit(progress.labyrinth_number)
 			_fade.fade_out()
 		Motion.GoalStep.NEXT_LABYRINTH:
+			if ends_voyage:
+				_open_party()
+				_fade.fade_in()
+				return
 			# The boat stays still until the input unlocks.
 			_show_current_labyrinth()
 			_fade.fade_in()
@@ -419,7 +449,61 @@ func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
 				_fade.show_area_item(Area.item_kinds(Area.for_labyrinth(progress.labyrinth_number))[0], _items.item_px())
 		Motion.GoalStep.UNLOCK:
 			_celebration = null
-			_unlock()
+			if ends_voyage:
+				_start_party()
+			else:
+				_unlock()
+
+
+# The Party (game-flow spec part 4). It shows after the Goal celebration of Labyrinth 20, in place
+# of the next Labyrinth.
+
+## Shows the Party at once and starts its timeline. Tests and tools use it; the game shows the Party
+## after the Goal celebration of Labyrinth 20.
+func show_party() -> void:
+	_stop_celebration()
+	_fade.stop()
+	_open_party()
+	_start_party()
+
+
+## True while the Party shows.
+func is_party_shown() -> bool:
+	return _party.visible
+
+
+## Shows the still picture of the Party. The input of the Labyrinth stays locked, and the Collection
+## strip hides: the Party shows all 20 Sea friends.
+func _open_party() -> void:
+	_stop_move()
+	_locked = true
+	_kept_direction = Vector2i.ZERO
+	_sea_friend.stop()
+	_reveal.stop()
+	_effects.clear()
+	_wake.clear()
+	_opening.hide()
+	_collection_strip.hide()
+	_party.open()
+	_layout()
+
+
+func _start_party() -> void:
+	_party.start()
+	party_started.emit()
+
+
+## A press after the first 3.0 s: the screen fades to dark, then the opening screen fades in. The
+## save already holds the new Voyage.
+func _leave_party() -> void:
+	_party.leave()
+	_fade.fade_out().finished.connect(_show_opening_after_party)
+
+
+func _show_opening_after_party() -> void:
+	show_opening()
+	_fade.set_dark()
+	_fade.fade_in()
 
 
 # Idle hint (game-flow spec part 5, fix 10).
@@ -450,6 +534,7 @@ func _layout() -> void:
 	_reveal.layout(visible, ScreenLayout.labyrinth_area(visible.size))
 	_gear.layout(visible.size)
 	_fade.layout(visible)
+	_party.layout(visible)
 	_opening.layout(visible)
 	if labyrinth == null:
 		return

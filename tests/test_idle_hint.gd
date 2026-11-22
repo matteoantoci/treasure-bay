@@ -198,6 +198,17 @@ func test_no_hop_on_the_opening_screen(t) -> bool:
 	return true
 
 
+## No hop on the Party.
+func test_no_hop_on_the_party(t) -> bool:
+	var main := await Scene.add_main(t)
+	var hops := _record_hops(main)
+	main.show_party()
+	await _wait(t, HOP_TIMEOUT)
+	t.assert_eq(hops, [], "no hop on the Party")
+	await Scene.remove(t, main)
+	return true
+
+
 ## No hop while the settings are open. The count starts again when they close.
 func test_no_hop_while_the_settings_are_open(t) -> bool:
 	var main := await Scene.add_main(t)
