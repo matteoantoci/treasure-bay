@@ -1,8 +1,9 @@
 ## Draws the islands of a Labyrinth with the Kenney tiles (spec 7.1): a TileMapLayer for the coasts
 ## and the grass, the rocks and bushes of the wall islands, and the palm and the closed chest on
-## the Goal island (spec 6.2). The water is the Water node below. The tile (0, 0) is at the node
-## position. IslandLook picks the tiles. The palm sways (spec 8.2). The closed chest sparkles like
-## an Item, and it opens at the start of the Goal celebration (spec 8.5).
+## the Goal island of 2 tiles (spec 6.2, game-flow spec part 5, fix 4). The water is the Water node
+## below. The tile (0, 0) is at the node position. IslandLook picks the tiles. The palm sways (spec
+## 8.2). The closed chest sparkles like an Item, and it opens at the start of the Goal celebration
+## (spec 8.5).
 class_name LabyrinthView
 extends Node2D
 
@@ -11,16 +12,18 @@ const KENNEY_TILE_PX := 128
 const KENNEY_TILES_DIR := "res://assets/kenney/tiles/"
 const CHEST_CLOSED := preload("res://assets/sprites/goal/chest_closed.png")
 const CHEST_OPEN := preload("res://assets/sprites/goal/chest_open.png")
-## The chest is 100 px of the prototype tile (spec 10, Open gap 3).
-const CHEST_PX := 100.0
+## The chest is 115 % of a tile wide (game-flow spec part 5, fix 4). Both chest pictures are wider
+## than tall.
+const CHEST_TILES := 1.15
 ## Sizes of a whole Kenney tile picture, in Labyrinth tiles. A rock or bush fills the grass top of
-## its island. The palm (91 px of the prototype tile) is a little smaller than the chest.
+## its island. The palm is smaller than the chest, so it stays inside the coast of the outer tile.
 const DECORATION_TILES := 0.5
-const PALM_TILES := 0.7
-## On the Goal island tile, the chest is at the side next to the Goal square and the palm at the
-## far side, on the sand (Open gap 3). Centres in tiles from the top-left corner of the tile.
-const CHEST_PLACE := Vector2(0.3, 0.56)
-const PALM_PLACE := Vector2(0.78, 0.42)
+const PALM_TILES := 0.6
+## Centres in tiles from the top-left corner of the Goal island tile. The chest sits on the seam of
+## the Goal island tile and the outer tile, fully on land. The palm sits on the outer tile, up and
+## to the right of the chest, inside the coast.
+const CHEST_PLACE := Vector2(1.0, 0.5)
+const PALM_PLACE := Vector2(1.62, 0.38)
 ## The palm is darker than the grass, so the Child sees the Goal island.
 const PALM_COLOUR := Color(0.7, 0.85, 0.7)
 
@@ -158,7 +161,7 @@ func _place() -> void:
 		_fit(_decorations[tile], (Vector2(tile) + Vector2(0.5, 0.5)) * tile_px, DECORATION_TILES * tile_px)
 	var goal_island := Vector2(labyrinth.goal_island_tile())
 	var s := ScreenLayout.labyrinth_scale(tile_px)
-	_fit(chest, (goal_island + CHEST_PLACE) * tile_px, CHEST_PX * s)
+	_fit(chest, (goal_island + CHEST_PLACE) * tile_px, CHEST_TILES * tile_px)
 	_fit(palm, (goal_island + PALM_PLACE) * tile_px, PALM_TILES * tile_px)
 	chest_sparkle.position = chest.position + Motion.SPARKLE_OFFSET_PX * s
 	chest_sparkle.polygon = Burst.star_points(Vector2.ZERO, Motion.SPARKLE_RADIUS_PX * s)

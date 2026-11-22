@@ -95,12 +95,10 @@ func test_the_goal_celebration_runs_on_the_spec_times(t) -> bool:
 	return true
 
 
-## The Sea friend grows next to the Goal island at the far side, away from the chest and the boat,
-## so the open chest and the boat stay in view (spec 6.2, 8.5, 8.6, Open gap 3). The check uses the
-## box of the opaque pixels of each of the 20 Sea friend pictures at the end of the growth. A corner
-## is at most a quarter of the chest box. The play-improvements spec (part 2) makes the chest 100 px,
-## so the chest reaches up to the lower-left corner of the Sea friend. For this reason, the limit
-## changed from 0.2 to 0.25.
+## The Sea friend grows right of the chest, over the outer Goal island tile, away from the chest
+## and the boat, so the open chest and the boat stay in view (spec 6.2, 8.5, 8.6, game-flow spec
+## part 5, fix 4). The check uses the box of the opaque pixels of each of the 20 Sea friend pictures
+## at the end of the growth. A corner is at most a quarter of the chest box.
 func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
 	var main := await Scene.add_main(t)
 	var view: LabyrinthView = main.get_node("LabyrinthView")
@@ -113,7 +111,7 @@ func test_the_sea_friend_leaves_the_open_chest_and_the_boat_in_view(t) -> bool:
 	var s := boat.scale.x
 	var tile_px := ScreenLayout.PROTOTYPE_TILE_PX * s
 	var island := view.global_position + (Vector2(main.labyrinth.goal_island_tile()) + Vector2(0.5, 0.5)) * tile_px
-	t.assert_true(friend.position.is_equal_approx(island + Vector2(60, -30) * s), "the Sea friend is at (+60, -30) px from the Goal island centre")
+	t.assert_true(friend.position.is_equal_approx(island + Vector2(175, -30) * s), "the Sea friend is at (+175, -30) px from the Goal island tile centre")
 	var chest_px := maxf(view.chest.texture.get_width(), view.chest.texture.get_height()) * view.chest.global_scale.x
 	var chest := _opaque_rect(view.chest.texture, view.chest.global_position, chest_px)
 	var boat_local := _opaque_rect(BoatView.TEXTURE, Vector2.ZERO, BoatView.LENGTH_PX * s)
@@ -188,9 +186,10 @@ func test_the_boat_rocks_only_when_it_does_not_move_and_leaves_a_wake(t) -> bool
 	var finished := [false]
 	main.move_finished.connect(func() -> void: finished[0] = true, CONNECT_ONE_SHOT)
 	var timer: SceneTreeTimer = t.create_timer(Scene.MOVE_TIMEOUT)
-	while wake.rings.is_empty() and not finished[0] and timer.time_left > 0.0:
+	while wake.dots.is_empty() and not finished[0] and timer.time_left > 0.0:
 		await t.process_frame
-	t.assert_true(wake.rings.size() > 0, "the moving boat leaves wake rings")
+	t.assert_true(wake.dots.size() > 0, "the moving boat leaves wake dots")
+	t.assert_true(wake.get_index() < main.get_node("LabyrinthView").get_index(), "the wake dots stay under the islands")
 	if not finished[0]:
 		t.assert_true(await t.wait_for(main.move_finished, Scene.MOVE_TIMEOUT), "the move is over")
 	t.assert_true(boat.idle, "the boat rocks again")

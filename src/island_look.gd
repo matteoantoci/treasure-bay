@@ -1,6 +1,8 @@
 ## The Kenney island look of a Labyrinth (spec 7.1): the Kenney tile of each Kenney cell, and the
-## rocks and bushes on the wall islands. The outside of the Labyrinth is sea. The Goal island gets
-## no rock and no bush: the view puts the palm and the chest on it (spec 6.2).
+## rocks and bushes on the wall islands. The outside of the Labyrinth is sea, but the tile right of
+## the Goal island tile is island too: the Goal island is 2 tiles wide, with a sand coast all
+## around (game-flow spec part 5, fix 4). The 2 Goal island tiles get no rock and no bush: the
+## view puts the palm and the chest on them (spec 6.2).
 ##
 ## Each Labyrinth tile is drawn as 3 x 3 Kenney cells (Open gap 1). The Kenney coast tiles need an
 ## island at least 2 tiles thick, and a wall island is only 1 Labyrinth tile thick. With 3 x 3
@@ -61,16 +63,21 @@ var decorations := {}
 
 static func build(labyrinth: Labyrinth) -> IslandLook:
 	var look := IslandLook.new()
+	var tiles: Array[Vector2i] = []
 	var count := labyrinth.tile_count()
 	for y in count.y:
 		for x in count.x:
-			var tile := Vector2i(x, y)
-			if not _is_island(labyrinth, tile):
-				continue
-			for cy in CELLS_PER_TILE:
-				for cx in CELLS_PER_TILE:
-					var side := Vector2i(cx - 1, cy - 1)
-					look.cells[tile * CELLS_PER_TILE + Vector2i(cx, cy)] = _cell_tile(labyrinth, tile, side)
+			tiles.append(Vector2i(x, y))
+	# The outer Goal island tile comes last, so the tile variants of the Labyrinth tiles keep their
+	# PRNG outputs.
+	tiles.append(goal_island_tiles(labyrinth)[1])
+	for tile in tiles:
+		if not _is_island(labyrinth, tile):
+			continue
+		for cy in CELLS_PER_TILE:
+			for cx in CELLS_PER_TILE:
+				var side := Vector2i(cx - 1, cy - 1)
+				look.cells[tile * CELLS_PER_TILE + Vector2i(cx, cy)] = _cell_tile(labyrinth, tile, side)
 	var prng := Prng.new(labyrinth.seed_value + 1)
 	for y in count.y:
 		for x in count.x:
@@ -89,6 +96,13 @@ static func build(labyrinth: Labyrinth) -> IslandLook:
 	return look
 
 
+## The Goal island: the Goal island tile on the right border, and the tile right of it, outside the
+## Labyrinth.
+static func goal_island_tiles(labyrinth: Labyrinth) -> Array[Vector2i]:
+	var tile := labyrinth.goal_island_tile()
+	return [tile, tile + Vector2i.RIGHT]
+
+
 ## The Kenney tile of the cell of `tile` on `side`: (-1, -1) is the top-left cell, (0, 0) the
 ## centre cell. The cell faces the neighbours of `tile` on that side.
 static func _cell_tile(labyrinth: Labyrinth, tile: Vector2i, side: Vector2i) -> int:
@@ -105,8 +119,10 @@ static func _cell_tile(labyrinth: Labyrinth, tile: Vector2i, side: Vector2i) -> 
 	return GRASS
 
 
-## A tile outside the Labyrinth is sea.
+## A tile outside the Labyrinth is sea, except the outer Goal island tile.
 static func _is_island(labyrinth: Labyrinth, tile: Vector2i) -> bool:
+	if tile == goal_island_tiles(labyrinth)[1]:
+		return true
 	var count := labyrinth.tile_count()
 	if tile.x < 0 or tile.y < 0 or tile.x >= count.x or tile.y >= count.y:
 		return false

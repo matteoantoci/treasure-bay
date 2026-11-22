@@ -1,5 +1,6 @@
-## The coast lines of the foam (spec 8.2, gap-audit default 40): the foam follows the whole coast of
-## the water inside the Labyrinth and the outer coast of the border islands.
+## The coast lines of the foam (spec 8.2, gap-audit default 40, game-flow spec part 5, fix 2): the
+## foam follows the whole coast of the water inside the Labyrinth and the outer coast of the border
+## islands with the Goal island.
 extends RefCounted
 
 const Fixtures := preload("res://tests/fixtures.gd")
@@ -67,11 +68,22 @@ func test_the_water_of_each_labyrinth_has_one_coast(t) -> bool:
 	return true
 
 
+func test_the_outer_coast_goes_round_the_goal_island(t) -> bool:
+	# The Goal island tile is (4, 1). The tile (5, 1) right of it is island too (fix 4).
+	var outline := CoastLine.outer_outline(Fixtures.labyrinth_from_tiles(ROW))
+	var expected := PackedVector2Array([
+		Vector2(0, 0), Vector2(5, 0), Vector2(5, 1), Vector2(6, 1),
+		Vector2(6, 2), Vector2(5, 2), Vector2(5, 3), Vector2(0, 3),
+	])
+	t.assert_eq(_from_top_left(outline), expected, "the corners of the outer coast, clockwise on the screen")
+	return true
+
+
 func test_the_foam_lies_on_the_water_at_its_distance_from_the_coast(t) -> bool:
 	# Tiles of 100 px, foam 4 px from the coast. The inner foam stays 4 px inside the water. The
-	# outer foam goes 4 px around the Labyrinth.
+	# outer foam goes 4 px around the Labyrinth and its Goal island.
 	var labyrinth := Fixtures.labyrinth_from_tiles(ROW)
-	var loops := CoastLine.foam_loops(CoastLine.water_outlines(labyrinth), labyrinth.tile_count(), 100.0, 30.0, 4.0)
+	var loops := CoastLine.foam_loops(CoastLine.water_outlines(labyrinth), CoastLine.outer_outline(labyrinth), 100.0, 30.0, 4.0)
 	t.assert_eq(loops.size(), 2, "the inner and the outer foam")
 	var bounds: Array[Rect2] = []
 	for loop: PackedVector2Array in loops:
@@ -81,5 +93,5 @@ func test_the_foam_lies_on_the_water_at_its_distance_from_the_coast(t) -> bool:
 		bounds.append(rect)
 	bounds.sort_custom(func(a: Rect2, b: Rect2) -> bool: return a.get_area() < b.get_area())
 	t.assert_true(bounds[0].is_equal_approx(Rect2(104, 104, 292, 92)), "inner foam: %s" % bounds[0])
-	t.assert_true(bounds[1].is_equal_approx(Rect2(-4, -4, 508, 308)), "outer foam: %s" % bounds[1])
+	t.assert_true(bounds[1].is_equal_approx(Rect2(-4, -4, 608, 308)), "outer foam: %s" % bounds[1])
 	return true
