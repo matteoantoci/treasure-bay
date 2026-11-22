@@ -444,17 +444,17 @@ func _run_goal_step(step: Motion.GoalStep, friend: String, ends_voyage: bool) ->
 				_open_party()
 				_fade.fade_in()
 				return
-			# The boat stays still until the input unlocks.
+			# The boat stays still until the input unlocks at the end of the fade-in. The UNLOCK step
+			# comes at the planned end of the fade-in, but the fade-in starts up to one frame after
+			# its planned time, so the step does not unlock.
 			_show_current_labyrinth()
-			_fade.fade_in()
+			_fade.fade_in().finished.connect(_unlock)
 			if Motion.starts_new_area(progress.labyrinth_number):
 				_fade.show_area_item(Area.item_kinds(Area.for_labyrinth(progress.labyrinth_number))[0], _items.item_px())
 		Motion.GoalStep.UNLOCK:
 			_celebration = null
 			if ends_voyage:
 				_start_party()
-			else:
-				_unlock()
 
 
 # The Party (game-flow spec part 4). It shows after the Goal celebration of Labyrinth 20, in place
