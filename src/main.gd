@@ -125,14 +125,9 @@ func show_labyrinth() -> void:
 ## button starts the current Labyrinth.
 func show_opening() -> void:
 	_stop_celebration()
-	_stop_move()
+	_stop_play_views()
 	_locked = true
-	_kept_direction = Vector2i.ZERO
 	_fade.stop()
-	_sea_friend.stop()
-	_reveal.stop()
-	_effects.clear()
-	_wake.clear()
 	_party.close()
 	# The Collection strip draws above the reveal layer, so it is above the opening screen too. It
 	# hides while the opening screen shows. The gear stays above the opening screen.
@@ -204,16 +199,11 @@ func _notification(what: int) -> void:
 
 
 func _show_current_labyrinth() -> void:
-	_stop_move()
+	_stop_play_views()
 	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
-	_kept_direction = Vector2i.ZERO
-	_sea_friend.stop()
-	_reveal.stop()
-	_effects.clear()
 	_party.close()
-	_wake.clear()
 	var area := Area.for_labyrinth(progress.labyrinth_number)
 	_water.show_area(area)
 	_area_decoration.show_labyrinth(labyrinth, area)
@@ -239,6 +229,17 @@ func _stop_move() -> void:
 	if _move_tween != null:
 		_move_tween.kill()
 		_move_tween = null
+
+
+## The shared stop of a screen change: a move stops and never ends, the kept press goes, and the
+## Sea friend, the reveal, the effects, and the wake clear.
+func _stop_play_views() -> void:
+	_stop_move()
+	_kept_direction = Vector2i.ZERO
+	_sea_friend.stop()
+	_reveal.stop()
+	_effects.clear()
+	_wake.clear()
 
 
 ## The input unlocks, the boat rocks, and the Child can sail the shown Labyrinth.
@@ -413,24 +414,21 @@ func _run_goal_step(step: Motion.GoalStep, friend: String, ends_voyage: bool) ->
 		Motion.GoalStep.FRIEND_APPEARS:
 			# The reveal: the screen gets darker, and the Sea friend flips in large in the middle of
 			# the Labyrinth area (game-flow spec part 6, fix 5).
-			if not friend.is_empty():
-				_reveal.show_reveal()
-				var full_px := Motion.FRIEND_HEIGHT_SHARE * _visible_size().y
-				_sea_friend.appear(load(SeaFriends.texture_path(friend)), _reveal.light_centre, full_px)
-				sea_friend_appeared.emit(friend)
+			_reveal.show_reveal()
+			var full_px := Motion.FRIEND_HEIGHT_SHARE * _visible_size().y
+			_sea_friend.appear(load(SeaFriends.texture_path(friend)), _reveal.light_centre, full_px)
+			sea_friend_appeared.emit(friend)
 		Motion.GoalStep.FRIEND_WIGGLES:
 			_sea_friend.wiggle()
 		Motion.GoalStep.FRIEND_FLIES:
-			if not friend.is_empty():
-				_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
-				_reveal.fade_out(Motion.FRIEND_FLY_SECONDS, Motion.FRIEND_FLY_CURVE)
+			_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
+			_reveal.fade_out(Motion.FRIEND_FLY_SECONDS, Motion.FRIEND_FLY_CURVE)
 		Motion.GoalStep.FRIEND_IN_SLOT:
 			_sea_friend.stop()
 			_reveal.stop()
-			if not friend.is_empty():
-				_collection_strip.show_friend(friend)
-				var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
-				_effects.burst(sparkles, _slot_centre(friend), _hud_scale())
+			_collection_strip.show_friend(friend)
+			var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
+			_effects.burst(sparkles, _slot_centre(friend), _hud_scale())
 		Motion.GoalStep.FADE_OUT:
 			if ends_voyage:
 				party_coming.emit()
@@ -475,13 +473,8 @@ func is_party_shown() -> bool:
 ## Shows the still picture of the Party. The input of the Labyrinth stays locked, and the Collection
 ## strip hides: the Party shows all 20 Sea friends.
 func _open_party() -> void:
-	_stop_move()
+	_stop_play_views()
 	_locked = true
-	_kept_direction = Vector2i.ZERO
-	_sea_friend.stop()
-	_reveal.stop()
-	_effects.clear()
-	_wake.clear()
 	_opening.hide()
 	_collection_strip.hide()
 	_party.open()
