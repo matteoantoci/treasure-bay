@@ -32,9 +32,10 @@ func set_dark() -> void:
 	dark.color.a = 1.0
 
 
-## Fades the screen to dark in 500 ms.
-func fade_out() -> Tween:
-	return _fade_to(1.0)
+## Fades the screen to dark in `seconds`: 500 ms between Labyrinths, 800 ms after the press on the
+## opening screen (game-flow spec part 3).
+func fade_out(seconds := Motion.FADE_SECONDS) -> Tween:
+	return _fade_to(1.0, seconds)
 
 
 ## Fades the screen in from dark in 500 ms.
@@ -66,9 +67,9 @@ func stop() -> void:
 	area_item.visible = false
 
 
-func _fade_to(alpha: float) -> Tween:
+func _fade_to(alpha: float, seconds := Motion.FADE_SECONDS) -> Tween:
 	var tween := _new_tween()
-	Motion.shape(tween.tween_property(dark, "color:a", alpha, Motion.FADE_SECONDS), Motion.FADE_CURVE)
+	Motion.shape(tween.tween_property(dark, "color:a", alpha, seconds), Motion.FADE_CURVE)
 	return tween
 
 

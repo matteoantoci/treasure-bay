@@ -1,7 +1,8 @@
-## The main scene: one Labyrinth on the screen, the boat, the Items, the Item row, and the
-## Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects each Item that it
-## stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth fades in. The
-## motion values of spec 8 are in Motion.
+## The main scene: the opening screen, then one Labyrinth on the screen, the boat, the Items, the
+## Item row, and the Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects
+## each Item that it stops on. The chest of the Goal is locked until the last Item. At the open
+## chest, a Sea friend comes to the strip, then the next Labyrinth fades in. The motion values of
+## spec 8 are in Motion.
 extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.
@@ -13,7 +14,7 @@ signal item_collected(item: Item)
 ## Emitted when the boat arrives on the Goal square, before the celebration. The progress already
 ## holds the Sea friend and the next Labyrinth (spec 12.2).
 signal goal_reached(sea_friend: String)
-## Emitted when the Sea friend of the Goal appears next to the Goal island.
+## Emitted when the Sea friend of the Goal flips in at the reveal (game-flow spec part 6, fix 5).
 signal sea_friend_appeared(sea_friend: String)
 ## Emitted at 4.2 s of the Goal celebration, when the fade to the next Labyrinth starts (spec 8.8).
 signal next_labyrinth_coming(number: int)
@@ -24,6 +25,16 @@ signal labyrinth_ready(number: int)
 signal move_started
 ## Emitted when the boat bumps at a wall (spec 5.3, 9.7).
 signal bumped
+## Emitted when the opening screen shows: at launch and after a Parent reset (game-flow spec
+## part 3).
+signal opening_shown
+## Emitted when the Child presses the start button of the opening screen.
+signal start_pressed
+## Emitted when the boat arrives on the Goal square while the chest is locked: an Item of the
+## Labyrinth is not collected. Nothing of the Goal happens (game-flow spec Part 2).
+signal locked_chest_reached
+## Emitted when the last Item of the Labyrinth arrives in its slot and the padlock pops off.
+signal chest_unlocked
 
 ## The progress of the Child. _ready() loads it from the save file. Tests and tools can replace it,
 ## then call show_labyrinth().
@@ -33,8 +44,9 @@ var save_store := SaveStore.new()
 var labyrinth: Labyrinth
 var boat_square := Vector2i.ZERO
 
-## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth, and during the
-## fade-in at launch and after a reset. Presses are dropped (spec 5.4, 8.8). Only _unlock() clears it.
+## True from the arrival on the Goal to the end of the fade-in of the next Labyrinth, while the
+## opening screen shows, and from the start press to the end of the fade-in of the Labyrinth.
+## Presses are dropped (spec 5.4, 8.8). Only _unlock() clears it.
 var _locked := false
 ## One early press, kept while the boat is busy (spec 5.4). ZERO means none.
 var _kept_direction := Vector2i.ZERO
@@ -42,6 +54,8 @@ var _tile_px := 0.0
 var _celebration: Tween
 ## The slide or the bump of the boat while it runs. The boat is busy while this is not null.
 var _move_tween: Tween
+## The collected Items that fly to their slots now. The padlock pops off only when none flies.
+var _items_in_flight := 0
 
 @onready var _water: WaterView = $Water
 @onready var _area_decoration: AreaDecoration = $AreaDecoration
@@ -54,9 +68,11 @@ var _move_tween: Tween
 @onready var _collection_strip: CollectionStrip = $CollectionStrip
 @onready var _gear: GearView = $Gear
 @onready var _sea_friend: SeaFriendView = $SeaFriend
+@onready var _reveal: RevealView = $Reveal
 @onready var _effects: EffectsView = $Effects
 @onready var _fade: FadeView = $Fade
 @onready var _settings: SettingsPanel = $Settings
+@onready var _opening: OpeningScreen = $Opening
 
 
 func _ready() -> void:
@@ -70,7 +86,8 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	_wake.boat = _boat
 	_settings.reset_requested.connect(_reset_progress)
-	start_with_fade()
+	_opening.button.clicked.connect(_press_start)
+	show_opening()
 
 
 ## Shows the current Labyrinth of `progress` at once, with the boat on its start square, and the
@@ -79,17 +96,61 @@ func _ready() -> void:
 func show_labyrinth() -> void:
 	_stop_celebration()
 	_fade.stop()
+	_hide_opening()
 	_show_current_labyrinth()
 	_unlock()
 
 
+## Shows the opening screen: at launch and after a Parent reset. A Goal celebration, a move, or a
+## fade stops. The input of the Labyrinth is locked. An arrow key, Space, Enter, or a click on the
+## button starts the current Labyrinth.
+func show_opening() -> void:
+	_stop_celebration()
+	_stop_move()
+	_locked = true
+	_kept_direction = Vector2i.ZERO
+	_fade.stop()
+	_sea_friend.stop()
+	_reveal.stop()
+	_effects.clear()
+	_wake.clear()
+	# The Collection strip draws above the reveal layer, so it is above the opening screen too. It
+	# hides while the opening screen shows. The gear stays above the opening screen.
+	_collection_strip.hide()
+	_opening.open()
+	_layout()
+	opening_shown.emit()
+
+
+func _hide_opening() -> void:
+	_opening.hide()
+	_collection_strip.show()
+
+
+## True while the opening screen shows.
+func is_opening_shown() -> bool:
+	return _opening.visible
+
+
+## The start press: the button press motion, the Item sound, and the fade to dark in 0.8 s. Then the
+## current Labyrinth fades in. The input stays locked from the press to the end of the fade-in. While
+## the settings are open, the button does nothing.
+func _press_start() -> void:
+	if not _opening.visible or _opening.button.is_pressed() or _settings.is_open():
+		return
+	_opening.button.press()
+	start_pressed.emit()
+	_fade.fade_out(OpeningScreen.FADE_OUT_SECONDS).finished.connect(start_with_fade)
+
+
 ## Shows the current Labyrinth of `progress`, and the screen fades in from dark in 500 ms with no
-## Area Item: at launch and after a Parent reset (spec 8.8). The input is locked until the end of the
-## fade-in (spec 5.4).
+## Area Item: after the start press on the opening screen (spec 8.8, game-flow spec part 3). The
+## input is locked until the end of the fade-in (spec 5.4).
 func start_with_fade() -> void:
 	_stop_celebration()
 	_locked = true
 	_fade.set_dark()
+	_hide_opening()
 	_show_current_labyrinth()
 	_boat.idle = true
 	_fade.fade_in().finished.connect(_unlock)
@@ -104,15 +165,15 @@ func save_progress() -> void:
 
 ## The Parent reset (spec 11.2). The game keeps a copy of the old save. A new Voyage starts: new
 ## seeds, Labyrinth 1, an empty Collection, and a total of 0 (game-flow spec Part 1). The game writes
-## the save (spec 12.2), and the screen fades in from dark (spec 8.8). If the copy fails, the reset
-## still goes on, because the Parent held the button for the whole hold time.
+## the save (spec 12.2), and the opening screen shows (game-flow spec part 3). If the copy fails, the
+## reset still goes on, because the Parent held the button for the whole hold time.
 func _reset_progress() -> void:
 	var error := save_store.copy_before_reset(progress)
 	if error != OK:
 		push_warning("The copy before the reset was not made: %s" % error_string(error))
 	progress = Progress.new_voyage(randi())
 	save_progress()
-	start_with_fade()
+	show_opening()
 
 
 ## The settings pause play, and the input is locked while they are open. The game does not keep a
@@ -123,15 +184,13 @@ func _notification(what: int) -> void:
 
 
 func _show_current_labyrinth() -> void:
-	# A move of the old Labyrinth stops and never ends.
-	if _move_tween != null:
-		_move_tween.kill()
-		_move_tween = null
+	_stop_move()
 	labyrinth = progress.build_labyrinth()
 	boat_square = labyrinth.start_square()
 	_boat.rotation = 0.0
 	_kept_direction = Vector2i.ZERO
 	_sea_friend.stop()
+	_reveal.stop()
 	_effects.clear()
 	_wake.clear()
 	var area := Area.for_labyrinth(progress.labyrinth_number)
@@ -139,6 +198,8 @@ func _show_current_labyrinth() -> void:
 	_area_decoration.show_labyrinth(labyrinth, area)
 	_foam.show_labyrinth(labyrinth)
 	_labyrinth_view.labyrinth = labyrinth
+	_labyrinth_view.locked = not _all_items_collected()
+	_items_in_flight = 0
 	_items.show_items(labyrinth, progress)
 	_item_row.show_items(labyrinth, progress)
 	_collection_strip.show_progress(progress)
@@ -152,6 +213,13 @@ func _stop_celebration() -> void:
 		_celebration = null
 
 
+## A move of the old Labyrinth stops and never ends.
+func _stop_move() -> void:
+	if _move_tween != null:
+		_move_tween.kill()
+		_move_tween = null
+
+
 ## The input unlocks, the boat rocks, and the Child can sail the shown Labyrinth.
 func _unlock() -> void:
 	_locked = false
@@ -161,6 +229,12 @@ func _unlock() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo():
+		return
+	# On the opening screen, an arrow key, Space, or Enter presses the start button.
+	if _opening.visible:
+		if _direction_of(event) != Vector2i.ZERO or event.is_action_pressed("confirm"):
+			get_viewport().set_input_as_handled()
+			_press_start()
 		return
 	var direction := _direction_of(event)
 	if direction == Vector2i.ZERO:
@@ -223,7 +297,8 @@ func _end_move(target: Vector2i) -> void:
 		_move(kept)
 
 
-## Collects the Item on the boat square, and starts the celebration on the Goal square (spec 5.2).
+## Collects the Item on the boat square. On the Goal square, the open chest starts the celebration,
+## and the locked chest only shakes (spec 5.2, game-flow spec Part 2).
 func _arrive() -> void:
 	for i in labyrinth.items.size():
 		var item := labyrinth.items[i]
@@ -231,7 +306,32 @@ func _arrive() -> void:
 			_collect(i)
 			item_collected.emit(item)
 	if boat_square == labyrinth.goal_square():
-		_reach_goal()
+		if _all_items_collected():
+			_reach_goal()
+		else:
+			_visit_locked_chest()
+
+
+func _all_items_collected() -> bool:
+	return labyrinth.items.all(func(item: Item) -> bool: return progress.is_collected(item.id))
+
+
+## The locked chest shakes and the empty slots pulse. The input stays free, the progress does not
+## change, and the game does not save (game-flow spec Part 2).
+func _visit_locked_chest() -> void:
+	_labyrinth_view.shake_chest()
+	_item_row.pulse_empty()
+	locked_chest_reached.emit()
+
+
+## The last Item is in its slot: the padlock pops off with 6 sparkles, and the open chest starts to
+## sparkle (game-flow spec Part 2).
+func _unlock_chest() -> void:
+	var centre := _labyrinth_view.position + _labyrinth_view.padlock.position
+	_labyrinth_view.pop_padlock()
+	var sparkles := Burst.stars(Motion.PADLOCK_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.PADLOCK_SPARKLE_SPEED_PX, Motion.PADLOCK_SPARKLE_LIFE)
+	_effects.burst(sparkles, centre, _labyrinth_scale())
+	chest_unlocked.emit()
 
 
 ## The Item splashes, pops, and flies to its outline, which fills when it arrives (spec 8.4). The
@@ -245,12 +345,16 @@ func _collect(index: int) -> void:
 	_items.remove_item(item.id)
 	_item_row.collect(index)
 	_collection_strip.set_count(progress.total_items)
+	_items_in_flight += 1
 
 
 func _show_item_in_outline(index: int) -> void:
 	_item_row.show_fill(index)
 	var sparkles := Burst.stars(Motion.OUTLINE_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.OUTLINE_SPARKLE_SPEED_PX, Motion.OUTLINE_SPARKLE_LIFE)
 	_effects.burst(sparkles, _item_row.outline_centre(index), _hud_scale())
+	_items_in_flight -= 1
+	if _items_in_flight == 0 and _labyrinth_view.locked and _all_items_collected():
+		_unlock_chest()
 
 
 ## Locks the input, moves the progress on, and plays the Goal celebration of spec 6.3 and 8.5 to
@@ -277,16 +381,22 @@ func _run_goal_step(step: Motion.GoalStep, friend: String) -> void:
 		Motion.GoalStep.CONFETTI:
 			_effects.burst(Burst.confetti(), island + Vector2(0, -Motion.CONFETTI_RISE_PX * s), s)
 		Motion.GoalStep.FRIEND_APPEARS:
+			# The reveal: the screen gets darker, and the Sea friend flips in large in the middle of
+			# the Labyrinth area (game-flow spec part 6, fix 5).
 			if not friend.is_empty():
-				_sea_friend.appear(load(SeaFriends.texture_path(friend)), island, s)
+				_reveal.show_reveal()
+				var full_px := Motion.FRIEND_HEIGHT_SHARE * _visible_size().y
+				_sea_friend.appear(load(SeaFriends.texture_path(friend)), _reveal.light_centre, full_px)
 				sea_friend_appeared.emit(friend)
 		Motion.GoalStep.FRIEND_WIGGLES:
 			_sea_friend.wiggle()
 		Motion.GoalStep.FRIEND_FLIES:
 			if not friend.is_empty():
 				_sea_friend.fly_to(_slot_centre(friend), ScreenLayout.collection_icon_px(_visible_size()))
+				_reveal.fade_out(Motion.FRIEND_FLY_SECONDS, Motion.FRIEND_FLY_CURVE)
 		Motion.GoalStep.FRIEND_IN_SLOT:
 			_sea_friend.stop()
+			_reveal.stop()
 			if not friend.is_empty():
 				_collection_strip.show_friend(friend)
 				var sparkles := Burst.stars(Motion.SLOT_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.SLOT_SPARKLE_SPEED_PX, Motion.SLOT_SPARKLE_LIFE)
@@ -309,8 +419,10 @@ func _layout() -> void:
 	var visible := get_viewport().get_visible_rect()
 	_item_row.layout(visible.size)
 	_collection_strip.layout(visible.size)
+	_reveal.layout(visible, ScreenLayout.labyrinth_area(visible.size))
 	_gear.layout(visible.size)
 	_fade.layout(visible)
+	_opening.layout(visible)
 	if labyrinth == null:
 		return
 	var rect := ScreenLayout.labyrinth_rect(visible.size, labyrinth.tile_count())

@@ -1,6 +1,7 @@
 ## The sound of the game (spec 9): the `Music` and `Effects` buses, the music of each Area with its
-## crossfade loop, and the sounds of the events of spec 9.7. A child of the main scene: it connects
-## to the signals of its parent in _ready().
+## crossfade loop, and the sounds of the events of spec 9.7 and of the padlock on the chest
+## (game-flow spec Part 2). A child of the main scene: it connects to the signals of its parent in
+## _ready().
 class_name Sound
 extends Node
 
@@ -22,6 +23,9 @@ const WALL_PATH := "res://assets/audio/effects/wall.wav"
 const ITEM_PATH := "res://assets/audio/effects/item.wav"
 const GOAL_PATH := "res://assets/audio/effects/goal.wav"
 const SPLASH_PATH := "res://assets/audio/effects/splash.wav"
+## The soft knock at the locked chest, and the latch when the padlock pops off.
+const LOCKED_PATH := "res://assets/audio/effects/locked.wav"
+const UNLOCK_PATH := "res://assets/audio/effects/unlock.wav"
 ## The move swish varies its pitch, and up to 4 swishes can sound at one time (spec 9.3).
 const MOVE_PITCH_SEMITONES := 1.0
 const MOVE_POLYPHONY := 4
@@ -36,6 +40,8 @@ var wall_player: AudioStreamPlayer
 var item_player: AudioStreamPlayer
 var goal_player: AudioStreamPlayer
 var sea_friend_player: AudioStreamPlayer
+var locked_player: AudioStreamPlayer
+var unlock_player: AudioStreamPlayer
 
 var _active := 0
 var _crossfade: Tween
@@ -76,6 +82,8 @@ func _ready() -> void:
 	item_player = _add_player(EFFECTS_BUS, PROCESS_MODE_PAUSABLE, load(ITEM_PATH), ITEM_PATH)
 	goal_player = _add_player(EFFECTS_BUS, PROCESS_MODE_PAUSABLE, load(GOAL_PATH), GOAL_PATH)
 	sea_friend_player = _add_player(EFFECTS_BUS, PROCESS_MODE_PAUSABLE)
+	locked_player = _add_player(EFFECTS_BUS, PROCESS_MODE_PAUSABLE, load(LOCKED_PATH), LOCKED_PATH)
+	unlock_player = _add_player(EFFECTS_BUS, PROCESS_MODE_PAUSABLE, load(UNLOCK_PATH), UNLOCK_PATH)
 	var main := get_parent()
 	main.labyrinth_started.connect(_on_labyrinth_started)
 	main.next_labyrinth_coming.connect(_on_labyrinth_started)
@@ -84,6 +92,12 @@ func _ready() -> void:
 	main.item_collected.connect(_play.bind(item_player, ITEM_PATH).unbind(1))
 	main.goal_reached.connect(play_goal.unbind(1))
 	main.sea_friend_appeared.connect(play_sea_friend)
+	# The opening screen plays the music of Area 1, and its start press plays the Item sound
+	# (game-flow spec part 3).
+	main.opening_shown.connect(play_area.bind(Area.for_labyrinth(1)))
+	main.start_pressed.connect(_play.bind(item_player, ITEM_PATH))
+	main.locked_chest_reached.connect(_play.bind(locked_player, LOCKED_PATH))
+	main.chest_unlocked.connect(_play.bind(unlock_player, UNLOCK_PATH))
 
 
 ## Stops the music, so the audio server holds no playback of a freed scene.

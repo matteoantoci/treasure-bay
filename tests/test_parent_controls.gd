@@ -115,7 +115,9 @@ func test_a_newer_settings_file_stays_after_a_volume_click(t) -> bool:
 	return true
 
 
-func test_an_8_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
+## Spec 11.2, game-flow spec part 3: a hold of 8 s starts a new Voyage and shows the opening screen.
+## The start press then shows Labyrinth 1 with an empty strip.
+func test_an_8_second_hold_on_reset_shows_the_opening_screen_then_labyrinth_1(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	SaveStore.new(dir).save(_progress_7())
 	var main := await Scene.add_main(t, dir)
@@ -140,15 +142,16 @@ func test_an_8_second_hold_on_reset_starts_labyrinth_1(t) -> bool:
 	t.assert_true(main.progress.is_fresh(), "Labyrinth 1, empty Collection, total 0")
 	t.assert_true(main.progress.seeds != LabyrinthPlan.FIXED_SEEDS, "a new Voyage with new seeds")
 	t.assert_eq(SaveStore.to_dictionary(SaveStore.new(dir).load_progress()), SaveStore.to_dictionary(main.progress), "the save holds the reset")
+	t.assert_true(main.is_opening_shown(), "the opening screen shows after the reset")
+	t.assert_eq(started, [], "no Labyrinth starts before the start press")
+	_mouse(t, panel.reset_button, false)
+	t.assert_true(await Scene.start_from_opening(t, main), "the start press fades in Labyrinth 1")
 	t.assert_eq(started, [1], "Labyrinth 1 starts")
 	t.assert_eq([main.labyrinth.width, main.labyrinth.height], [4, 3], "the 4 x 3 Labyrinth 1")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the boat is on the start square")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "an empty Collection strip")
 	t.assert_eq(main.get_node("CollectionStrip").count_text(), "0", "total count 0")
-	t.assert_eq(main.get_node("Fade").dark.color.a, 1.0, "the screen is dark at the reset")
-	t.assert_true(await t.wait_for(main.labyrinth_ready, 5.0), "the screen fades in from dark")
 	t.assert_eq(main.get_node("Fade").dark.color.a, 0.0, "the screen is clear after the fade-in")
-	_mouse(t, panel.reset_button, false)
 	t.assert_true(await Scene.press(t, main, Scene.key_for(Scene.next_step(main.labyrinth, main.boat_square))), "the Child can sail Labyrinth 1")
 	await Scene.remove(t, main)
 	return true
@@ -179,7 +182,7 @@ func test_a_reset_during_a_slide_starts_labyrinth_1_on_its_start_square(t) -> bo
 	panel.reset_button.button_down.emit()
 	panel.reset_button.advance(panel.reset_button.hold_seconds)
 	panel.reset_button.button_up.emit()
-	t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.MOVE_TIMEOUT), "the fade-in after the reset ends")
+	t.assert_true(await Scene.start_from_opening(t, main), "the fade-in after the reset and the start press ends")
 	await t.create_timer(1.0).timeout
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
 	t.assert_eq(main.boat_square, Vector2i(0, 0), "the old slide does not move the boat")

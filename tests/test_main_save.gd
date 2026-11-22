@@ -160,9 +160,9 @@ func _ids(labyrinth: Labyrinth) -> Array:
 	return ids
 
 
-## Game-flow spec Part 1: a version 1 save past Labyrinth 20 becomes a new Voyage. The launch shows
-## Labyrinth 1 with an empty strip and the same total count.
-func test_a_version_1_save_past_labyrinth_20_starts_a_new_voyage(t) -> bool:
+## Game-flow spec Parts 1 and 3: a version 1 save past Labyrinth 20 becomes a new Voyage. The launch
+## shows the opening screen, then Labyrinth 1 with an empty strip and the same total count.
+func test_a_version_1_save_past_labyrinth_20_shows_the_opening_screen_then_a_new_voyage(t) -> bool:
 	var dir := Fixtures.new_save_dir()
 	var file := FileAccess.open(dir.path_join("save.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({
@@ -170,7 +170,9 @@ func test_a_version_1_save_past_labyrinth_20_starts_a_new_voyage(t) -> bool:
 		"collection": SeaFriends.IDS, "total_items": 260, "last_returning_friend": "crab",
 	}))
 	file.close()
-	var main := await Scene.add_main(t, dir)
+	var main := await Scene.add_main_at_opening(t, dir)
+	t.assert_true(main.is_opening_shown(), "the opening screen shows at launch")
+	t.assert_true(await Scene.start_from_opening(t, main), "the start press fades in the Labyrinth")
 	t.assert_eq(main.progress.labyrinth_number, 1, "Labyrinth 1")
 	t.assert_eq(Vector2i(main.labyrinth.width, main.labyrinth.height), Vector2i(4, 3), "Labyrinth 1 is 4 x 3")
 	t.assert_eq(main.get_node("CollectionStrip").shown_friends(), PackedStringArray(), "an empty strip")

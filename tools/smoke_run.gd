@@ -1,8 +1,9 @@
-## Smoke run in a window (ticket 28): the main scene sails Labyrinths 1 to 3 through their Goals
-## with arrow key events through Input.parse_input_event(), with the real audio driver and the
-## Master bus muted. It also bumps into a wall one time. The game saves into a new folder in the OS
-## temp folder, which the tool removes at the end: it never reads or changes the real save or the
-## real settings.
+## Smoke run in a window (ticket 28): Space starts the game on the opening screen, then the main
+## scene sails Labyrinths 1 to 3 through their Goals with arrow key events through
+## Input.parse_input_event(), with the real audio driver and the Master bus muted. In each Labyrinth
+## the boat collects all Items first, so the chest is open (game-flow spec Part 2). It also bumps
+## into a wall one time. The game saves into a new folder in the OS temp folder, which the tool
+## removes at the end: it never reads or changes the real save or the real settings.
 ##
 ## Run from the repository root:
 ##   godot --path . --windowed --script res://tools/smoke_run.gd
@@ -10,6 +11,7 @@
 ## Script errors show in the output as "SCRIPT ERROR".
 extends SceneTree
 
+const Scene := preload("res://tests/scene_helpers.gd")
 const GOALS := 3
 ## Real seconds. One Labyrinth of this run takes less than 10 s, its celebration 5.2 s.
 const TIMEOUT_SECONDS := 30.0
@@ -27,8 +29,9 @@ func _initialize() -> void:
 	root.add_child(_main)
 	current_scene = _main
 	AudioServer.set_bus_mute(AudioServer.get_bus_index(&"Master"), true)
+	_press(KEY_SPACE)
 	if not await _wait_for(_main.labyrinth_ready):
-		_end("the launch fade-in did not end")
+		_end("the start press on the opening screen did not start the game")
 		return
 	# The start square (0, 0) of every Labyrinth has the border to the left, so this press is a
 	# bump whatever the Labyrinth shape. The bump signal fires at the press.
@@ -55,19 +58,19 @@ func _initialize() -> void:
 	_end("")
 
 
-## Presses the arrow keys along the path to the Goal until the boat is on the Goal square.
+## Presses the arrow keys along the shortest press path to each uncollected Item, then to the open
+## chest, until the Goal celebration starts.
 func _sail_to_goal() -> bool:
 	var labyrinth: Labyrinth = _main.labyrinth
-	var distances := labyrinth.distances_from(labyrinth.goal_square())
+	var number: int = _main.progress.labyrinth_number
 	for presses in 100:
-		var from: Vector2i = _main.boat_square
-		if from == labyrinth.goal_square():
+		# The progress moves to the next Labyrinth at the arrival on the open chest.
+		if _main.progress.labyrinth_number != number:
 			return true
-		for direction in Labyrinth.DIRECTIONS:
-			var next := from + direction
-			if not labyrinth.has_wall(from, direction) and distances[next.y * labyrinth.width + next.x] == distances[from.y * labyrinth.width + from.x] - 1:
-				_press(_key_for(direction))
-				break
+		var direction := Scene.first_press(labyrinth, _main.boat_square, _main.progress.item_states(labyrinth))
+		if direction == Vector2i.ZERO:
+			return false
+		_press(_key_for(direction))
 		if not await _wait_for(_main.move_finished):
 			return false
 	return false

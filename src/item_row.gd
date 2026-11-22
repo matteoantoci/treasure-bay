@@ -2,7 +2,7 @@
 ## (spec 6.1, 10). An empty outline is the Item sprite at 35 % opacity, drawn grey and light
 ## (spec 8.7). A collected Item fills its outline: the normal sprite shows on top. The row never
 ## gets smaller. When the Item arrives at its outline, the outline fills in 150 ms and bounces
-## (spec 8.4).
+## (spec 8.4). At a visit to the locked chest, each empty outline pulses (game-flow spec Part 2).
 class_name ItemRow
 extends Node2D
 
@@ -21,6 +21,8 @@ var _outline_material := ShaderMaterial.new()
 ## The scale of each outline sprite without the bounce.
 var _scales: Array[Vector2] = []
 var _tweens := []
+## Outline index -> the Tween of its pulse.
+var _pulses := {}
 
 
 func _init() -> void:
@@ -29,9 +31,10 @@ func _init() -> void:
 
 ## Shows one outline for each Item of `labyrinth`. The outlines of collected Items are filled.
 func show_items(labyrinth: Labyrinth, progress: Progress) -> void:
-	for tween in _tweens:
+	for tween in _tweens + _pulses.values():
 		tween.kill()
 	_tweens.clear()
+	_pulses.clear()
 	for sprite in outlines + fills:
 		sprite.queue_free()
 	kinds.clear()
@@ -61,9 +64,28 @@ func collect(index: int) -> void:
 	filled[index] = true
 
 
+## Each empty outline pulses two times: scale 1.0 to 1.15 and back, 300 ms each. The opacity does
+## not change. A pulse that runs starts again. Returns the Tween of each pulse.
+func pulse_empty() -> Array[Tween]:
+	var pulses: Array[Tween] = []
+	for index in kinds.size():
+		if filled[index]:
+			continue
+		_stop_pulse(index)
+		var tween := create_tween()
+		_pulses[index] = tween
+		for i in Motion.SLOT_PULSE_COUNT:
+			for size: Vector2 in [_scales[index] * Motion.SLOT_PULSE_SCALE, _scales[index]]:
+				Motion.shape(tween.tween_property(outlines[index], "scale", size, Motion.SLOT_PULSE_SECONDS), Motion.SLOT_PULSE_CURVE)
+				Motion.shape(tween.parallel().tween_property(fills[index], "scale", size, Motion.SLOT_PULSE_SECONDS), Motion.SLOT_PULSE_CURVE)
+		pulses.append(tween)
+	return pulses
+
+
 ## The Item arrives at outline `index`: the normal sprite fades in on top in 150 ms, and the
 ## outline bounces from 1.5 times its size to its size in 350 ms.
 func show_fill(index: int) -> Tween:
+	_stop_pulse(index)
 	_tweens = _tweens.filter(func(tween: Tween) -> bool: return tween.is_valid())
 	var tween := create_tween().set_parallel()
 	_tweens.append(tween)
@@ -78,6 +100,16 @@ func show_fill(index: int) -> Tween:
 ## The centre of outline `index` on the screen.
 func outline_centre(index: int) -> Vector2:
 	return outlines[index].position
+
+
+## The pulse of outline `index` stops, and the outline gets its size back.
+func _stop_pulse(index: int) -> void:
+	if not _pulses.has(index):
+		return
+	_pulses[index].kill()
+	_pulses.erase(index)
+	outlines[index].scale = _scales[index]
+	fills[index].scale = _scales[index]
 
 
 func layout(visible_size: Vector2) -> void:
