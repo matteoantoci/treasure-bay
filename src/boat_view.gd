@@ -3,7 +3,8 @@
 ## points down at rotation 0.
 ##
 ## While the boat does not move, it rocks and bobs (spec 8.2). At the Goal it hops: its height
-## grows and comes back (spec 8.5).
+## grows and comes back (spec 8.5). Its still shadow (FloatShadow) moves with the boat, but it does
+## not turn, rock, bob or hop.
 class_name BoatView
 extends Node2D
 
@@ -46,12 +47,19 @@ func hull_rect() -> Rect2:
 	return ScreenLayout.sprite_rect(Vector2.ZERO, TEXTURE.get_size(), LENGTH_PX)
 
 
+## The shadow ellipse box in the coordinates of the boat parent.
+func shadow_rect() -> Rect2:
+	return FloatShadow.rect(position, LENGTH_PX * scale.x)
+
+
 func _process(delta: float) -> void:
 	time += delta
 	queue_redraw()
 
 
 func _draw() -> void:
+	# The shadow keeps the screen axes, whatever the boat direction.
+	FloatShadow.draw(self, FloatShadow.rect(Vector2.ZERO, LENGTH_PX), Transform2D(-rotation, Vector2.ZERO))
 	# The bob goes down on the screen, whatever the boat direction.
 	draw_set_transform(Vector2(0, bob()).rotated(-rotation), rock(), Vector2(1, hop_scale))
 	draw_texture_rect(TEXTURE, hull_rect(), false)

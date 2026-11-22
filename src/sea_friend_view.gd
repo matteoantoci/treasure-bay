@@ -6,9 +6,9 @@ extends Sprite2D
 var _tweens := []
 
 
-## Grows from 0 to 1.3 times 110 px at (+60, +60) px from the Goal island centre, at the far side
-## from the chest (Motion.FRIEND_START_PX), and moves up to 30 px above the island centre. `s` is
-## the Labyrinth scale of spec 8.1.
+## Grows from 0 to 1.3 times 110 px at (+175, +60) px from the Goal island tile centre, right of
+## the chest (Motion.FRIEND_START_PX), and moves up to 30 px above the island centre. `s` is the
+## Labyrinth scale of spec 8.1.
 func appear(friend_texture: Texture2D, island_centre: Vector2, s: float) -> void:
 	stop()
 	texture = friend_texture
