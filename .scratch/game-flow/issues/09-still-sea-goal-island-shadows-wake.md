@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] Water: the light patterns go away. The wave lines stay but do not move. Nothing in the background moves.
 - [x] Foam: a still soft edge along each coast (a white line of 6 px at 35 % with soft edges, under the islands) replaces the moving dashed foam. It uses the coast lines that the game already computes.
