@@ -157,7 +157,7 @@ func test_an_8_second_hold_on_reset_shows_the_opening_screen_then_labyrinth_1(t)
 	return true
 
 
-## Spec 11.2: the reset ring (orange) and the quit ring (yellow) fill in different colours, so the
+## Spec 11.2: the reset ring (orange) and the quit ring (dark brown) fill in different colours, so the
 ## Parent sees which hold runs.
 func test_the_reset_ring_and_the_quit_ring_have_different_colours(t) -> bool:
 	var main := await Scene.add_main(t)

@@ -5,8 +5,9 @@ extends RefCounted
 ## A Voyage has 20 Labyrinths. Labyrinth n uses the seed of slot n of the Voyage.
 const FIXED_COUNT := 20
 ## The fixed seed table: one seed for each slot, by measured difficulty (play-improvements spec
-## Part 3). The tool tools/seed_search.gd selects them and prints this table. A slot of a new Voyage
-## with no seed within its tries uses it, and so does the save migration from version 1.
+## Part 3). The tool tools/seed_search.gd selects them and prints this table. The save migration
+## gives it to a version 1 save in Labyrinths 1 to 20, a save of a newer build plays it in memory, and
+## the tests use it.
 const FIXED_SEEDS: Array[int] = [1, 17, 2, 9, 85, 10, 12, 9, 8, 23, 1, 69, 29, 73, 9, 28, 73, 127, 167, 30]
 ## Sizes in squares of Labyrinths 1 and 2, 3 and 4, and so on to 19 and 20.
 const FIXED_SIZES: Array[Vector2i] = [
