@@ -1,6 +1,6 @@
-# Labyrinth game
+# Treasure Bay
 
-A keyboard game for one 5-year-old girl. The Child moves a character through Labyrinths to reach the Goal.
+Treasure Bay is a keyboard game for one 5-year-old girl. The Child moves a character through Labyrinths to reach the Goal.
 
 ## Language
 

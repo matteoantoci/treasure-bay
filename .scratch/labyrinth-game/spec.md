@@ -1,8 +1,8 @@
-# Labyrinth game: build spec
+# Treasure Bay: build spec
 
 This spec overrides older text in the tickets and research files.
 
-Map: [Labyrinth game for a 5-year-old](map.md). Date: 2026-11-04. All decision tickets are closed. The build follows this file and asks no questions. When this file gives a value that no ticket gives, the value comes from [ticket 19](issues/19-gaps-before-the-spec.md) and [research/gap-audit.md](research/gap-audit.md) (defaults 8 to 41), or the "Open gaps" section at the end states it.
+Map: [Treasure Bay for a 5-year-old](map.md). Date: 2026-11-04. All decision tickets are closed. The build follows this file and asks no questions. When this file gives a value that no ticket gives, the value comes from [ticket 19](issues/19-gaps-before-the-spec.md) and [research/gap-audit.md](research/gap-audit.md) (defaults 8 to 41), or the "Open gaps" section at the end states it.
 
 Mark in this file: **[trace]** means that the fact comes from a read of the Godot source code. Nobody tested it.
 
@@ -10,7 +10,7 @@ Mark in this file: **[trace]** means that the fact comes from a read of the Godo
 
 Sources: [map.md](map.md), [ticket 16](issues/16-parent-controls.md), [ticket 17](issues/17-session-limit.md).
 
-The game is a keyboard Labyrinth game for one Child, the Parent's 5-year-old daughter. It is a Godot 4.7 app in a fullscreen window on the Parent's Mac laptop. The Child sails a boat through water channels between islands. She collects Items on the way. At the Goal she gets a Sea friend for her Collection.
+The game is Treasure Bay, a keyboard Labyrinth game for one Child, the Parent's 5-year-old daughter. It is a Godot 4.7 app in a fullscreen window on the Parent's Mac laptop. The Child sails a boat through water channels between islands. She collects Items on the way. At the Goal she gets a Sea friend for her Collection.
 
 Fixed rules. The build must obey each rule:
 1. The game shows no words to the Child. Numbers are allowed. The one exception is the game name "Treasure Bay" in the logo of the opening screen ([game-flow spec](../game-flow/spec.md) part 3).
