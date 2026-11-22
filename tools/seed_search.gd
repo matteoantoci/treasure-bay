@@ -10,13 +10,18 @@
 ##
 ## Mode 2, the cost (--cost): for each slot, the tries from COST_STARTS random start seeds (largest
 ## and median), the count of different valid seeds and Labyrinths that the two 4 x 3 slots find,
-## and the time of one new Voyage with DifficultyCurve.MAX_TRIES.
+## and the time of one new Voyage.
+##
+## Mode 3, the seed pool (--pool): for each slot, the first POOL_SIZE seeds from 1 upward that meet
+## DifficultyCurve.meets_conditions(). It writes them to src/seed_pool.gd, the const table that
+## DifficultyCurve.new_voyage() picks from. Run it again after each change of the curve.
 ##
 ## Run from the repository root:
 ##   godot --headless --path . --script res://tools/seed_search.gd
 ##   godot --headless --path . --script res://tools/seed_search.gd -- --cost
 ##   godot --headless --path . --script res://tools/seed_search.gd -- --cost --slot 7
 ##   godot --headless --path . --script res://tools/seed_search.gd -- --cost --voyage-time
+##   godot --headless --path . --script res://tools/seed_search.gd -- --pool
 ## With --slot n, the cost mode measures only slot n, so several runs can share the work. With
 ## --voyage-time, it gives only the time of one new Voyage.
 ## Mode 1 prints one table row for each Labyrinth, then the seed table, and exits with code 0. If no
@@ -30,11 +35,16 @@ const COST_STARTS := 1000
 ## from one own PRNG chain give Voyages with shifted seeds.
 const COST_RNG_SEED := 20261122
 ## The new Voyages that the cost mode times.
-const TIMED_VOYAGES := 20
+const TIMED_VOYAGES := 1000
+## The seeds of each slot in the seed pool.
+const POOL_SIZE := 100
+const POOL_PATH := "res://src/seed_pool.gd"
 
 
 func _initialize() -> void:
-	if OS.get_cmdline_user_args().has("--cost"):
+	if OS.get_cmdline_user_args().has("--pool"):
+		quit(_write_pool())
+	elif OS.get_cmdline_user_args().has("--cost"):
 		_print_cost()
 		quit(0)
 	else:
@@ -107,7 +117,6 @@ func _print_cost() -> void:
 		print("4 x 3 slot %d: %d different valid seeds, %d different Labyrinths (walls and Items)" % [number, valid.size(), layouts.size()])
 	if slot_at >= 0:
 		return
-	print("MAX_TRIES: %d" % DifficultyCurve.MAX_TRIES)
 	var slowest := 0
 	var total := 0
 	for i in TIMED_VOYAGES:
@@ -116,7 +125,7 @@ func _print_cost() -> void:
 		var used := Time.get_ticks_usec() - before
 		slowest = maxi(slowest, used)
 		total += used
-	print("new Voyage: mean %.1f ms, slowest %.1f ms of %d" % [total / 1000.0 / TIMED_VOYAGES, slowest / 1000.0, TIMED_VOYAGES])
+	print("new Voyage: mean %.3f ms, slowest %.3f ms of %d" % [total / 1000.0 / TIMED_VOYAGES, slowest / 1000.0, TIMED_VOYAGES])
 
 
 ## The walls and the Item IDs of `labyrinth`: two seeds with the same key give the same Labyrinth.
@@ -128,3 +137,34 @@ func _layout_key(labyrinth: Labyrinth) -> String:
 	for item in labyrinth.items:
 		parts.append(item.id)
 	return " ".join(parts)
+
+
+## Writes the seed pool to POOL_PATH. Returns the exit code.
+func _write_pool() -> int:
+	var lines := PackedStringArray([
+		"## The seed pool of a Voyage (game-flow spec Part 1, Parent decision of 2026-11-22). Row n - 1",
+		"## holds %d seeds of slot n, the first seeds from 1 upward that meet" % POOL_SIZE,
+		"## DifficultyCurve.meets_conditions(). tools/seed_search.gd -- --pool writes this file. Do not edit",
+		"## it by hand.",
+		"class_name SeedPool",
+		"extends RefCounted",
+		"",
+		"const SEEDS := [",
+	])
+	for number in range(1, LabyrinthPlan.FIXED_COUNT + 1):
+		var seeds := PackedStringArray()
+		var seed_value := 1
+		while seeds.size() < POOL_SIZE:
+			if seed_value > MAX_SEED:
+				print("SEED POOL FAIL: fewer than %d seeds up to %d for Labyrinth %d" % [POOL_SIZE, MAX_SEED, number])
+				return 1
+			if DifficultyCurve.meets_conditions(number, seed_value):
+				seeds.append(str(seed_value))
+			seed_value += 1
+		lines.append("\t[%s]," % ", ".join(seeds))
+		print("slot %d: %d seeds up to %d" % [number, POOL_SIZE, seed_value - 1])
+	lines.append("]")
+	var file := FileAccess.open(POOL_PATH, FileAccess.WRITE)
+	file.store_string("\n".join(lines) + "\n")
+	file.close()
+	return 0
