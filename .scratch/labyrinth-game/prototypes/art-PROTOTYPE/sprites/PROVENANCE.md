@@ -48,6 +48,9 @@
 | star | item | gen/batch09-items.md | Kenney + dolphin | 1 | No rays. |
 | chest_closed | goal | gen/batch10-chest.md | Kenney + dolphin | 1 | Kind "item" in make_batch.py (no face). |
 | chest_open | goal | gen/batch10-chest.md | Kenney + dolphin | 1 | Same chest as chest_closed (planks, gold bands, lock), gold coins inside. |
+| crab_front | friend | gen/batch12-crab-padlock.md | Kenney + dolphin | 1 | Game-flow ticket 04. Front view, symmetric, both claws at the same height, wider than tall (512x378). The Parent approved it on 2026-11-22. It replaces `assets/sprites/friends/crab.png` (the app icon too); the old `crab` row and raw image stay. |
+| padlock | goal | gen/batch13-padlock.md | Kenney + dolphin | 2 | Game-flow ticket 04. Kind "item" (no face). Attempt 1 (gen/batch12-crab-padlock.md, raw kept as `gen/raw/padlock-attempt1.png`) drew an open padlock with a grey shackle. Attempt 2 asks for a locked, symmetric, all-gold padlock. Cutout uses `--seed 512,390` to clear the enclosed background inside the shackle. The Parent approved it on 2026-11-22. Copied to `assets/sprites/goal/padlock.png`. |
 
 No asset failed. Rights: the Kenney reference is CC0; the generated images follow the xAI terms of the Parent's subscription.
 - Cost: the full batch of 23 sprites used about 2% of the weekly xAI subscription quota (Parent report, 2026-11-03).
+- Batches 12 and 13 (game-flow ticket 04, 2026-11-22) used the same method, models and references. The generator now saves PNG (still no alpha, white background), so the raw files are `gen/raw/<name>.png`. The cutout and sheet scripts ran with `uv run --with numpy --with scipy --with pillow`, because the system Python has no numpy.
