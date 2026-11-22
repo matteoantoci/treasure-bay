@@ -1,6 +1,6 @@
-## The main scene: the arrow keys sail the boat by the move rule, and the Goal starts the next
-## Labyrinth (ticket 20). The keys go in through Input.parse_input_event (spec 14.1 test 5).
-## The move rule durations are in test_move_rule.gd.
+## The main scene: the arrow keys sail the boat by the move rule, and the open chest of the Goal
+## starts the next Labyrinth (ticket 20, game-flow spec Part 2). The keys go in through
+## Input.parse_input_event (spec 14.1 test 5). The move rule durations are in test_move_rule.gd.
 extends RefCounted
 
 const Scene := preload("res://tests/scene_helpers.gd")
@@ -43,6 +43,9 @@ func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	t.assert_eq(main.boat_square, Vector2i(2, 2), "the next press stops at the junction")
 	t.assert_true(await Scene.press(t, main, KEY_RIGHT), "move right is over")
 	t.assert_eq(main.boat_square, Vector2i(3, 2), "the next press reaches the Goal")
+	await t.create_timer(Scene.NO_MOVE_SECONDS).timeout
+	t.assert_eq(main.progress.labyrinth_number, 1, "the Item on (1, 1) is still in the water: the chest stays locked")
+	t.assert_true(await Scene.sail_to_goal(t, main), "the boat collects the Item on (1, 1) and sails back to the Goal")
 	t.assert_true(await t.wait_for(main.labyrinth_started, Scene.NEXT_LABYRINTH_TIMEOUT), "the next Labyrinth starts")
 	t.assert_eq(main.progress.labyrinth_number, 2, "the Goal starts Labyrinth 2")
 	t.assert_eq(Scene.wall_list(main.labyrinth), Scene.wall_list(LabyrinthPlan.build(2)), "Labyrinth 2 walls")
@@ -51,18 +54,23 @@ func test_arrow_keys_sail_labyrinth_1_to_the_goal(t) -> bool:
 	return true
 
 
+## Each press stops where the move rule says. The boat collects all Items, then it sails to the
+## open chest.
 func test_sailing_each_goal_starts_the_next_labyrinth(t) -> bool:
 	var main := await Scene.add_main(t)
 	for number in [1, 2, 3]:
 		t.assert_eq(main.progress.labyrinth_number, number, "Labyrinth %d started" % number)
+		var labyrinth: Labyrinth = main.labyrinth
 		var presses := 0
-		while main.boat_square != main.labyrinth.goal_square() and presses < 50:
-			var direction := Scene.next_step(main.labyrinth, main.boat_square)
+		while main.progress.labyrinth_number == number and presses < 50:
 			var before: Vector2i = main.boat_square
-			var expected := MoveRule.plan(main.labyrinth, before, direction, main.progress.item_states(main.labyrinth)).target
+			var items: Dictionary = main.progress.item_states(labyrinth)
+			var direction := Scene.first_press(labyrinth, before, items)
+			var expected := MoveRule.plan(labyrinth, before, direction, items).target
 			t.assert_true(await Scene.press(t, main, Scene.key_for(direction)), "move is over")
 			t.assert_eq(main.boat_square, expected, "the boat stops where the move rule says")
 			presses += 1
+		t.assert_eq(main.boat_square, labyrinth.goal_square(), "Labyrinth %d: the boat is on the Goal square" % number)
 		t.assert_true(await t.wait_for(main.labyrinth_ready, Scene.NEXT_LABYRINTH_TIMEOUT), "Labyrinth %d starts, and its fade-in ends" % (number + 1))
 	t.assert_eq(main.progress.labyrinth_number, 4, "Labyrinth 4 after 3 Goals")
 	t.assert_eq(main.labyrinth.width, LabyrinthPlan.size_for(4).x, "Labyrinth 4 width")

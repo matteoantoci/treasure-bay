@@ -64,11 +64,12 @@ func test_the_goal_island_has_the_palm_and_the_closed_chest(t) -> bool:
 	return true
 
 
-## The closed chest shows the Item sparkle of spec 8.2 with i = the Item count. The sparkle is white,
-## with a radius of 7 px, at (+18, -18) px from the chest centre. It shows while
-## fract(0.7 t + 0.33 i) < 0.15, with alpha 1 - fract / 0.15. The open chest does not sparkle.
-## Labyrinth 1 opens its chest, so Labyrinth 20 also checks that a new chest sparkles again.
-func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
+## The open chest (all Items collected, game-flow spec Part 2) shows the Item sparkle of spec 8.2
+## with i = the Item count. The sparkle is white, with a radius of 7 px, at (+18, -18) px from the
+## chest centre. It shows while fract(0.7 t + 0.33 i) < 0.15, with alpha 1 - fract / 0.15. The
+## chest of the Goal celebration does not sparkle. Labyrinth 1 opens its chest, so Labyrinth 20
+## also checks that a new chest sparkles again. The locked chest does not sparkle (test_padlock.gd).
+func test_the_open_chest_sparkles_like_an_item(t) -> bool:
 	var main := await Scene.add_main(t)
 	var view: LabyrinthView = main.get_node("LabyrinthView")
 	var sparkle: Polygon2D = view.get_node("ChestSparkle")
@@ -77,6 +78,9 @@ func test_the_closed_chest_sparkles_like_an_item(t) -> bool:
 	var cases := {1: [2, 0.485714], 20: [8, 0.514286]}
 	for number: int in cases:
 		_show(main, number)
+		for item in main.labyrinth.items:
+			main.progress.collect_item(item.id)
+		main.show_labyrinth()
 		var label := "Labyrinth %d: " % number
 		t.assert_eq(main.labyrinth.items.size(), cases[number][0], label + "Item count")
 		# 0.1 ms after the cycle time, so the float rounding of the time does not hide the sparkle.

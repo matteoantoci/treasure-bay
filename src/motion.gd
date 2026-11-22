@@ -96,6 +96,25 @@ const OUTLINE_SPARKLE_COUNT := 10
 const OUTLINE_SPARKLE_SPEED_PX := 120.0
 const OUTLINE_SPARKLE_LIFE := 0.5
 
+# Padlock on the chest (game-flow spec Part 2).
+## A visit to the locked chest: the chest moves sideways by these offsets, linear, in 360 ms in all
+## (the pile-pals soft shake). The first offset is the rest place.
+const CHEST_SHAKE_PX := [0.0, -10.0, 8.0, -6.0, 4.0, -2.0, 0.0]
+const CHEST_SHAKE_SECONDS := 0.36
+## Each empty Item slot pulses two times: scale 1.0 to 1.15 in 300 ms, and back in 300 ms.
+const SLOT_PULSE_SCALE := 1.15
+const SLOT_PULSE_SECONDS := 0.3
+const SLOT_PULSE_COUNT := 2
+const SLOT_PULSE_CURVE := Easing.INOUT
+## The last Item arrives in its slot: the padlock grows to 1.3 times its size and fades out in
+## 300 ms, with 6 sparkles.
+const PADLOCK_POP_SCALE := 1.3
+const PADLOCK_POP_SECONDS := 0.3
+const PADLOCK_POP_CURVE := Easing.OUT
+const PADLOCK_SPARKLE_COUNT := 6
+const PADLOCK_SPARKLE_SPEED_PX := 100.0
+const PADLOCK_SPARKLE_LIFE := 0.5
+
 # Goal (spec 8.5). Times from the arrival on the Goal square.
 const CHEST_OPENS_AT := 0.0
 const CONFETTI_AT := 0.0
