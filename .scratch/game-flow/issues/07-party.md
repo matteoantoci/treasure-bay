@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Voyage), 05 (Name and opening screen)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] After the flamingo arrives in its slot, the screen fades to the Party.
 - [x] Picture: the still water of Area 1, an island with the island rules (as on the opening screen), the open chest on it, and the boat below the island with its bow up.
