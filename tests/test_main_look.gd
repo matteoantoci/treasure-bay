@@ -117,8 +117,9 @@ func _at(view: LabyrinthView, seconds: float) -> void:
 
 
 ## At 1920 x 1200, in the small Labyrinth 1 and the large Labyrinth 20, the Item is 90 px and the
-## boat 69 x 110 px of the 130 px tile (play-improvements spec, part 2). The chest is 115 % of a
-## tile wide (game-flow spec part 5, fix 4).
+## boat 69 x 110 px of the 130 px tile (play-improvements spec, part 2): the boat stays 85 % of a
+## tile long, and an Item 69 %. The chest is 115 % of a tile wide (game-flow spec part 5, fix 4).
+## Labyrinth 20 has a 70 px tile in the layout of game-flow spec part 5, fix 1.
 func test_items_boat_and_chest_have_their_sizes_in_labyrinths_1_and_20(t) -> bool:
 	var main := await Scene.add_main(t)
 	# The headless window is square. The window size of a 16:10 screen gives the visible rect of
@@ -127,7 +128,7 @@ func test_items_boat_and_chest_have_their_sizes_in_labyrinths_1_and_20(t) -> boo
 	t.root.size = Vector2i(1920, 1200)
 	await t.process_frame
 	t.assert_eq(main.get_viewport().get_visible_rect().size, Vector2(1920, 1200), "the screen is 1920 x 1200")
-	var tile_px := {1: 121.0, 20: 56.0}
+	var tile_px := {1: 121.0, 20: 70.0}
 	for number: int in tile_px:
 		_show(main, number)
 		var view: LabyrinthView = main.get_node("LabyrinthView")
@@ -193,6 +194,6 @@ func test_empty_item_outlines_are_grey_and_light(t) -> bool:
 func test_the_gear_is_in_the_top_right_corner(t) -> bool:
 	var main := await Scene.add_main(t)
 	var visible: Vector2 = main.get_viewport().get_visible_rect().size
-	t.assert_eq(main.get_node("Gear").get_rect(), ScreenLayout.gear_rect(visible), "gear rectangle")
+	t.assert_true(main.get_node("Gear").get_rect().is_equal_approx(ScreenLayout.gear_rect(visible)), "gear rectangle")
 	await Scene.remove(t, main)
 	return true

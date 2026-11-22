@@ -15,12 +15,16 @@ signal reset_requested
 
 ## Above the game, its effects, and its fade.
 const LAYER := 10
-const BACKGROUND_COLOUR := Color("#10213a")
-const BORDER_COLOUR := Color(1, 1, 1, 0.85)
-const BORDER_WIDTH := 4
-const CORNER_RADIUS := 28
-const MARGIN := 40
-const ROW_GAP := 36
+## The screen behind the panel gets darker.
+const DIM_COLOUR := Color(0, 0, 0, 0.5)
+## The cream-and-wood style of the logo (game-flow spec part 5, fix 7).
+const BACKGROUND_COLOUR := Color("#fff3d6")
+const BORDER_COLOUR := Color("#7a4a24")
+const BORDER_WIDTH := 10
+const CORNER_RADIUS := 40
+const MARGIN_TOP_BOTTOM := 40
+const MARGIN_SIDES := 56
+const ROW_GAP := 28
 const ITEM_GAP := 24
 const HOLD_GAP := 96
 ## The reset needs a long hold, so the Child cannot reset the game by accident. Its ring has its own
@@ -28,7 +32,8 @@ const HOLD_GAP := 96
 const RESET_HOLD_SECONDS := 8.0
 const RESET_RING_COLOUR := Color("#ff7a59")
 const QUIT_HOLD_SECONDS := 3.0
-const QUIT_RING_COLOUR := Color("#ffd447")
+## Dark brown: yellow has too little contrast on the light brown ring.
+const QUIT_RING_COLOUR := SettingsPicture.FILL_COLOUR
 ## Before the quit, the players stop, and the audio server frees their playbacks in a later mix
 ## step. Without this wait, the quit prints a leaked music playback.
 const AUDIO_STOP_SECONDS := 0.1
@@ -49,6 +54,10 @@ var effects_plus: PictureButton
 var effects_bars: LevelBars
 var reset_button: HoldButton
 var quit_button: HoldButton
+## The dark layer behind the panel. It takes no clicks, so a click on the gear still closes the
+## panel.
+var dim := ColorRect.new()
+var box := PanelContainer.new()
 
 
 func _ready() -> void:
@@ -121,13 +130,18 @@ func _quit() -> void:
 
 
 func _build() -> void:
+	dim.color = DIM_COLOUR
+	# A CanvasItem under a CanvasLayer does not inherit the filter of the main scene (spec 3.5).
+	dim.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
 	var centre := CenterContainer.new()
 	# A CanvasItem under a CanvasLayer does not inherit the filter of the main scene (spec 3.5).
 	centre.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	centre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(centre)
-	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", _box_style())
 	centre.add_child(box)
 	var rows := VBoxContainer.new()
@@ -177,6 +191,10 @@ func _box_style() -> StyleBoxFlat:
 	style.border_color = BORDER_COLOUR
 	style.set_border_width_all(BORDER_WIDTH)
 	style.set_corner_radius_all(CORNER_RADIUS)
-	style.set_content_margin_all(MARGIN)
+	# The content margin counts from the outer edge, so it includes the border.
+	style.content_margin_top = BORDER_WIDTH + MARGIN_TOP_BOTTOM
+	style.content_margin_bottom = BORDER_WIDTH + MARGIN_TOP_BOTTOM
+	style.content_margin_left = BORDER_WIDTH + MARGIN_SIDES
+	style.content_margin_right = BORDER_WIDTH + MARGIN_SIDES
 	style.anti_aliasing = true
 	return style

@@ -1,7 +1,8 @@
 ## The main scene: the opening screen, then one Labyrinth on the screen, the boat, the Items, the
 ## Item row, and the Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects
 ## each Item that it stops on. The chest of the Goal is locked until the last Item. At the open
-## chest, a Sea friend comes to the strip, then the next Labyrinth fades in. The motion values of
+## chest, a Sea friend comes to the strip, then the next Labyrinth fades in. When the Child presses
+## no key for a while, the open chest or the nearest Item hops (IdleHint). The motion values of
 ## spec 8 are in Motion.
 extends Node2D
 
@@ -44,6 +45,9 @@ signal party_started
 signal party_friend_popped(sea_friend: String)
 ## Emitted when the chest of the Party opens.
 signal party_chest_opened
+## Emitted when the idle hint target hops (game-flow spec part 5, fix 10): the Goal square for the
+## open chest, or the square of the Item.
+signal hint_hopped(square: Vector2i)
 
 ## The progress of the Child. _ready() loads it from the save file. Tests and tools can replace it,
 ## then call show_labyrinth().
@@ -83,6 +87,7 @@ var _items_in_flight := 0
 @onready var _settings: SettingsPanel = $Settings
 @onready var _opening: OpeningScreen = $Opening
 @onready var _party: PartyView = $Party
+@onready var _idle_hint: IdleHint = $IdleHint
 
 
 func _ready() -> void:
@@ -99,6 +104,8 @@ func _ready() -> void:
 	_opening.button.clicked.connect(_press_start)
 	_party.friend_popped.connect(party_friend_popped.emit)
 	_party.chest_opened.connect(party_chest_opened.emit)
+	_idle_hint.is_play_free = _is_play_free
+	_idle_hint.hop_due.connect(_hop_hint)
 	show_opening()
 
 
@@ -362,7 +369,7 @@ func _collect(index: int) -> void:
 	var sprite := _items.sprite_of(item.id)
 	var from := _items.position + sprite.position
 	_effects.burst(Burst.stars(Motion.SPLASH_COUNT, Motion.SPLASH_COLOURS, Motion.SPLASH_SPEED_PX, Motion.SPLASH_LIFE), from, _labyrinth_scale())
-	_effects.fly_item(sprite.texture, from, _items.item_px(), _item_row.outline_centre(index), _show_item_in_outline.bind(index))
+	_effects.fly_item(sprite.texture, from, _items.item_px(), _item_row.slot_centre(index), _show_item_in_outline.bind(index))
 	_items.remove_item(item.id)
 	_item_row.collect(index)
 	_collection_strip.set_count(progress.total_items)
@@ -372,7 +379,7 @@ func _collect(index: int) -> void:
 func _show_item_in_outline(index: int) -> void:
 	_item_row.show_fill(index)
 	var sparkles := Burst.stars(Motion.OUTLINE_SPARKLE_COUNT, Motion.SPARKLE_COLOURS, Motion.OUTLINE_SPARKLE_SPEED_PX, Motion.OUTLINE_SPARKLE_LIFE)
-	_effects.burst(sparkles, _item_row.outline_centre(index), _hud_scale())
+	_effects.burst(sparkles, _item_row.slot_centre(index), _hud_scale())
 	_items_in_flight -= 1
 	if _items_in_flight == 0 and _labyrinth_view.locked and _all_items_collected():
 		_unlock_chest()
@@ -497,6 +504,27 @@ func _show_opening_after_party() -> void:
 	show_opening()
 	_fade.set_dark()
 	_fade.fade_in()
+
+
+# Idle hint (game-flow spec part 5, fix 10).
+
+## True while the Child can sail with no move: no lock, no opening screen, and the settings closed.
+func _is_play_free() -> bool:
+	return labyrinth != null and not _locked and _move_tween == null and not _opening.visible and not _settings.is_open()
+
+
+## The open chest or the nearest uncollected Item hops.
+func _hop_hint() -> void:
+	var square := IdleHint.target_square(labyrinth, boat_square, progress.item_states(labyrinth), not _labyrinth_view.locked)
+	if square == IdleHint.NO_TARGET:
+		return
+	if square == labyrinth.goal_square():
+		_labyrinth_view.hop_chest()
+	else:
+		for item in labyrinth.items:
+			if item.square == square:
+				_items.hop_item(item.id)
+	hint_hopped.emit(square)
 
 
 func _layout() -> void:

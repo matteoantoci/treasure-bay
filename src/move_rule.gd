@@ -20,6 +20,16 @@ class Move:
 	var duration: float
 
 
+## The shortest press path to a target, as nearest_target() gives it.
+class PressPath:
+	## The target square at the end of the path.
+	var target: Vector2i
+	## The first press of the path.
+	var first_press: Vector2i
+	## The count of presses on the path.
+	var presses: int
+
+
 ## The bow of boat_white_sail.png points down at rotation 0.
 static func rotation_for(direction: Vector2i) -> float:
 	return atan2(direction.y, direction.x) - PI / 2
@@ -58,3 +68,36 @@ static func stops_at(labyrinth: Labyrinth, square: Vector2i, direction: Vector2i
 	if items.has(square) and not items[square]:
 		return true
 	return square == labyrinth.goal_square()
+
+
+## The shortest press path from `from` to the nearest square of `targets`, a set of squares. Each
+## press follows plan() with `items`, so the boat stops on each Item not collected and on the Goal.
+## Of two paths with the same press count, the first in the order of Labyrinth.DIRECTIONS wins.
+## Returns null when `from` is a target or no target is in reach. The idle hint and the test helpers
+## use it.
+static func nearest_target(labyrinth: Labyrinth, from: Vector2i, items: Dictionary, targets: Dictionary) -> PressPath:
+	if targets.has(from):
+		return null
+	# Breadth-first search over the stops of the move rule. Each stop keeps the first press and the
+	# press count of the first path that reaches it.
+	var first := {from: Vector2i.ZERO}
+	var presses := {from: 0}
+	var queue: Array[Vector2i] = [from]
+	var head := 0
+	while head < queue.size():
+		var square := queue[head]
+		head += 1
+		for direction in Labyrinth.DIRECTIONS:
+			var move := plan(labyrinth, square, direction, items)
+			if move.bump or first.has(move.target):
+				continue
+			first[move.target] = direction if square == from else first[square]
+			presses[move.target] = presses[square] + 1
+			if targets.has(move.target):
+				var path := PressPath.new()
+				path.target = move.target
+				path.first_press = first[move.target]
+				path.presses = presses[move.target]
+				return path
+			queue.append(move.target)
+	return null

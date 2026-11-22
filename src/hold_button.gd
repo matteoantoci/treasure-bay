@@ -1,17 +1,20 @@
 ## A button that acts only after a hold: the reset and the quit button (spec 11.2). Each button has
 ## its own hold time and full ring colour. A ring around the picture fills while the button is down.
 ## If the button comes up before the hold time, the ring goes back to empty and nothing happens.
+## The ring has the cream-and-wood style (game-flow spec part 5, fix 7): a light brown ring with a
+## cream disc in it.
 class_name HoldButton
 extends PictureButton
 
 ## Emitted when the button was down for the whole hold time.
 signal held
 
-## The button is this big, so the ring fits around the 64 px picture.
-const BUTTON_PX := 112.0
-const RING_RADIUS := 48.0
-const RING_WIDTH := 8.0
-const RING_EMPTY_COLOUR := Color(1, 1, 1, 0.25)
+## The ring is this big. It is 14 px thick, so the cream disc in it is 92 px.
+const RING_BUTTON_PX := 120.0
+const RING_WIDTH := 14.0
+const RING_RADIUS := (RING_BUTTON_PX - RING_WIDTH) / 2.0
+const RING_EMPTY_COLOUR := PictureButton.FACE_COLOUR
+const DISC_COLOUR := SettingsPicture.KNOB_COLOUR
 
 ## The time of a full hold, in seconds. Tests set a shorter time.
 var hold_seconds: float
@@ -27,7 +30,7 @@ func _init(picture_kind: SettingsPicture.Kind, hold_time: float, full_colour: Co
 	super(picture_kind)
 	hold_seconds = hold_time
 	ring_full_colour = full_colour
-	custom_minimum_size = Vector2.ONE * BUTTON_PX
+	custom_minimum_size = Vector2.ONE * RING_BUTTON_PX
 	button_down.connect(_on_button_down)
 	button_up.connect(release)
 
@@ -67,10 +70,12 @@ func _on_button_down() -> void:
 	queue_redraw()
 
 
+## The ring fills clockwise from the top. The picture is in the cream disc, with no face.
 func _draw() -> void:
 	var centre := size / 2.0
-	draw_arc(centre, RING_RADIUS, 0.0, TAU, 64, SettingsPicture.OUTLINE_COLOUR, RING_WIDTH + 2.0 * SettingsPicture.OUTLINE_WIDTH, true)
-	draw_arc(centre, RING_RADIUS, 0.0, TAU, 64, RING_EMPTY_COLOUR, RING_WIDTH, true)
+	draw_arc(centre, RING_RADIUS, 0.0, TAU, 96, RING_EMPTY_COLOUR, RING_WIDTH, true)
 	if ring > 0.0:
-		draw_arc(centre, RING_RADIUS, -PI / 2.0, -PI / 2.0 + TAU * ring, 64, ring_full_colour, RING_WIDTH, true)
-	super()
+		draw_arc(centre, RING_RADIUS, -PI / 2.0, -PI / 2.0 + TAU * ring, 96, ring_full_colour, RING_WIDTH, true)
+	draw_circle(centre, RING_RADIUS - RING_WIDTH / 2.0, DISC_COLOUR, true, -1.0, true)
+	var picture_size := Vector2.ONE * SettingsPicture.PICTURE_PX
+	SettingsPicture.draw_picture(self, picture, Rect2(centre - picture_size / 2.0, picture_size), SettingsPicture.FILL_COLOUR)
