@@ -1,10 +1,10 @@
-# Labyrinth game for a 5-year-old
+# Treasure Bay for a 5-year-old
 
 Label: wayfinder:map
 
 ## Destination
 
-A build-ready spec at `.scratch/labyrinth-game/spec.md`. An agent can build the game from the spec and ask no more questions. The game is a keyboard Labyrinth game for the Parent's 5-year-old Child. It is a Godot 4.7 app in a fullscreen window on the Parent's Mac laptop.
+A build-ready spec at `.scratch/labyrinth-game/spec.md`. An agent can build the game from the spec and ask no more questions. The game is Treasure Bay, a keyboard Labyrinth game for the Parent's 5-year-old Child. It is a Godot 4.7 app in a fullscreen window on the Parent's Mac laptop.
 
 ## Notes
 

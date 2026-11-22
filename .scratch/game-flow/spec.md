@@ -6,7 +6,7 @@ Sources: [ticket 01](issues/01-opening-and-end-screens.md) and [ticket 02](issue
 
 ## Problem Statement
 
-The Child is the Parent's 5-year-old daughter. She cannot read, but she knows numbers well. She plays the Labyrinth game every day, and the Parent sees five problems:
+The Child is the Parent's 5-year-old daughter. She cannot read, but she knows numbers well. She plays Treasure Bay every day, and the Parent sees five problems:
 
 1. She gets very angry when she sails onto the chest by mistake before she collects all the Items of a Labyrinth. The Labyrinth then ends, and the Items that she did not collect are lost.
 2. After Labyrinth 20, each Goal gives back a Sea friend that she already has. She is annoyed by the duplicates.
