@@ -12,9 +12,12 @@
 ## and median), the count of different valid seeds and Labyrinths that the two 4 x 3 slots find,
 ## and the time of one new Voyage.
 ##
-## Mode 3, the seed pool (--pool): for each slot, the first POOL_SIZE seeds from 1 upward that meet
-## DifficultyCurve.meets_conditions(). It writes them to src/seed_pool.gd, the const table that
-## DifficultyCurve.new_voyage() picks from. Run it again after each change of the curve.
+## Mode 3, the seed pool (--pool): for each slot, the first seeds from 1 upward that meet
+## DifficultyCurve.meets_conditions() and give a layout (DifficultyCurve.layout_key()) that no seed
+## before them in the slot gives. It stops at POOL_SIZE layouts or at seed POOL_SCAN_LIMIT, so a slot
+## with fewer layouts has a shorter row. It writes the seeds and their layout numbers to
+## src/seed_pool.gd, the const tables that DifficultyCurve.new_voyage() picks from. Run it again
+## after each change of the curve.
 ##
 ## Run from the repository root:
 ##   godot --headless --path . --script res://tools/seed_search.gd
@@ -36,8 +39,11 @@ const COST_STARTS := 1000
 const COST_RNG_SEED := 20261122
 ## The new Voyages that the cost mode times.
 const TIMED_VOYAGES := 1000
-## The seeds of each slot in the seed pool.
+## The layouts of each slot in the seed pool.
 const POOL_SIZE := 100
+## The pool mode scans the seeds 1 to POOL_SCAN_LIMIT of each slot, so the run ends in a few
+## minutes. A slot with fewer than POOL_SIZE layouts in these seeds keeps the layouts that it found.
+const POOL_SCAN_LIMIT := 50000
 const POOL_PATH := "res://src/seed_pool.gd"
 
 
@@ -113,7 +119,7 @@ func _print_cost() -> void:
 		for start in starts:
 			var seed_value := DifficultyCurve.find_seed(number, start, MAX_SEED)
 			valid[seed_value] = true
-			layouts[_layout_key(LabyrinthPlan.build_from_seed(number, seed_value))] = true
+			layouts[DifficultyCurve.layout_key(LabyrinthPlan.build_from_seed(number, seed_value))] = true
 		print("4 x 3 slot %d: %d different valid seeds, %d different Labyrinths (walls and Items)" % [number, valid.size(), layouts.size()])
 	if slot_at >= 0:
 		return
@@ -128,41 +134,69 @@ func _print_cost() -> void:
 	print("new Voyage: mean %.3f ms, slowest %.3f ms of %d" % [total / 1000.0 / TIMED_VOYAGES, slowest / 1000.0, TIMED_VOYAGES])
 
 
-## The walls and the Item IDs of `labyrinth`: two seeds with the same key give the same Labyrinth.
-func _layout_key(labyrinth: Labyrinth) -> String:
-	var parts := PackedStringArray()
-	for y in labyrinth.height:
-		for x in labyrinth.width:
-			parts.append(str(labyrinth.wall_bits(Vector2i(x, y))))
-	for item in labyrinth.items:
-		parts.append(item.id)
-	return " ".join(parts)
-
-
 ## Writes the seed pool to POOL_PATH. Returns the exit code.
 func _write_pool() -> int:
+	var seed_rows := PackedStringArray()
+	var layout_rows := PackedStringArray()
+	# The layout number of each layout key. The two slots of one size share the numbers.
+	var size_layouts := {}
+	var first_slot_keys := {}
+	for number in range(1, LabyrinthPlan.FIXED_COUNT + 1):
+		if number % 2 == 1:
+			size_layouts = {}
+		var keys := {}
+		var seeds := PackedStringArray()
+		var layouts := PackedStringArray()
+		var scanned := 0
+		var last_new := 0
+		while seeds.size() < POOL_SIZE and scanned < POOL_SCAN_LIMIT:
+			scanned += 1
+			if not DifficultyCurve.meets_conditions(number, scanned):
+				continue
+			var key := DifficultyCurve.layout_key(LabyrinthPlan.build_from_seed(number, scanned))
+			if keys.has(key):
+				continue
+			keys[key] = true
+			if not size_layouts.has(key):
+				size_layouts[key] = size_layouts.size() + 1
+			seeds.append(str(scanned))
+			layouts.append(str(size_layouts[key]))
+			last_new = scanned
+		# The second slot of a size needs a second layout: new_voyage() takes it when the first slot
+		# has the same layout.
+		var needed := 2 if number % 2 == 0 else 1
+		if seeds.size() < needed:
+			print("SEED POOL FAIL: fewer than %d layouts up to seed %d for Labyrinth %d" % [needed, POOL_SCAN_LIMIT, number])
+			return 1
+		seed_rows.append("\t[%s]," % ", ".join(seeds))
+		layout_rows.append("\t[%s]," % ", ".join(layouts))
+		var line := "slot %d: %d layouts, scan up to seed %d, the last new layout at seed %d" % [number, seeds.size(), scanned, last_new]
+		if number % 2 == 1:
+			first_slot_keys = keys
+		else:
+			var shared := 0
+			for key in keys:
+				if first_slot_keys.has(key):
+					shared += 1
+			line += ", %d layouts also in slot %d" % [shared, number - 1]
+		print(line)
 	var lines := PackedStringArray([
-		"## The seed pool of a Voyage (game-flow spec Part 1, Parent decision of 2026-11-22). Row n - 1",
-		"## holds %d seeds of slot n, the first seeds from 1 upward that meet" % POOL_SIZE,
-		"## DifficultyCurve.meets_conditions(). tools/seed_search.gd -- --pool writes this file. Do not edit",
-		"## it by hand.",
+		"## The seed pool of a Voyage (game-flow spec Part 1, Parent decision of 2026-11-22). Row n - 1 of",
+		"## SEEDS holds the seeds of slot n: from 1 upward, each seed that meets",
+		"## DifficultyCurve.meets_conditions() and gives a layout that no seed before it in the slot gives,",
+		"## up to %d layouts or up to seed %d. Row n - 1 of LAYOUTS holds the layout number of each seed." % [POOL_SIZE, POOL_SCAN_LIMIT],
+		"## The two slots of one size share the layout numbers: the same number is the same layout.",
+		"## tools/seed_search.gd -- --pool writes this file. Do not edit it by hand.",
 		"class_name SeedPool",
 		"extends RefCounted",
 		"",
 		"const SEEDS := [",
 	])
-	for number in range(1, LabyrinthPlan.FIXED_COUNT + 1):
-		var seeds := PackedStringArray()
-		var seed_value := 1
-		while seeds.size() < POOL_SIZE:
-			if seed_value > MAX_SEED:
-				print("SEED POOL FAIL: fewer than %d seeds up to %d for Labyrinth %d" % [POOL_SIZE, MAX_SEED, number])
-				return 1
-			if DifficultyCurve.meets_conditions(number, seed_value):
-				seeds.append(str(seed_value))
-			seed_value += 1
-		lines.append("\t[%s]," % ", ".join(seeds))
-		print("slot %d: %d seeds up to %d" % [number, POOL_SIZE, seed_value - 1])
+	lines.append_array(seed_rows)
+	lines.append("]")
+	lines.append("")
+	lines.append("const LAYOUTS := [")
+	lines.append_array(layout_rows)
 	lines.append("]")
 	var file := FileAccess.open(POOL_PATH, FileAccess.WRITE)
 	file.store_string("\n".join(lines) + "\n")
