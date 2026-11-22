@@ -1,7 +1,7 @@
 ## The main scene: one Labyrinth on the screen, the boat, the Items, the Item row, and the
 ## Collection strip (spec 5, 6). The arrow keys sail the boat. The boat collects each Item that it
-## stops on. At the Goal, a Sea friend comes to the strip, then the next Labyrinth fades in. The
-## motion values of spec 8 are in Motion.
+## stops on. The chest of the Goal is locked until the last Item. At the open chest, a Sea friend
+## comes to the strip, then the next Labyrinth fades in. The motion values of spec 8 are in Motion.
 extends Node2D
 
 ## Emitted when a Labyrinth shows, with the boat on its start square.

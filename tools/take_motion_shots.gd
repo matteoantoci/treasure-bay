@@ -78,8 +78,9 @@ func _initialize() -> void:
 	if not await _wait_for(_main.chest_unlocked):
 		await _end("Labyrinth 1: the chest did not unlock")
 		return
-	await _wait(0.35)
-	await _shot("motion-unlocked.png", "0.35 s after the unlock: the padlock is gone, the open chest and the sparkles")
+	# The pop ends at 0.3 s. The 6 sparkles live 0.5 s.
+	await _wait(0.29)
+	await _shot("motion-unlocked.png", "0.3 s after the unlock: the padlock is gone, the open chest and the 6 sparkles")
 	var reached := [false]
 	_main.goal_reached.connect(func(_friend: String) -> void: reached[0] = true, CONNECT_ONE_SHOT)
 	while not reached[0]:
