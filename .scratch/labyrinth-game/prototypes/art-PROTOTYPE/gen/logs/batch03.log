@@ -1,8 +1,0 @@
-Warning: MCP server "context7:context7" failed to connect: HTTP 401: {"jsonrpc":"2.0","error":{"code":-32001,"message":"Authentication required. Please authenticate to use this MCP server."},"id":null} [WWW-Authenticate: Bearer resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"]; its tools are unavailable for this run.
-Working...
-Warning: MCP server "sentry:sentry" failed to connect: HTTP 401:  [WWW-Authenticate: Bearer realm="OAuth", resource_metadata="https://mcp.sentry.dev/.well-known/oauth-protected-resource/mcp?utm_source=plugin"]; its tools are unavailable for this run.
-Warning: MCP server "firecrawl:firecrawl" failed to connect: HTTP 401: {"error":"invalid_token","error_description":"OAuth access token required for the Firecrawl MCP resource /v2/mcp-search"} [WWW-Authenticate: Bearer resource_metadata="https://mcp.firecrawl.dev/.well-known/oauth-protected-resource/v2/mcp-search", error="invalid_token", error_description="OAuth access token required for the Firecrawl MCP resource /v2/mcp-search"]; its tools are unavailable for this run.
-gen/raw/spouting_whale.jpg
-gen/raw/whale.jpg
-gen/raw/shark.jpg
-gen/raw/squid.jpg

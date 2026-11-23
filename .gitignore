@@ -2,3 +2,5 @@
 .godot/
 .DS_Store
 __pycache__/
+.scratch/
+shots/
